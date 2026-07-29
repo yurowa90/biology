@@ -4,7 +4,7 @@
 효소·물질대사 단원의 핵심 정량식인 **미카엘리스–멘텐 반응속도식**을 중심으로, 학생이
 예측 → 유도 → 개념 → 시뮬레이션 → 평가 → 서술형 → 보고서까지 스스로 밟아 갑니다.
 
-단일 HTML 파일(`index.html`)로 동작하며, 외부 라이브러리 없이 오프라인에서도 열립니다.
+**서버(백엔드)가 필요 없는 단일 정적 파일**(`index.html`)이라, GitHub Pages에 그대로 올리면 됩니다.
 
 ## 8단계 흐름
 
@@ -17,7 +17,7 @@
 | 05 | 유도 확인 (CHECK) | 유도 각 단계를 확인하는 4지선다 4문항, 즉시 채점·해설 |
 | 06 | 형성평가 (FORMATIVE) | 포화·효소농도·억제제·회전수 종합 4문항 |
 | 07 | 서술형 · AI | 서술형 2문항 + **Claude API 직접 호출**로 즉석 피드백 |
-| 08 | 최종 보고서 (SUBMIT) | 전체 답안·점수 정리 → 구글 시트 제출 / 인쇄(PDF) / 다운로드 |
+| 08 | 최종 보고서 (SUBMIT) | 전체 답안·점수 정리 → 제출 / 인쇄(PDF) / 다운로드 |
 
 원본 로켓 워크북과의 대응:
 
@@ -25,23 +25,43 @@
 - 연소율 ṁ, 추력 `F = vₑ·ṁ` ↔ 회전수 kcat, `Vmax = kcat·[E]₀`
 - 지면/로켓 두 관점 시뮬레이터 ↔ 직접 곡선 / 이중역수 두 표현 + 억제제 효과
 
-## 실행 방법
+## GitHub Pages 로 배포하기
 
-### A. 바로 열기 / 정적 호스팅
-`index.html` 을 브라우저로 열거나 GitHub Pages 등에 올립니다. 답안과 진행 상황은
-브라우저 `localStorage` 에 저장됩니다.
+### 방법 A — GitHub Actions (권장, 이미 설정됨)
+저장소에 `.github/workflows/deploy-pages.yml` 이 포함되어 있습니다.
 
-### B. Google Apps Script 웹앱 (원본과 동일한 배포 방식, 구글 시트 저장)
-1. [script.google.com](https://script.google.com) 에서 새 프로젝트 생성
-2. `apps-script/Code.gs` 내용을 `Code.gs` 에 붙여넣기
-3. HTML 파일 추가 → 이름 `Index` → 저장소의 `index.html` 내용 붙여넣기
-4. **배포 → 새 배포 → 웹 앱** (실행: 나 / 액세스: 조직 또는 모든 사용자)
-5. 발급된 `/exec` URL 을 학생에게 공유
+1. 저장소 → **Settings → Pages**
+2. **Build and deployment → Source** 를 **“GitHub Actions”** 로 선택
+3. 이 브랜치(`main`/`master` 또는 작업 브랜치)에 푸시하면 자동 배포됩니다.
+   배포가 끝나면 `https://<사용자명>.github.io/<저장소명>/` 에서 열립니다.
 
-`index.html` 은 Apps Script 안에서 실행되면 `google.script.run.saveReport()` 를,
-정적 호스팅에서는 `CONFIG.submitEndpoint` 로의 POST 를 자동으로 사용합니다.
-정적 호스팅에서도 구글 시트로 제출하려면 `index.html` 상단의
-`CONFIG.submitEndpoint` 에 배포된 Apps Script `/exec` URL 을 넣으세요.
+### 방법 B — 브랜치에서 바로 배포 (Actions 없이)
+1. 저장소 → **Settings → Pages**
+2. **Source: Deploy from a branch** → 브랜치 선택, 폴더는 **`/ (root)`**
+3. 저장하면 잠시 후 위와 같은 URL 로 게시됩니다. (`index.html` 이 루트에 있어 그대로 동작)
+
+> 로컬에서 확인만 하려면 `index.html` 을 브라우저로 그냥 열어도 됩니다. 답안과 진행 상황은
+> 브라우저 `localStorage` 에 저장됩니다.
+
+## 제출 방식 (백엔드 불필요)
+
+`index.html` 상단의 `CONFIG.submit.mode` 로 선택합니다. 기본값은 설정이 필요 없는 `"download"` 입니다.
+
+| mode | 동작 | 설정 |
+|------|------|------|
+| `"download"` (기본) | 보고서를 JSON 파일로 저장 → 학생이 구글 클래스룸/이메일로 제출 | 없음 |
+| `"googleForm"` | **구글 폼**으로 전송 → 연결된 스프레드시트에 자동 기록 (Apps Script 아님) | 폼 ID + 필드 매핑 |
+| `"endpoint"` | Formspree / Cloudflare Worker 등 임의의 POST URL 로 전송 | URL 1개 |
+
+**구글 폼으로 자동 수집하기** (스프레드시트에 쌓고 싶을 때, 서버 없이):
+1. 구글 폼을 만들고 필요한 항목마다 **단답형** 질문을 추가합니다(모두 “필수 아님”).
+   전체 답안을 통째로 저장하려면 `payload` 항목 하나만 있어도 됩니다.
+2. 폼 미리보기에서 **페이지 소스 보기** → 각 질문의 `entry.XXXXXXX` 번호를 찾습니다.
+3. `CONFIG.submit.mode = "googleForm"` 으로 바꾸고 `googleForm.formId` 와 `entries` 를 채웁니다.
+   `formId` 는 폼 주소 `.../forms/d/e/<formId>/viewform` 의 가운데 부분입니다.
+4. 폼 응답을 스프레드시트에 연결하면, 학생이 “제출”할 때마다 자동으로 한 줄씩 쌓입니다.
+
+인쇄(PDF 저장)와 JSON 다운로드는 어떤 모드에서든 항상 가능합니다.
 
 ## AI 서술형 피드백 (Step 07)
 
@@ -50,15 +70,16 @@
   브라우저에서 Anthropic API(`api.anthropic.com`)를 직접 호출합니다.
 - 사용 모델은 `index.html` 상단 상수 `AI_MODEL` 로 바꿀 수 있습니다.
   - `claude-haiku-4-5` (가장 저렴) · `claude-sonnet-5` (기본, 균형) · `claude-opus-5` (최고 품질)
-- 브라우저 직접 호출을 위해 요청에 `anthropic-dangerous-direct-browser-access: true`
-  헤더를 사용합니다. **API 키는 학생이 볼 수 있으므로**, 사용량이 제한된 전용 키를
-  발급해 배포하는 것을 권장합니다.
+- 브라우저 직접 호출을 위해 요청에 `anthropic-dangerous-direct-browser-access: true` 헤더를 사용합니다.
+  **API 키는 학생이 볼 수 있으므로**, 사용량이 제한된 전용 키를 발급해 배포하는 것을 권장합니다.
+  (AI 피드백을 쓰지 않아도 나머지 7단계는 정상 동작합니다.)
 
 ## 파일 구성
 
 ```
-index.html            단일 파일 웹앱 (UI + 로직 + 시뮬레이터 + AI 호출)
-apps-script/Code.gs   구글 시트 저장용 Apps Script 백엔드 (선택)
+index.html                        단일 파일 정적 웹앱 (UI + 로직 + 시뮬레이터 + AI 호출)
+.github/workflows/deploy-pages.yml GitHub Pages 자동 배포 워크플로
+.nojekyll                         Pages 의 Jekyll 처리 비활성화
 README.md
 ```
 

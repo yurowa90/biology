@@ -1,8 +1,9 @@
 <!--
   효소반응속도 학습 워크북 — 미카엘리스-멘텐 (Michaelis–Menten)
-  단일 파일 웹앱. Google Apps Script(Index.html)로 붙여넣어도, 정적 호스팅(GitHub Pages 등)으로도 동작.
-  - CONFIG.submitEndpoint 를 배포된 Apps Script /exec URL 로 지정하면 정적 호스팅에서도 구글 시트로 제출됩니다.
-  - Apps Script 안에서 실행되면 google.script.run.saveReport() 를 자동으로 사용합니다.
+  단일 파일 정적 웹앱. GitHub Pages 등 어떤 정적 호스팅에도 그대로 올리면 동작합니다.
+  서버(백엔드)가 전혀 필요 없습니다.
+  - 제출 방식은 아래 CONFIG.submit 에서 선택합니다.
+      "download"(기본, 설정 불필요) · "googleForm"(구글 폼, Apps Script 아님) · "endpoint"(임의 POST URL)
 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -276,9 +277,27 @@
    설정
    ============================================================ */
 const CONFIG = {
-  // 정적 호스팅(GitHub Pages 등)에서 구글 시트로 제출하려면
-  // 배포한 Apps Script 웹앱의 /exec URL 을 여기에 넣으세요. (예: "https://script.google.com/macros/s/XXXX/exec")
-  submitEndpoint: ""
+  // 제출 방식 — 서버 없이 GitHub Pages 만으로 동작합니다.
+  submit: {
+    // "download"  : (기본) 보고서를 파일로 저장 → 학생이 구글 클래스룸/이메일로 제출. 설정 불필요.
+    // "googleForm": 구글 폼(Apps Script 아님)으로 전송 → 연결된 스프레드시트에 자동 기록.
+    // "endpoint"  : Formspree / Cloudflare Worker 등 임의의 POST URL 로 전송.
+    mode: "download",
+
+    // mode:"googleForm" 일 때만 사용.
+    //   1) 구글 폼을 만들고, 아래 필드마다 '단답형' 질문을 하나씩 추가합니다(모두 '필수 아님'으로).
+    //   2) 폼 미리보기에서 '페이지 소스 보기' → 각 질문의 entry.XXXXXXX 번호를 찾아 매핑합니다.
+    //   3) 폼 응답을 스프레드시트에 연결하면 제출이 자동으로 쌓입니다. (백엔드/Apps Script 불필요)
+    googleForm: {
+      formId: "",   // https://docs.google.com/forms/d/e/<formId>/viewform 의 <formId>
+      entries: {    // 항목명 → entry.XXXXXXX 번호 (사용할 항목만 채우면 됩니다. payload 하나만 써도 됩니다)
+        name:"", studentId:"", checkScore:"", quizScore:"", essay1:"", essay2:"", payload:""
+      }
+    },
+
+    // mode:"endpoint" 일 때만 사용. JSON 을 POST 로 받는 URL.
+    endpoint: ""
+  }
 };
 // AI 서술형 피드백에 사용할 Claude 모델. 강사가 비용/품질에 따라 바꿀 수 있습니다.
 //   claude-haiku-4-5  (가장 저렴)  ·  claude-sonnet-5  (권장, 균형)  ·  claude-opus-5 (최고 품질)
@@ -891,11 +910,16 @@ function rSubmit(){
       <span class="ans"><span class="lab">내 답안: </span>${shown}</span></div>`;
   }).join("");
   const {KmA,VmaxA}=computeApparent();
+  const mode=submitMode();
+  const subDesc = mode==="googleForm" ? "확인 후 제출하면 구글 폼으로 전송되어 연결된 스프레드시트에 기록됩니다. 인쇄(PDF 저장)도 가능합니다."
+    : mode==="endpoint" ? "확인 후 제출하면 설정된 주소로 전송됩니다. 인쇄(PDF 저장)도 가능합니다."
+    : "확인 후 제출하면 보고서가 파일로 저장됩니다. 저장한 파일을 구글 클래스룸/이메일로 제출하세요. 인쇄(PDF 저장)도 가능합니다.";
+  const submitLabel = mode==="download" ? "보고서 저장 →" : "제출하기 →";
 
   main.innerHTML = `<div class="panel">
     <div class="eyebrow">STEP 08 · 최종 보고서 REPORT</div>
     <h1 class="h">최종 보고서</h1>
-    <p class="sub">내용을 확인하고 제출하면 ${CONFIG.submitEndpoint||window.google?"구글 시트로 전송":"파일로 저장(제출 서버 미설정)"}됩니다. 인쇄(PDF 저장)도 가능합니다.</p>
+    <p class="sub">${subDesc}</p>
 
     <div class="rsec"><div class="rt">학생 정보</div>
       <div class="idgrid">
@@ -919,7 +943,7 @@ function rSubmit(){
         <button class="btn btn-prev" onclick="window.print()">🖨 인쇄 / PDF</button>
         <button class="btn btn-prev" onclick="downloadReport()">⭳ 다운로드</button>
       </div>
-      <button class="btn btn-next" id="submitBtn" onclick="submitReport()">제출하기 →</button>
+      <button class="btn btn-next" id="submitBtn" onclick="submitReport()">${submitLabel}</button>
     </div></div>`;
 }
 window.onId = ()=>{ state.student.name=$("#rName").value; state.student.id=$("#rId").value;
@@ -936,32 +960,58 @@ function buildPayload(){
     essay:state.essay, sim:state.sim
   };
 }
+function submitMode(){
+  const s = CONFIG.submit||{}; const m = s.mode;
+  if(m==="googleForm" && s.googleForm && s.googleForm.formId) return "googleForm";
+  if(m==="endpoint" && s.endpoint) return "endpoint";
+  return "download";
+}
 window.downloadReport = ()=>{
   const blob=new Blob([JSON.stringify(buildPayload(),null,2)],{type:"application/json"});
   const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
   a.download=`효소반응속도_보고서_${state.student.name||"학생"}.json`; a.click();
-  toast("보고서를 내려받았습니다.");
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 };
+function submitViaGoogleForm(payload){
+  return new Promise((resolve)=>{
+    const gf = CONFIG.submit.googleForm;
+    let sink = document.getElementById("gform_sink");
+    if(!sink){ sink=document.createElement("iframe"); sink.id="gform_sink"; sink.name="gform_sink"; sink.style.display="none"; document.body.appendChild(sink); }
+    const form=document.createElement("form"); form.style.display="none";
+    form.action="https://docs.google.com/forms/d/e/"+gf.formId+"/formResponse";
+    form.method="POST"; form.target="gform_sink";
+    const vals={ name:payload.name, studentId:payload.studentId,
+      checkScore:payload.checkScore+"/"+payload.checkMax, quizScore:payload.quizScore+"/"+payload.quizMax,
+      essay1:(payload.essay&&payload.essay.s1)||"", essay2:(payload.essay&&payload.essay.s2)||"",
+      payload:JSON.stringify(payload) };
+    const map=gf.entries||{};
+    Object.keys(map).forEach(k=>{ if(map[k]){ const inp=document.createElement("input"); inp.type="hidden";
+      inp.name=map[k]; inp.value=(vals[k]!=null?vals[k]:""); form.appendChild(inp); } });
+    let done=false; const finish=()=>{ if(done)return; done=true; resolve(); };
+    sink.addEventListener("load", finish, {once:true});
+    document.body.appendChild(form); form.submit();
+    // 구글 폼은 CORS 로 응답을 읽을 수 없어, 전송 후 타임아웃으로 성공 처리합니다.
+    setTimeout(finish, 2500);
+    setTimeout(()=>{ try{form.remove();}catch(e){} }, 3200);
+  });
+}
 window.submitReport = async ()=>{
   if(!state.student.name){ toast("이름을 입력해 주세요.",true); return; }
-  const btn=$("#submitBtn"); btn.disabled=true; btn.textContent="제출 중...";
-  const payload=buildPayload();
+  const btn=$("#submitBtn"); const orig=btn.textContent; btn.disabled=true; btn.textContent="제출 중...";
+  const payload=buildPayload(); const mode=submitMode();
   try{
-    if(window.google && google.script && google.script.run){
-      await new Promise((res,rej)=>{ google.script.run.withSuccessHandler(res).withFailureHandler(rej).saveReport(payload); });
-      toast("구글 시트로 제출되었습니다. 수고했어요!");
-    } else if(CONFIG.submitEndpoint){
-      const r=await fetch(CONFIG.submitEndpoint,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)});
+    if(mode==="googleForm"){ await submitViaGoogleForm(payload); toast("제출되었습니다. 수고했어요!"); }
+    else if(mode==="endpoint"){
+      const r=await fetch(CONFIG.submit.endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
       if(!r.ok) throw new Error("HTTP "+r.status);
-      toast("구글 시트로 제출되었습니다. 수고했어요!");
+      toast("제출되었습니다. 수고했어요!");
     } else {
-      window.downloadReport();
-      toast("제출 서버가 설정되지 않아 파일로 저장했습니다.",false);
+      window.downloadReport(); toast("보고서를 파일로 저장했습니다. 이 파일을 제출하세요.");
     }
     state.done.submit=true; save(); renderNav();
   }catch(err){
     toast("제출 실패: "+(err.message||err),true);
-  }finally{ btn.disabled=false; btn.textContent="제출하기 →"; }
+  }finally{ btn.disabled=false; btn.textContent=orig; }
 };
 
 /* ---------- toast ---------- */
