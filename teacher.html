@@ -1,0 +1,427 @@
+<!--
+  효소반응속도 워크북 — 교사 대시보드
+  서버 없이 동작. 학생 보고서(JSON)를 가져오거나, 구글 폼 응답 시트를 CSV로 게시한 URL을 넣으면
+  반별 결과가 누적 집계됩니다. 데이터는 이 브라우저(localStorage)에만 저장됩니다.
+  같은 GitHub Pages 사이트의 /teacher.html 로 배포됩니다.
+-->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>교사 대시보드 · 효소반응속도 워크북</title>
+<style>
+  :root{
+    --bg:#070b14; --panel:#0e1626; --panel2:#111d31; --line:#1d2b41; --line2:#26374f;
+    --txt:#e6edf6; --muted:#7e8da0; --faint:#586479;
+    --cyan:#45d3d8; --cyan2:#63e6ea; --cyandim:#1c5a5e;
+    --green:#33d17f; --amber:#f2c14e; --violet:#a98bff; --red:#ff6b7d; --blue:#5aa9ff;
+    --mono:ui-monospace,SFMono-Regular,Menlo,"Cascadia Mono",monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR",sans-serif;
+  }
+  *{box-sizing:border-box} html,body{margin:0;padding:0}
+  body{font-family:var(--sans); color:var(--txt);
+    background:radial-gradient(1100px 640px at 80% -10%,#122036 0,transparent 55%),
+               linear-gradient(180deg,#070b14,#060910 60%); min-height:100vh}
+  .mono{font-family:var(--mono)}
+  a{color:var(--cyan)}
+  header.top{display:flex; align-items:center; gap:18px; padding:14px 26px; border-bottom:1px solid var(--line);
+    background:rgba(8,13,22,.7); position:sticky; top:0; z-index:20; backdrop-filter:blur(6px)}
+  .brand{font-family:var(--mono); font-size:11.5px; letter-spacing:.22em; color:var(--faint)}
+  .brand b{color:var(--cyan)}
+  .title{font-size:18px; font-weight:700}
+  .title span{color:var(--cyan)}
+  .top-right{margin-left:auto; font-size:13px; color:var(--muted)}
+  .top-right b{color:var(--txt)}
+  .wrap{max-width:1120px; margin:0 auto; padding:24px 26px 70px}
+
+  .src{border:1px solid var(--line); border-radius:16px; padding:18px 20px; margin-bottom:20px;
+    background:linear-gradient(180deg,rgba(16,24,40,.9),rgba(9,15,26,.9))}
+  .src-grid{display:grid; grid-template-columns:1fr 1fr; gap:18px}
+  @media(max-width:760px){ .src-grid{grid-template-columns:1fr} }
+  .src h3{margin:0 0 10px; font-size:13px; font-family:var(--mono); letter-spacing:.12em; color:var(--cyan)}
+  .drop{border:1.5px dashed var(--line2); border-radius:12px; padding:22px; text-align:center; color:var(--muted);
+    cursor:pointer; transition:border-color .15s, background .15s; font-size:14px}
+  .drop:hover,.drop.over{border-color:var(--cyan); background:rgba(69,211,216,.05); color:var(--txt)}
+  .drop b{color:var(--cyan2)}
+  .csvrow{display:flex; gap:10px}
+  .csvrow input{flex:1; font-family:var(--mono); font-size:12.5px; padding:11px 12px; border-radius:9px; border:1px solid var(--line2); background:#0a1220; color:var(--txt)}
+  .csvrow input:focus{outline:none; border-color:var(--cyandim)}
+  .csv-note{font-size:11.5px; color:var(--faint); margin-top:9px; line-height:1.5}
+  .btn{font-size:13px; font-weight:600; padding:10px 16px; border-radius:9px; cursor:pointer; border:1px solid transparent; white-space:nowrap}
+  .btn-cyan{background:linear-gradient(180deg,#1a6f74,#12545a); border-color:#1f8288; color:#e7fdff}
+  .btn-cyan:hover{filter:brightness(1.08)}
+  .btn-ghost{background:transparent; border-color:var(--line2); color:var(--muted)}
+  .btn-ghost:hover{color:var(--txt); border-color:var(--cyandim)}
+  .srcbar{display:flex; align-items:center; gap:12px; margin-top:16px; padding-top:14px; border-top:1px solid var(--line)}
+  .count{font-size:14px; color:var(--muted)} .count b{color:var(--cyan2); font-family:var(--mono); font-size:18px}
+
+  .tabs{display:flex; gap:8px; margin-bottom:18px; flex-wrap:wrap}
+  .tab{font-size:14px; font-weight:600; padding:9px 16px; border-radius:10px; border:1px solid var(--line); background:#0d1626; color:var(--muted); cursor:pointer}
+  .tab.active{border-color:var(--cyan); color:var(--txt); box-shadow:0 0 0 1px var(--cyandim) inset}
+
+  .empty{text-align:center; padding:70px 20px; color:var(--faint)}
+  .empty .big{font-size:40px; margin-bottom:12px}
+
+  .stats{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:22px}
+  @media(max-width:680px){ .stats{grid-template-columns:1fr 1fr} }
+  .stat{border:1px solid var(--line); border-radius:13px; padding:16px 18px; background:rgba(10,17,30,.55)}
+  .stat .k{font-family:var(--mono); font-size:10px; letter-spacing:.1em; color:var(--faint); text-transform:uppercase; margin-bottom:6px}
+  .stat .v{font-family:var(--mono); font-size:28px; font-weight:700}
+  .stat .v small{font-size:14px; color:var(--muted)}
+
+  .card{border:1px solid var(--line); border-radius:14px; padding:20px 22px; margin-bottom:18px; background:linear-gradient(180deg,rgba(16,24,40,.85),rgba(9,15,26,.85))}
+  .card h2{margin:0 0 4px; font-size:17px}
+  .card .csub{color:var(--muted); font-size:13px; margin:0 0 16px}
+
+  table{width:100%; border-collapse:collapse; font-size:13.5px}
+  th,td{text-align:left; padding:10px 12px; border-bottom:1px solid var(--line)}
+  th{font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; color:var(--faint); text-transform:uppercase; cursor:pointer; user-select:none}
+  th:hover{color:var(--cyan)}
+  tbody tr{cursor:pointer}
+  tbody tr:hover{background:rgba(69,211,216,.05)}
+  .pill{font-family:var(--mono); font-size:12px; padding:2px 9px; border-radius:20px; border:1px solid var(--line2)}
+  .pill.g{color:#bfeed4; border-color:#1e5f3c; background:rgba(51,209,127,.08)}
+  .pill.a{color:#f7dfa0; border-color:#6a5320; background:rgba(242,193,78,.08)}
+  .pill.r{color:#ffc2ca; border-color:#5a2530; background:rgba(255,107,125,.08)}
+  .yes{color:var(--green)} .no{color:var(--faint)}
+
+  .detail{border:1px solid var(--cyandim); border-radius:12px; padding:16px 18px; margin-top:12px; background:rgba(12,31,40,.5)}
+  .detail h4{margin:0 0 10px; font-size:14px; color:var(--cyan2)}
+  .dline{font-size:13px; margin-bottom:8px; line-height:1.5}
+  .dline .lab{color:var(--faint); font-family:var(--mono); font-size:11px; margin-right:6px}
+  .dessay{white-space:pre-wrap; background:#0a1220; border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin-top:4px; font-size:13px; line-height:1.6; color:#dbe4f0}
+
+  .item{margin-bottom:20px}
+  .item .q{font-size:14px; font-weight:600; margin-bottom:8px}
+  .item .q .qn{color:var(--cyan); font-family:var(--mono); margin-right:7px}
+  .bar-wrap{display:flex; align-items:center; gap:12px; margin-bottom:5px}
+  .bar-lab{flex:0 0 210px; font-size:12.5px; color:var(--muted); display:flex; gap:7px; align-items:center}
+  @media(max-width:560px){ .bar-lab{flex-basis:130px} }
+  .bar-lab .mark{flex:0 0 18px; width:18px; height:18px; border-radius:5px; border:1px solid var(--line2); display:grid; place-items:center; font-family:var(--mono); font-size:10px; color:var(--muted)}
+  .bar-lab .mark.correct{background:var(--green); border-color:var(--green); color:#04240f}
+  .bar-lab .mark.target{border-color:var(--cyan); color:var(--cyan)}
+  .bar-track{flex:1; height:20px; background:#0a1524; border-radius:6px; overflow:hidden; position:relative}
+  .bar-fill{height:100%; border-radius:6px}
+  .bar-val{flex:0 0 74px; text-align:right; font-family:var(--mono); font-size:12.5px; color:var(--muted)}
+  .rate-badge{font-family:var(--mono); font-size:12px; padding:2px 9px; border-radius:20px; margin-left:8px}
+  .toast{position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(18px); opacity:0;
+    background:#0e2733; border:1px solid var(--cyandim); color:#dffbff; padding:11px 18px; border-radius:10px; font-size:13.5px; transition:.25s; z-index:60}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+  .toast.err{background:#2a1216; border-color:#5a2530; color:#ffd7dc}
+</style>
+
+<header class="top">
+  <div class="brand"><b>Vmax</b> · TEACHER DASHBOARD</div>
+  <div class="title">효소반응속도 <span>교사 대시보드</span></div>
+  <div class="top-right">누적 제출 <b id="hCount">0</b>명</div>
+</header>
+
+<div class="wrap">
+  <div class="src">
+    <div class="src-grid">
+      <div>
+        <h3>① 파일 가져오기 · 설정 불필요</h3>
+        <div class="drop" id="drop">
+          학생 보고서 <b>.json</b> 파일을 끌어다 놓거나 클릭해 선택<br>
+          <span style="font-size:12px;color:var(--faint)">여러 개 한 번에 가능 · 브라우저에 누적 저장</span>
+        </div>
+        <input id="fileInput" type="file" accept=".json,application/json" multiple hidden>
+      </div>
+      <div>
+        <h3>② 구글 시트 CSV · 구글 폼 제출용</h3>
+        <div class="csvrow">
+          <input id="csvUrl" placeholder="게시된 CSV URL (…/pub?output=csv)">
+          <button class="btn btn-cyan" id="csvLoad">불러오기</button>
+        </div>
+        <div class="csv-note">구글 폼 응답 시트 → <b>파일 → 공유 → 웹에 게시 → 쉼표로 구분된 값(.csv)</b> 으로 게시한 링크를 넣으세요.
+          <code>payload</code> 열(전체 JSON)이 있으면 문항별 분석까지, 없으면 이름·점수·서술형만 집계됩니다.
+          ⚠️ 게시 링크는 공개되니 학생 개인정보 취급에 유의하세요.</div>
+      </div>
+    </div>
+    <div class="srcbar">
+      <div class="count">현재 <b id="count">0</b>명 누적</div>
+      <div style="margin-left:auto; display:flex; gap:10px">
+        <button class="btn btn-ghost" id="exportCsv">CSV 내보내기</button>
+        <button class="btn btn-ghost" id="clearAll">모두 지우기</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-t="overview">개요</button>
+    <button class="tab" data-t="roster">학생 명단</button>
+    <button class="tab" data-t="items">문항 분석</button>
+    <button class="tab" data-t="essays">서술형</button>
+  </div>
+  <div id="view"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ── 문항 메타 (index.html 의 문항 은행을 반영. 문항 수정 시 함께 갱신) ── */
+const BANK = {
+  predict:[
+    {q:"기질 농도 [S]를 계속 높이면 반응 속도 v는 어떻게 될까요?", opts:["끝없이 비례하며 증가한다","어느 순간부터 거의 일정해진다 (포화)","증가하다가 다시 감소한다"], target:1},
+    {q:"효소 농도 [E]₀ 를 2배로 하면 최대 반응속도 Vmax 는?", opts:["그대로다","2배가 된다","절반이 된다"], target:1},
+  ],
+  check:[
+    {q:"효소-기질 복합체 ES 의 생성 속도로 옳은 것은?", opts:["k₁[E][S]","k₋₁[ES]","k₂[ES]","k₁[ES]"], a:0},
+    {q:"정상상태 가정 d[ES]/dt ≈ 0 에서 얻는 관계식은?", opts:["k₁[E][S] = k₂[ES]","k₁[E][S] = (k₋₁+k₂)[ES]","k₋₁[ES] = k₂[ES]","[E] = [ES]"], a:1},
+    {q:"미카엘리스 상수 Km 의 정의로 옳은 것은?", opts:["k₁ / (k₋₁+k₂)","(k₋₁+k₂) / k₁","k₂ / k₁","k₋₁ / k₂"], a:1},
+    {q:"효소 보존식 [E]₀ = [E]+[ES] 를 대입해 [ES]를 [E]₀로 나타내면?", opts:["[ES] = [E]₀[S] / (Km+[S])","[ES] = [E]₀[S] / Km","[ES] = [E]₀·Km / [S]","[ES] = [E]₀ / (Km+[S])"], a:0},
+  ],
+  quiz:[
+    {q:"[S] ≫ Km 인 조건에서 반응은 몇 차 반응처럼 보이나요?", opts:["0차 반응","1차 반응","2차 반응","3차 반응"], a:0},
+    {q:"효소 농도 [E]₀ 만 2배로 하면 Km 과 Vmax 는 어떻게 변하나요?", opts:["Km 2배, Vmax 그대로","Km 그대로, Vmax 2배","둘 다 2배","변화 없음"], a:1},
+    {q:"경쟁적 억제제를 넣었을 때 나타나는 변화로 옳은 것은?", opts:["겉보기 Km 증가, Vmax 불변","Km 불변, Vmax 감소","둘 다 증가","둘 다 감소"], a:0},
+    {q:"회전수 kcat(turnover number)의 의미로 옳은 것은?", opts:["효소가 변성되는 속도","효소 1개가 단위시간당 전환하는 기질 분자 수","기질이 확산되는 속도","억제제의 농도"], a:1},
+  ],
+  essay:["낮은/높은 기질 농도에서 반응 차수가 달라지는 이유","경쟁적·비경쟁적 억제제의 Km·Vmax·이중역수 변화"]
+};
+
+const LS="mm_teacher_records";
+const $=s=>document.querySelector(s);
+let records=loadRecs();
+let tab="overview", detailKey=null, sortKey="name", sortDir=1;
+
+function loadRecs(){ try{return JSON.parse(localStorage.getItem(LS)||"[]");}catch(e){return [];} }
+function persist(){ localStorage.setItem(LS, JSON.stringify(records)); }
+function keyOf(r){ return (r.name||"?")+"|"+(r.studentId||"")+"|"+(r.timestamp||""); }
+function toNum(v){ if(typeof v==="number")return v; if(v==null)return null; const m=String(v).match(/-?\d+(\.\d+)?/); return m?parseFloat(m[0]):null; }
+function normalize(r){
+  const n=Object.assign({},r);
+  n.name=(n.name||"").toString().trim(); n.studentId=(n.studentId||"").toString().trim();
+  n.checkScore=toNum(n.checkScore); n.quizScore=toNum(n.quizScore);
+  n.checkMax=toNum(n.checkMax)||BANK.check.length; n.quizMax=toNum(n.quizMax)||BANK.quiz.length;
+  n.predict=n.predict||{}; n.check=n.check||{}; n.quiz=n.quiz||{}; n.essay=n.essay||{};
+  return n;
+}
+function addRecords(list){
+  const seen=new Set(records.map(keyOf)); let added=0;
+  list.filter(Boolean).map(normalize).forEach(r=>{ const k=keyOf(r); if(!seen.has(k)){ seen.add(k); records.push(r); added++; } });
+  persist(); render(); return added;
+}
+
+/* ── 파일 가져오기 ── */
+const drop=$("#drop"), fileInput=$("#fileInput");
+drop.onclick=()=>fileInput.click();
+fileInput.onchange=()=>{ handleFiles(fileInput.files); fileInput.value=""; };
+["dragover","dragenter"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault(); drop.classList.add("over");}));
+["dragleave","drop"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault(); drop.classList.remove("over");}));
+drop.addEventListener("drop",ev=>{ if(ev.dataTransfer&&ev.dataTransfer.files) handleFiles(ev.dataTransfer.files); });
+function handleFiles(files){
+  const arr=[...files]; let pending=arr.length, batch=[];
+  if(!pending) return;
+  arr.forEach(f=>{
+    const rd=new FileReader();
+    rd.onload=()=>{
+      try{ const j=JSON.parse(rd.result); Array.isArray(j)?batch.push(...j):batch.push(j); }
+      catch(e){ toast("JSON 파싱 실패: "+f.name, true); }
+      if(--pending===0){ const n=addRecords(batch); toast(n+"명 추가됨 (중복 제외)"); }
+    };
+    rd.onerror=()=>{ if(--pending===0){ const n=addRecords(batch); toast(n+"명 추가됨"); } };
+    rd.readAsText(f);
+  });
+}
+
+/* ── 구글 시트 CSV ── */
+$("#csvLoad").onclick=async ()=>{
+  const url=$("#csvUrl").value.trim(); if(!url){ toast("CSV URL 을 입력하세요.",true); return; }
+  try{
+    const r=await fetch(url); if(!r.ok) throw new Error("HTTP "+r.status);
+    const text=await r.text(); const recs=recordsFromCSV(text);
+    if(!recs.length){ toast("행을 찾지 못했습니다. 게시 형식을 확인하세요.",true); return; }
+    const n=addRecords(recs); toast(n+"명 추가됨 (중복 제외)");
+  }catch(err){ toast("불러오기 실패: "+(err.message||err),true); }
+};
+function parseCSV(text){
+  const rows=[]; let row=[], field="", q=false, i=0;
+  while(i<text.length){ const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){field+='"'; i++;} else q=false; } else field+=c; }
+    else{ if(c==='"') q=true; else if(c===','){ row.push(field); field=""; }
+      else if(c==='\n'){ row.push(field); rows.push(row); row=[]; field=""; }
+      else if(c!=='\r') field+=c; }
+    i++;
+  }
+  if(field.length||row.length){ row.push(field); rows.push(row); }
+  return rows;
+}
+function tryJSON(s){ try{ const o=JSON.parse(s); return (o&&typeof o==="object")?o:null; }catch(e){ return null; } }
+function recordsFromCSV(text){
+  const rows=parseCSV(text).filter(r=>r.some(c=>String(c).trim()!==""));
+  if(rows.length<2) return [];
+  const head=rows[0].map(h=>String(h).trim());
+  const find=re=>head.findIndex(h=>re.test(h));
+  const iPay=find(/payload/i), iName=find(/name|이름|성명/i), iId=find(/id|학번/i),
+        iCheck=find(/check|유도/i), iQuiz=find(/quiz|형성/i),
+        iE1=find(/essay ?1|서술 ?1/i), iE2=find(/essay ?2|서술 ?2/i), iTime=find(/timestamp|time|시각|타임/i);
+  const out=[];
+  for(let r=1;r<rows.length;r++){
+    const c=rows[r]; let rec=null;
+    if(iPay>=0 && c[iPay]) rec=tryJSON(c[iPay]);
+    if(!rec){ for(const cell of c){ const o=tryJSON(cell); if(o&&(o.topic==="michaelis-menten"||o.check||o.checkScore!==undefined)){ rec=o; break; } } }
+    if(!rec){
+      rec={ timestamp: iTime>=0?c[iTime]:(c[0]||""), name: iName>=0?c[iName]:"", studentId: iId>=0?c[iId]:"",
+        checkScore: iCheck>=0?c[iCheck]:null, quizScore: iQuiz>=0?c[iQuiz]:null,
+        essay:{ s1: iE1>=0?c[iE1]:"", s2: iE2>=0?c[iE2]:"" } };
+      if(!rec.name && !rec.studentId) continue;
+    }
+    out.push(rec);
+  }
+  return out;
+}
+
+$("#clearAll").onclick=()=>{ if(records.length && confirm("누적된 "+records.length+"명 데이터를 모두 지울까요?")){ records=[]; persist(); detailKey=null; render(); toast("모두 지웠습니다."); } };
+$("#exportCsv").onclick=()=>{
+  if(!records.length){ toast("내보낼 데이터가 없습니다.",true); return; }
+  const head=["제출시각","이름","학번","유도확인","형성평가"];
+  const esc=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
+  const lines=[head.join(",")];
+  records.forEach(r=>lines.push([r.timestamp,r.name,r.studentId, (r.checkScore??"")+"/"+r.checkMax, (r.quizScore??"")+"/"+r.quizMax].map(esc).join(",")));
+  const blob=new Blob(["﻿"+lines.join("\n")],{type:"text/csv;charset=utf-8"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="효소반응속도_반별집계.csv"; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+};
+
+/* ── 탭 ── */
+document.querySelectorAll("#tabs .tab").forEach(b=>b.onclick=()=>{ tab=b.dataset.t;
+  document.querySelectorAll("#tabs .tab").forEach(x=>x.classList.toggle("active",x===b)); render(); });
+
+/* ── 집계 ── */
+function mean(a){ return a.length? a.reduce((s,x)=>s+x,0)/a.length : 0; }
+function itemStats(bankKey, field){
+  return BANK[bankKey].map((it,qi)=>{
+    let answered=0, correct=0; const dist=it.opts.map(()=>0);
+    records.forEach(r=>{ const sel=r[field] ? r[field][qi] : undefined;
+      if(sel!==undefined && sel!==null && sel!==""){ const s=toNum(sel); if(s!=null && s<dist.length){ answered++; dist[s]++; if(s===it.a) correct++; } } });
+    return {qi, q:it.q, opts:it.opts, a:it.a, answered, correct, rate:answered?correct/answered:null, dist};
+  });
+}
+function predictStats(){
+  return BANK.predict.map((it,qi)=>{ let answered=0; const dist=it.opts.map(()=>0);
+    records.forEach(r=>{ const sel=r.predict?r.predict[qi]:undefined; if(sel!==undefined&&sel!==null&&sel!==""){ const s=toNum(sel); if(s!=null&&s<dist.length){answered++; dist[s]++;} } });
+    return {qi, q:it.q, opts:it.opts, target:it.target, answered, dist};
+  });
+}
+function rateColor(r){ return r>=.7?"var(--green)":r>=.4?"var(--amber)":"var(--red)"; }
+function ratePill(r){ if(r==null) return ''; const c=r>=.7?"g":r>=.4?"a":"r"; return `<span class="rate-badge" style="border:1px solid;color:${rateColor(r)}">${Math.round(r*100)}%</span>`; }
+
+/* ── 렌더 ── */
+function render(){
+  $("#count").textContent=records.length; $("#hCount").textContent=records.length;
+  const view=$("#view");
+  if(!records.length){ view.innerHTML=`<div class="empty"><div class="big">📊</div>
+    아직 데이터가 없습니다.<br>위에서 학생 보고서 파일을 가져오거나 구글 시트 CSV 를 불러오세요.</div>`; return; }
+  if(tab==="overview") view.innerHTML=renderOverview();
+  else if(tab==="roster") view.innerHTML=renderRoster();
+  else if(tab==="items") view.innerHTML=renderItems();
+  else if(tab==="essays") view.innerHTML=renderEssays();
+  bindRoster();
+}
+function renderOverview(){
+  const cs=records.map(r=>r.checkScore).filter(v=>v!=null);
+  const qs=records.map(r=>r.quizScore).filter(v=>v!=null);
+  const cMax=BANK.check.length, qMax=BANK.quiz.length;
+  const essayCnt=records.filter(r=>r.essay&&(r.essay.s1||r.essay.s2)).length;
+  // 가장 어려운 문항 top
+  const all=[...itemStats("check","check").map(x=>({...x,src:"유도확인",n:x.qi+1})),
+             ...itemStats("quiz","quiz").map(x=>({...x,src:"형성평가",n:x.qi+1}))].filter(x=>x.rate!=null).sort((a,b)=>a.rate-b.rate);
+  const hardest=all.slice(0,3);
+  return `<div class="stats">
+    <div class="stat"><div class="k">제출 인원</div><div class="v">${records.length}<small> 명</small></div></div>
+    <div class="stat"><div class="k">유도확인 평균</div><div class="v" style="color:var(--cyan2)">${mean(cs).toFixed(1)}<small> / ${cMax}</small></div></div>
+    <div class="stat"><div class="k">형성평가 평균</div><div class="v" style="color:var(--cyan2)">${mean(qs).toFixed(1)}<small> / ${qMax}</small></div></div>
+    <div class="stat"><div class="k">서술형 작성</div><div class="v">${essayCnt}<small> / ${records.length}</small></div></div>
+  </div>
+  <div class="card"><h2>가장 정답률이 낮은 문항</h2><p class="csub">학생들이 공통으로 막힌 개념 — 다음 수업의 피드백 지점입니다.</p>
+    ${hardest.length?hardest.map(h=>`<div class="bar-wrap">
+        <div class="bar-lab" style="flex-basis:120px"><span class="pill ${h.rate>=.7?'g':h.rate>=.4?'a':'r'}">${h.src} Q${h.n}</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.round(h.rate*100)}%;background:${rateColor(h.rate)}"></div></div>
+        <div class="bar-val">${Math.round(h.rate*100)}% (${h.correct}/${h.answered})</div></div>
+        <div style="font-size:12.5px;color:var(--muted);margin:2px 0 14px 128px">${h.q}</div>`).join(""):'<p class="csub">문항별 데이터가 있는 제출이 없습니다.</p>'}
+  </div>`;
+}
+function renderRoster(){
+  const rows=records.map(r=>({ key:keyOf(r), name:r.name||"(이름 없음)", id:r.studentId||"", ts:r.timestamp||"",
+    c:r.checkScore, cM:r.checkMax, q:r.quizScore, qM:r.quizMax, e:!!(r.essay&&(r.essay.s1||r.essay.s2)), _r:r }));
+  const val={name:x=>x.name, id:x=>x.id, c:x=>x.c??-1, q:x=>x.q??-1, ts:x=>x.ts};
+  rows.sort((a,b)=>{ const A=val[sortKey](a),B=val[sortKey](b); return (A>B?1:A<B?-1:0)*sortDir; });
+  const scorePill=(v,m)=>{ if(v==null) return '<span class="no">—</span>'; const r=v/m; const c=r>=.7?"g":r>=.4?"a":"r"; return `<span class="pill ${c}">${v}/${m}</span>`; };
+  const arrow=k=> sortKey===k? (sortDir>0?" ▲":" ▼"):"";
+  let html=`<div class="card"><h2>학생 명단</h2><p class="csub">행을 클릭하면 상세 답안이 펼쳐집니다. 열 제목을 눌러 정렬.</p>
+    <div style="overflow-x:auto"><table><thead><tr>
+      <th data-s="name">이름${arrow("name")}</th><th data-s="id">학번${arrow("id")}</th>
+      <th data-s="c">유도확인${arrow("c")}</th><th data-s="q">형성평가${arrow("q")}</th>
+      <th data-s="ts">제출시각${arrow("ts")}</th><th>서술형</th></tr></thead><tbody>`;
+  rows.forEach(x=>{
+    html+=`<tr data-k="${encodeURIComponent(x.key)}"><td>${esc(x.name)}</td><td class="mono">${esc(x.id)}</td>
+      <td>${scorePill(x.c,x.cM)}</td><td>${scorePill(x.q,x.qM)}</td>
+      <td style="color:var(--muted);font-size:12px">${fmtTime(x.ts)}</td>
+      <td>${x.e?'<span class="yes">●</span>':'<span class="no">○</span>'}</td></tr>`;
+    if(detailKey===x.key) html+=`<tr><td colspan="6">${renderDetail(x._r)}</td></tr>`;
+  });
+  html+=`</tbody></table></div></div>`;
+  return html;
+}
+function renderDetail(r){
+  const mc=(bankKey,field)=>BANK[bankKey].map((it,qi)=>{ const sel=r[field]?toNum(r[field][qi]):null;
+    const ok=sel===it.a; const txt=sel==null?'<span class="no">(미응답)</span>':`<span style="color:${ok?'var(--green)':'var(--red)'}">${"ABCD"[sel]}. ${esc(it.opts[sel])} ${ok?'✓':'✗'}</span>`;
+    return `<div class="dline"><span class="lab">Q${qi+1}</span>${esc(it.q)}<br>${txt}</div>`; }).join("");
+  const pr=BANK.predict.map((it,qi)=>{ const sel=r.predict?toNum(r.predict[qi]):null;
+    return `<div class="dline"><span class="lab">P${qi+1}</span>${esc(it.q)} → ${sel==null?'—':esc(it.opts[sel])}</div>`; }).join("");
+  return `<div class="detail">
+    <h4>예측</h4>${pr}
+    <h4 style="margin-top:14px">유도 확인</h4>${mc("check","check")}
+    <h4 style="margin-top:14px">형성평가</h4>${mc("quiz","quiz")}
+    <h4 style="margin-top:14px">서술형</h4>
+    <div class="dline"><span class="lab">서술1</span>${esc(BANK.essay[0])}<div class="dessay">${esc(r.essay&&r.essay.s1||"—")}</div></div>
+    <div class="dline"><span class="lab">서술2</span>${esc(BANK.essay[1])}<div class="dessay">${esc(r.essay&&r.essay.s2||"—")}</div></div>
+  </div>`;
+}
+function bindRoster(){
+  document.querySelectorAll("th[data-s]").forEach(th=>th.onclick=()=>{ const k=th.dataset.s;
+    if(sortKey===k) sortDir*=-1; else{ sortKey=k; sortDir=1; } render(); });
+  document.querySelectorAll("tbody tr[data-k]").forEach(tr=>tr.onclick=()=>{ const k=decodeURIComponent(tr.dataset.k);
+    detailKey = detailKey===k?null:k; render(); });
+}
+function renderItems(){
+  const block=(title,bankKey,field,graded)=>{
+    const stats= graded ? itemStats(bankKey,field) : predictStats();
+    return `<div class="card"><h2>${title}</h2>
+      <p class="csub">${graded?'막대는 각 선택지를 고른 학생 수. 정답 선택지는 초록, 우측 배지는 정답률.':'예측(채점 안 함) 분포. 파란 테두리는 과학적으로 기대되는 답 — 오개념 파악용.'}</p>
+      ${stats.map(s=>{
+        const total=s.dist.reduce((a,b)=>a+b,0)||1;
+        const bars=s.opts.map((o,oi)=>{
+          const n=s.dist[oi], w=Math.round(n/total*100);
+          const isC = graded && oi===s.a, isT = !graded && oi===s.target;
+          const col = isC?"var(--green)": isT?"var(--cyan)": "#33506e";
+          return `<div class="bar-wrap"><div class="bar-lab"><span class="mark ${isC?'correct':isT?'target':''}">${"ABCD"[oi]}</span>${esc(o)}</div>
+            <div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${col}"></div></div>
+            <div class="bar-val">${n}명 (${w}%)</div></div>`; }).join("");
+        return `<div class="item"><div class="q"><span class="qn">${graded?'Q':'P'}${s.qi+1}</span>${esc(s.q)} ${graded?ratePill(s.rate):''}
+          <span style="color:var(--faint);font-size:12px;margin-left:6px">응답 ${s.answered}명</span></div>${bars}</div>`;
+      }).join("")}</div>`;
+  };
+  return block("유도 확인 · 문항별 정답률","check","check",true)
+       + block("형성평가 · 문항별 정답률","quiz","quiz",true)
+       + block("예측 · 사전 개념 분포","predict","predict",false);
+}
+function renderEssays(){
+  const withE=records.filter(r=>r.essay&&(r.essay.s1||r.essay.s2));
+  if(!withE.length) return `<div class="card"><h2>서술형 답안</h2><p class="csub">작성된 서술형 답안이 없습니다.</p></div>`;
+  return `<div class="card"><h2>서술형 답안 (${withE.length}명)</h2>
+    <p class="csub">서술1: ${esc(BANK.essay[0])} · 서술2: ${esc(BANK.essay[1])}</p>
+    ${withE.map(r=>`<div class="detail"><h4>${esc(r.name||"(이름 없음)")} <span style="color:var(--faint);font-family:var(--mono);font-size:11px">${esc(r.studentId||"")}</span></h4>
+      <div class="dline"><span class="lab">서술1</span><div class="dessay">${esc(r.essay.s1||"—")}</div></div>
+      <div class="dline"><span class="lab">서술2</span><div class="dessay">${esc(r.essay.s2||"—")}</div></div></div>`).join("")}</div>`;
+}
+
+/* ── 유틸 ── */
+function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function fmtTime(ts){ if(!ts) return "—"; const d=new Date(ts); if(isNaN(d)) return esc(String(ts).slice(0,16));
+  return d.getFullYear()+"."+String(d.getMonth()+1).padStart(2,"0")+"."+String(d.getDate()).padStart(2,"0")+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
+let toTimer=null;
+function toast(m,err){ const t=$("#toast"); t.textContent=m; t.className="toast show"+(err?" err":""); clearTimeout(toTimer); toTimer=setTimeout(()=>t.className="toast",3000); }
+
+render();
+</script>
