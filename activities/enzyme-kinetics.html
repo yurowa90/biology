@@ -1,0 +1,1050 @@
+<!--
+  효소반응속도 학습 워크북 — 미카엘리스-멘텐 (Michaelis–Menten)
+  단일 파일 정적 웹앱. GitHub Pages 등 어떤 정적 호스팅에도 그대로 올리면 동작합니다.
+  서버(백엔드)가 전혀 필요 없습니다.
+  - 제출 방식은 아래 CONFIG.submit 에서 선택합니다.
+      "download"(기본, 설정 불필요) · "googleForm"(구글 폼, Apps Script 아님) · "endpoint"(임의 POST URL)
+-->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>효소반응속도 학습 워크북 · 미카엘리스-멘텐</title>
+<style>
+  :root{
+    --bg:#070b14; --bg2:#0a1120; --panel:#0e1626; --panel2:#111d31;
+    --line:#1d2b41; --line2:#26374f;
+    --txt:#e6edf6; --muted:#7e8da0; --faint:#586479;
+    --cyan:#45d3d8; --cyan2:#63e6ea; --cyandim:#1c5a5e;
+    --green:#33d17f; --amber:#f2c14e; --violet:#a98bff; --red:#ff6b7d; --blue:#5aa9ff;
+    --mono:ui-monospace,SFMono-Regular,Menlo,"Cascadia Mono",monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:var(--sans); color:var(--txt);
+    background:radial-gradient(1200px 700px at 78% -8%,#122036 0,transparent 55%),
+               radial-gradient(900px 600px at 5% 0,#0d1a2c 0,transparent 50%),
+               linear-gradient(180deg,#070b14,#060910 60%);
+    min-height:100vh; -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--cyan)}
+  .mono{font-family:var(--mono)}
+  .hidden{display:none !important}
+
+  /* ---------- header ---------- */
+  header.top{
+    display:flex; align-items:center; gap:20px;
+    padding:14px 26px; border-bottom:1px solid var(--line);
+    background:rgba(8,13,22,.7); backdrop-filter:blur(6px);
+    position:sticky; top:0; z-index:20;
+  }
+  .brand{font-family:var(--mono); font-size:11.5px; letter-spacing:.22em; color:var(--faint); white-space:nowrap}
+  .brand b{color:var(--cyan)}
+  .title{font-size:18px; font-weight:700}
+  .title span{color:var(--cyan)}
+  .top-right{margin-left:auto; display:flex; align-items:center; gap:16px}
+  .who{font-size:13px; color:var(--muted)}
+  .who b{color:var(--txt)}
+  .btn-exit{font-family:var(--mono); font-size:11px; letter-spacing:.12em; padding:7px 13px;
+    border:1px solid var(--line2); border-radius:8px; background:transparent; color:var(--muted); cursor:pointer}
+  .btn-exit:hover{color:var(--txt); border-color:var(--cyandim)}
+
+  /* ---------- layout ---------- */
+  .wrap{display:grid; grid-template-columns:270px 1fr; gap:26px; max-width:1240px; margin:0 auto; padding:26px 26px 70px}
+  @media(max-width:880px){ .wrap{grid-template-columns:1fr} nav.steps{position:static !important} }
+
+  /* ---------- sidebar ---------- */
+  nav.steps{position:sticky; top:78px; align-self:start; display:flex; flex-direction:column; gap:10px}
+  .step{
+    display:flex; align-items:center; gap:13px; text-align:left;
+    padding:13px 15px; border:1px solid var(--line); border-radius:13px;
+    background:linear-gradient(180deg,#0d1626,#0b1320); color:var(--muted); cursor:pointer; width:100%;
+    transition:border-color .15s, transform .05s;
+  }
+  .step:hover{border-color:var(--line2)}
+  .step:active{transform:translateY(1px)}
+  .step .num{
+    flex:0 0 26px; width:26px; height:26px; border-radius:50%;
+    border:1.5px solid var(--line2); display:grid; place-items:center;
+    font-family:var(--mono); font-size:12.5px; color:var(--muted);
+  }
+  .step .lbl{font-family:var(--mono); font-size:10px; letter-spacing:.16em; color:var(--faint)}
+  .step .nm{font-size:14px; font-weight:600; margin-top:2px; color:var(--muted)}
+  .step.active{border-color:var(--cyan); box-shadow:0 0 0 1px var(--cyandim) inset, 0 8px 30px -18px var(--cyan)}
+  .step.active .num{border-color:var(--cyan); color:var(--cyan)}
+  .step.active .nm{color:var(--txt)}
+  .step.done .num{background:var(--green); border-color:var(--green); color:#04240f}
+  .step.done .nm{color:#bfeed4}
+
+  /* ---------- panel ---------- */
+  .panel{
+    border:1px solid var(--line); border-radius:18px; padding:30px 34px 26px;
+    background:linear-gradient(180deg,rgba(16,24,40,.9),rgba(9,15,26,.9));
+    box-shadow:0 30px 80px -50px #000;
+  }
+  .eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.2em; color:var(--cyan); margin-bottom:12px}
+  h1.h{font-size:29px; margin:0 0 8px; letter-spacing:-.01em}
+  .sub{color:var(--muted); font-size:15px; line-height:1.6; margin:0 0 24px; max-width:70ch}
+  .foot{display:flex; align-items:center; justify-content:space-between; margin-top:28px; gap:14px; flex-wrap:wrap}
+  .note{color:var(--faint); font-size:12.5px}
+  .btn{font-size:14px; font-weight:600; padding:11px 20px; border-radius:11px; cursor:pointer; border:1px solid transparent}
+  .btn-prev{background:transparent; border-color:var(--line2); color:var(--muted)}
+  .btn-prev:hover{color:var(--txt); border-color:var(--cyandim)}
+  .btn-next{background:linear-gradient(180deg,#1a6f74,#12545a); border-color:#1f8288; color:#e7fdff; box-shadow:0 10px 30px -14px var(--cyan)}
+  .btn-next:hover{filter:brightness(1.08)}
+  .btn-next:disabled{opacity:.4; cursor:not-allowed; box-shadow:none}
+  .btn-violet{background:linear-gradient(180deg,#5a44b0,#43338a); border-color:#6f57c9; color:#efeaff}
+
+  /* ---------- formula / chips ---------- */
+  .kbd{font-family:var(--mono); font-size:.92em; background:#0c1728; border:1px solid var(--line2); border-radius:6px; padding:1px 6px; color:var(--cyan2)}
+  .fx{font-family:"Cambria Math",Georgia,serif; font-size:1.14em}
+  .fx sub,.fx sup{font-size:.72em}
+
+  /* ---------- MCQ ---------- */
+  .qcard{border:1px solid var(--line); border-radius:14px; padding:18px 20px; margin-bottom:16px; background:rgba(10,17,30,.6)}
+  .qh{font-size:15.5px; font-weight:600; margin-bottom:14px; line-height:1.5}
+  .qh .qn{color:var(--cyan); font-family:var(--mono); margin-right:8px}
+  .opt{
+    display:flex; align-items:center; gap:14px; width:100%; text-align:left;
+    padding:14px 16px; border:1px solid var(--line); border-radius:11px; margin-bottom:10px;
+    background:linear-gradient(180deg,#0c1524,#0a1220); color:var(--txt); cursor:pointer; font-size:14.5px;
+    transition:border-color .12s, background .12s;
+  }
+  .opt:last-child{margin-bottom:0}
+  .opt:hover{border-color:var(--line2)}
+  .opt .k{flex:0 0 26px; width:26px; height:26px; border-radius:7px; border:1px solid var(--line2);
+    display:grid; place-items:center; font-family:var(--mono); font-size:12px; color:var(--muted)}
+  .opt.sel{border-color:var(--cyan); background:linear-gradient(180deg,#0e2733,#0b1c27)}
+  .opt.sel .k{background:var(--cyan); border-color:var(--cyan); color:#04222a}
+  .opt.correct{border-color:var(--green); background:linear-gradient(180deg,#0d2419,#0a1c15)}
+  .opt.correct .k{background:var(--green); border-color:var(--green); color:#04240f}
+  .opt.wrong{border-color:var(--red); background:linear-gradient(180deg,#2a1216,#1c0e12)}
+  .opt.wrong .k{background:var(--red); border-color:var(--red); color:#2a0006}
+  .expl{font-size:13px; color:var(--muted); margin-top:10px; padding:10px 13px; border-left:2px solid var(--cyandim); background:rgba(69,211,216,.05); border-radius:0 8px 8px 0; line-height:1.55}
+  .expl.hidden{display:none}
+
+  /* ---------- derivation accordion ---------- */
+  .prep{border:1px solid var(--line2); border-radius:12px; padding:16px 18px; margin-bottom:18px; background:linear-gradient(180deg,#0d1c2b,#0b1624)}
+  .prep .tag{font-family:var(--mono); font-size:10px; letter-spacing:.18em; color:var(--cyan); margin-bottom:8px}
+  .prep p{margin:0; font-size:14px; line-height:1.7; color:#cdd8e6}
+  .acc{border:1px solid var(--line); border-radius:12px; margin-bottom:11px; overflow:hidden; background:rgba(10,17,30,.5)}
+  .acc-h{display:flex; align-items:center; gap:14px; padding:15px 17px; cursor:pointer}
+  .acc-h .an{flex:0 0 26px; width:26px; height:26px; border-radius:50%; background:#0c1c2a; border:1px solid var(--cyandim);
+    display:grid; place-items:center; font-family:var(--mono); font-size:12px; color:var(--cyan)}
+  .acc-h .at{font-weight:600; font-size:15px}
+  .acc-h .caret{margin-left:auto; color:var(--faint); transition:transform .18s}
+  .acc.open .caret{transform:rotate(90deg)}
+  .acc-b{padding:0 18px; max-height:0; overflow:hidden; transition:max-height .25s ease, padding .2s}
+  .acc.open .acc-b{padding:2px 18px 18px; max-height:420px}
+  .acc-b p{font-size:14px; line-height:1.7; color:#cdd8e6; margin:6px 0}
+  .eqbox{background:#0a1524; border:1px solid var(--line2); border-radius:10px; padding:16px; text-align:center; margin:10px 0}
+  .eqbox .fx{font-size:1.24em}
+
+  /* ---------- concept callouts ---------- */
+  .thrust{background:linear-gradient(180deg,#0e1a2b,#0b1421); border:1px solid var(--line2); border-radius:12px; padding:20px; text-align:center; margin-bottom:20px}
+  .thrust .lab{font-family:var(--mono); font-size:11px; letter-spacing:.14em; color:var(--amber); margin-bottom:8px}
+  .thrust .fx{font-size:1.5em}
+  .call{border-left:3px solid var(--violet); background:rgba(169,139,255,.06); border-radius:0 10px 10px 0; padding:14px 18px; margin-bottom:12px}
+  .call.amber{border-color:var(--amber); background:rgba(242,193,78,.06)}
+  .call .ct{font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; color:var(--violet); margin-bottom:6px}
+  .call.amber .ct{color:var(--amber)}
+  .call p{margin:0; font-size:14px; line-height:1.65; color:#d3dce8}
+
+  /* ---------- simulator ---------- */
+  .sim{display:grid; grid-template-columns:1fr 300px; gap:20px}
+  @media(max-width:820px){ .sim{grid-template-columns:1fr} }
+  .canvas-wrap{border:1px solid var(--line); border-radius:12px; background:#080f1b; padding:12px; position:relative}
+  .canvas-cap{font-family:var(--mono); font-size:10px; letter-spacing:.12em; color:var(--faint); margin-bottom:6px; display:flex; justify-content:space-between}
+  canvas{width:100%; display:block; border-radius:8px}
+  .ctrl{border:1px solid var(--line); border-radius:12px; padding:16px; background:linear-gradient(180deg,#0e1626,#0b1220)}
+  .ctrl-row{display:flex; gap:10px; margin-bottom:14px}
+  .csmall{flex:1; font-family:var(--mono); font-size:11px; letter-spacing:.08em; padding:9px; border-radius:9px; border:1px solid var(--line2); background:#0c1524; color:var(--muted); cursor:pointer}
+  .csmall:hover{color:var(--txt); border-color:var(--cyandim)}
+  .csmall.go{background:linear-gradient(180deg,#12545a,#0e444a); border-color:#1f8288; color:#dffbff}
+  .sld{margin-bottom:15px}
+  .sld label{display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:6px}
+  .sld label .v{font-family:var(--mono); color:var(--cyan2)}
+  .sld input[type=range]{width:100%; accent-color:var(--cyan)}
+  .seg{display:flex; gap:6px; margin-top:5px}
+  .seg button{flex:1; font-size:12px; padding:8px 4px; border-radius:8px; border:1px solid var(--line2); background:#0c1524; color:var(--muted); cursor:pointer}
+  .seg button.on{background:#12545a; border-color:#1f8288; color:#dffbff}
+  .chk{font-size:12.5px; color:var(--muted); display:flex; align-items:center; gap:8px; margin-top:9px}
+  .chk .box{width:16px; height:16px; border-radius:5px; border:1px solid var(--line2); display:grid; place-items:center; font-size:11px; color:transparent}
+  .chk.on .box{background:var(--green); border-color:var(--green); color:#04240f}
+  .chk.on{color:#bfeed4}
+
+  .readouts{display:grid; grid-template-columns:1fr 1fr 1fr; gap:11px; margin-top:18px}
+  @media(max-width:560px){ .readouts{grid-template-columns:1fr 1fr} }
+  .ro{border:1px solid var(--line); border-radius:11px; padding:12px 13px; background:rgba(10,17,30,.55)}
+  .ro .rk{font-family:var(--mono); font-size:9.5px; letter-spacing:.1em; color:var(--faint); margin-bottom:4px; text-transform:uppercase}
+  .ro .rv{font-family:var(--mono); font-size:20px; font-weight:600}
+  .ro .ru{font-size:11px; color:var(--muted); margin-left:3px}
+  .big-read{border:1px solid var(--cyandim); border-radius:12px; padding:15px 18px; background:linear-gradient(180deg,#0c1f28,#0a1822); margin-top:18px}
+  .big-read .rk{font-family:var(--mono); font-size:10px; letter-spacing:.12em; color:var(--faint); text-transform:uppercase}
+  .big-read .rv{font-family:var(--mono); font-size:30px; font-weight:700; color:var(--cyan2)}
+  .big-read .hint{font-size:12px; color:var(--muted); margin-top:2px}
+
+  /* ---------- AI ---------- */
+  .keybox{border:1px solid var(--line2); border-radius:14px; padding:18px 20px; margin-bottom:22px; background:linear-gradient(180deg,#130f24,#0e0b1c)}
+  .keybox .kh{font-family:var(--mono); font-size:11px; letter-spacing:.14em; color:var(--violet); margin-bottom:12px}
+  .keyrow{display:flex; gap:10px}
+  .keyrow input{flex:1; font-family:var(--mono); font-size:13px; padding:11px 13px; border-radius:9px; border:1px solid var(--line2); background:#0b1220; color:var(--txt)}
+  .keyrow input:focus{outline:none; border-color:var(--violet)}
+  .key-note{font-size:12px; color:var(--muted); margin-top:10px; display:flex; align-items:center; gap:6px}
+  .essay textarea{width:100%; min-height:120px; resize:vertical; font-family:var(--sans); font-size:14px; line-height:1.6;
+    padding:13px 15px; border-radius:11px; border:1px solid var(--line2); background:#0a1220; color:var(--txt)}
+  .essay textarea:focus{outline:none; border-color:var(--cyandim)}
+  .essay-foot{display:flex; align-items:center; justify-content:space-between; margin-top:10px}
+  .cc{font-size:12px; color:var(--faint); font-family:var(--mono)}
+  .ai-out{margin-top:14px; border:1px solid var(--line2); border-radius:11px; padding:15px 17px; background:rgba(169,139,255,.06); font-size:14px; line-height:1.7; white-space:pre-wrap; color:#e3ddf6}
+  .ai-out .ah{font-family:var(--mono); font-size:10px; letter-spacing:.14em; color:var(--violet); margin-bottom:9px}
+  .spin{display:inline-block; width:13px; height:13px; border:2px solid var(--violet); border-top-color:transparent; border-radius:50%; animation:sp .7s linear infinite; vertical-align:-2px; margin-right:7px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  /* ---------- report ---------- */
+  .rsec{border:1px solid var(--line); border-radius:13px; padding:18px 20px; margin-bottom:16px; background:rgba(10,17,30,.5)}
+  .rsec .rt{font-family:var(--mono); font-size:11px; letter-spacing:.14em; color:var(--cyan); margin-bottom:14px; display:flex; justify-content:space-between}
+  .rsec .rt .score{color:var(--amber)}
+  .idgrid{display:grid; grid-template-columns:repeat(4,1fr); gap:12px}
+  @media(max-width:640px){ .idgrid{grid-template-columns:1fr 1fr} }
+  .idcell{border:1px solid var(--line); border-radius:10px; padding:11px 13px; background:#0a1220}
+  .idcell .il{font-size:10px; color:var(--faint); font-family:var(--mono); margin-bottom:5px; text-transform:uppercase}
+  .idcell input{width:100%; background:transparent; border:none; color:var(--txt); font-size:18px; font-family:var(--mono); font-weight:600}
+  .idcell input:focus{outline:none}
+  .idcell .big{font-size:22px; font-family:var(--mono); font-weight:700}
+  .qline{margin-bottom:14px; font-size:14px; line-height:1.55}
+  .qline .qq{color:#c6d2e2}
+  .qline .ans{display:block; margin-top:4px}
+  .ans .lab{font-weight:700}
+  .ans .ok{color:var(--green)} .ans .no{color:var(--red)} .ans .neu{color:var(--muted)}
+  .toast{position:fixed; left:50%; bottom:28px; transform:translateX(-50%) translateY(20px); opacity:0;
+    background:#0e2733; border:1px solid var(--cyandim); color:#dffbff; padding:12px 20px; border-radius:11px;
+    font-size:14px; transition:.25s; z-index:60; box-shadow:0 20px 50px -20px #000}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+  .toast.err{background:#2a1216; border-color:#5a2530; color:#ffd7dc}
+
+  /* ---------- intro modal ---------- */
+  .modal{position:fixed; inset:0; background:rgba(4,7,12,.82); backdrop-filter:blur(5px); display:grid; place-items:center; z-index:80; padding:20px}
+  .modal .card{width:min(440px,100%); border:1px solid var(--line2); border-radius:18px; padding:30px; background:linear-gradient(180deg,#0f1930,#0a1120)}
+  .modal h2{margin:0 0 4px; font-size:22px}
+  .modal p{margin:0 0 22px; color:var(--muted); font-size:14px; line-height:1.6}
+  .modal .field{margin-bottom:15px}
+  .modal .field label{display:block; font-size:12px; color:var(--faint); font-family:var(--mono); letter-spacing:.1em; margin-bottom:6px; text-transform:uppercase}
+  .modal .field input{width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--line2); background:#0a1220; color:var(--txt); font-size:15px}
+  .modal .field input:focus{outline:none; border-color:var(--cyan)}
+
+  @media print{
+    body{background:#fff; color:#000}
+    header.top, nav.steps, .foot, .top-right, .modal{display:none !important}
+    .wrap{display:block; max-width:none; padding:0}
+    .panel{border:none; box-shadow:none; background:#fff}
+    .rsec{border:1px solid #ccc; background:#fff; break-inside:avoid}
+    .rt, .eyebrow{color:#000 !important}
+  }
+</style>
+
+<header class="top">
+  <div class="brand"><b>Vmax</b> · MICHAELIS–MENTEN · WORKBOOK</div>
+  <div class="title">효소반응속도 <span>학습 워크북</span></div>
+  <div class="top-right">
+    <div class="who">학생 · <b id="whoName">—</b></div>
+    <button class="btn-exit" id="btnReset">초기화</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="steps" id="nav"></nav>
+  <main id="main"></main>
+</div>
+
+<div class="modal" id="intro">
+  <div class="card">
+    <h2>시작하기 전에</h2>
+    <p>이름과 학번을 입력해 주세요. 최종 보고서에 함께 기록됩니다.</p>
+    <div class="field"><label>이름</label><input id="inName" placeholder="홍길동" autocomplete="off"></div>
+    <div class="field"><label>학번</label><input id="inId" placeholder="10203" autocomplete="off"></div>
+    <div style="display:flex; justify-content:flex-end">
+      <button class="btn btn-next" id="introGo">워크북 시작 →</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   설정
+   ============================================================ */
+const CONFIG = {
+  // 제출 방식 — 서버 없이 GitHub Pages 만으로 동작합니다.
+  submit: {
+    // "download"  : (기본) 보고서를 파일로 저장 → 학생이 구글 클래스룸/이메일로 제출. 설정 불필요.
+    // "googleForm": 구글 폼(Apps Script 아님)으로 전송 → 연결된 스프레드시트에 자동 기록.
+    // "endpoint"  : Formspree / Cloudflare Worker 등 임의의 POST URL 로 전송.
+    mode: "download",
+
+    // mode:"googleForm" 일 때만 사용.
+    //   1) 구글 폼을 만들고, 아래 필드마다 '단답형' 질문을 하나씩 추가합니다(모두 '필수 아님'으로).
+    //   2) 폼 미리보기에서 '페이지 소스 보기' → 각 질문의 entry.XXXXXXX 번호를 찾아 매핑합니다.
+    //   3) 폼 응답을 스프레드시트에 연결하면 제출이 자동으로 쌓입니다. (백엔드/Apps Script 불필요)
+    googleForm: {
+      formId: "",   // https://docs.google.com/forms/d/e/<formId>/viewform 의 <formId>
+      entries: {    // 항목명 → entry.XXXXXXX 번호 (사용할 항목만 채우면 됩니다. payload 하나만 써도 됩니다)
+        name:"", studentId:"", checkScore:"", quizScore:"", essay1:"", essay2:"", payload:""
+      }
+    },
+
+    // mode:"endpoint" 일 때만 사용. JSON 을 POST 로 받는 URL.
+    endpoint: ""
+  }
+};
+// AI 서술형 피드백에 사용할 Claude 모델. 강사가 비용/품질에 따라 바꿀 수 있습니다.
+//   claude-haiku-4-5  (가장 저렴)  ·  claude-sonnet-5  (권장, 균형)  ·  claude-opus-5 (최고 품질)
+const AI_MODEL = "claude-sonnet-5";
+
+const LS = { student:"mm_student", state:"mm_state", apiKey:"mm_anthropic_key" };
+
+/* ============================================================
+   상태
+   ============================================================ */
+const STEPS = [
+  {id:"predict", lbl:"PREDICT",   nm:"예측"},
+  {id:"theory",  lbl:"THEORY",    nm:"이론 유도"},
+  {id:"kcat",    lbl:"TURNOVER",  nm:"회전수 kcat"},
+  {id:"sim",     lbl:"SIMULATOR", nm:"반응속도 시뮬레이터"},
+  {id:"check",   lbl:"CHECK",     nm:"유도 확인"},
+  {id:"quiz",    lbl:"FORMATIVE", nm:"형성평가"},
+  {id:"ai",      lbl:"AI",        nm:"서술형 · AI"},
+  {id:"submit",  lbl:"SUBMIT",    nm:"최종 보고서"},
+];
+
+let state = {
+  student:{name:"", id:""},
+  predict:{}, check:{}, quiz:{}, essay:{s1:"",s2:""},
+  sim:{Vmax:6, Km:12, S:12, inh:"none", istr:0},
+  done:{}
+};
+let cur = 0;
+
+/* ---------- persistence ---------- */
+function save(){ try{ localStorage.setItem(LS.state, JSON.stringify(state)); }catch(e){} }
+function load(){
+  try{
+    const st = JSON.parse(localStorage.getItem(LS.state)||"null");
+    if(st) state = Object.assign(state, st);
+    const stu = JSON.parse(localStorage.getItem(LS.student)||"null");
+    if(stu) state.student = stu;
+  }catch(e){}
+}
+
+/* ============================================================
+   문항 데이터
+   ============================================================ */
+// 예측 (채점 안 함)
+const PREDICT = [
+  {q:"기질 농도 [S]를 계속 높이면 반응 속도 v는 어떻게 될까요?",
+   opts:["끝없이 비례하며 증가한다","어느 순간부터 거의 일정해진다 (포화)","증가하다가 다시 감소한다"]},
+  {q:"효소 농도 [E]₀ 를 2배로 하면 최대 반응속도 Vmax 는?",
+   opts:["그대로다","2배가 된다","절반이 된다"]},
+];
+// 유도 확인 (채점) — 4문항
+const CHECK = [
+  {q:"효소-기질 복합체 ES 의 생성 속도로 옳은 것은? (E+S ⇌ ES → E+P)",
+   opts:["k₁[E][S]","k₋₁[ES]","k₂[ES]","k₁[ES]"], a:0,
+   e:"ES는 자유 효소 E와 기질 S가 만나 생성되므로 생성 속도는 k₁[E][S] 입니다."},
+  {q:"정상상태 가정 d[ES]/dt ≈ 0 에서 얻는 관계식은?",
+   opts:["k₁[E][S] = k₂[ES]","k₁[E][S] = (k₋₁+k₂)[ES]","k₋₁[ES] = k₂[ES]","[E] = [ES]"], a:1,
+   e:"ES의 생성속도 k₁[E][S] 와 분해속도 (k₋₁+k₂)[ES] 가 같아집니다."},
+  {q:"미카엘리스 상수 Km 의 정의로 옳은 것은?",
+   opts:["k₁ / (k₋₁+k₂)","(k₋₁+k₂) / k₁","k₂ / k₁","k₋₁ / k₂"], a:1,
+   e:"Km ≡ (k₋₁+k₂)/k₁. 정상상태식을 [E][S]/[ES] 로 정리하면 Km 이 됩니다."},
+  {q:"효소 보존식 [E]₀ = [E]+[ES] 를 대입해 [ES]를 [E]₀로 나타내면?",
+   opts:["[ES] = [E]₀[S] / (Km+[S])","[ES] = [E]₀[S] / Km","[ES] = [E]₀·Km / [S]","[ES] = [E]₀ / (Km+[S])"], a:0,
+   e:"[ES] = [E]₀[S]/(Km+[S]). 이를 v=k₂[ES] 에 넣으면 미카엘리스-멘텐 식이 됩니다."},
+];
+// 형성평가 (채점) — 4문항
+const QUIZ = [
+  {q:"[S] ≫ Km 인 조건에서 반응은 몇 차 반응처럼 보이나요?",
+   opts:["0차 반응","1차 반응","2차 반응","3차 반응"], a:0,
+   e:"효소가 거의 다 포화되어 v ≈ Vmax 로 [S]와 무관 → 0차 반응처럼 거동합니다."},
+  {q:"효소 농도 [E]₀ 만 2배로 하면 Km 과 Vmax 는 어떻게 변하나요?",
+   opts:["Km 2배, Vmax 그대로","Km 그대로, Vmax 2배","둘 다 2배","변화 없음"], a:1,
+   e:"Vmax = kcat·[E]₀ 이므로 Vmax는 2배. Km은 속도상수들의 비라서 효소 농도와 무관 → 그대로."},
+  {q:"경쟁적 억제제를 넣었을 때 나타나는 변화로 옳은 것은?",
+   opts:["겉보기 Km 증가, Vmax 불변","Km 불변, Vmax 감소","둘 다 증가","둘 다 감소"], a:0,
+   e:"경쟁적 억제제는 활성부위를 두고 기질과 경쟁 → 겉보기 Km 증가, 기질을 충분히 넣으면 Vmax는 회복(불변)."},
+  {q:"회전수 kcat(turnover number)의 의미로 옳은 것은?",
+   opts:["효소가 변성되는 속도","효소 1개가 단위시간당 전환하는 기질 분자 수","기질이 확산되는 속도","억제제의 농도"], a:1,
+   e:"kcat은 포화 상태에서 효소 1개가 1초에 만들어내는 생성물(전환하는 기질) 수입니다."},
+];
+// 서술형
+const ESSAY = [
+  {k:"s1", q:"낮은 기질 농도([S]≪Km)와 높은 기질 농도([S]≫Km)에서 반응 차수가 왜 달라지는지, 미카엘리스-멘텐 식과 '효소 포화' 개념을 근거로 설명하시오."},
+  {k:"s2", q:"경쟁적 억제제와 비경쟁적 억제제를 넣었을 때 Km과 Vmax가 각각 어떻게 변하는지, 그리고 이중역수(Lineweaver–Burk) 그래프의 기울기·절편 변화를 근거로 설명하시오."},
+];
+
+/* ============================================================
+   렌더링
+   ============================================================ */
+const $ = s=>document.querySelector(s);
+const main = $("#main");
+
+function renderNav(){
+  const nav = $("#nav"); nav.innerHTML="";
+  STEPS.forEach((s,i)=>{
+    const b = document.createElement("button");
+    b.className = "step" + (i===cur?" active":"") + (state.done[s.id]?" done":"");
+    b.innerHTML = `<div class="num">${state.done[s.id]?"✓":(i+1)}</div>
+      <div><div class="lbl">${String(i+1).padStart(2,"0")} · ${s.lbl}</div><div class="nm">${s.nm}</div></div>`;
+    b.onclick = ()=>{ cur=i; renderAll(); window.scrollTo({top:0,behavior:"smooth"}); };
+    nav.appendChild(b);
+  });
+}
+
+function footer(prevLabel, nextLabel, nextEnabled, note){
+  const dis = nextEnabled===false ? "disabled":"";
+  return `<div class="foot">
+    <div>${note?`<div class="note">${note}</div>`:""}</div>
+    <div style="display:flex; gap:10px">
+      ${cur>0?`<button class="btn btn-prev" onclick="go(${cur-1})">← 이전</button>`:""}
+      ${cur<STEPS.length-1?`<button class="btn btn-next" id="nextBtn" ${dis} onclick="advance()">${nextLabel||"다음 →"}</button>`:""}
+    </div></div>`;
+}
+window.go = i=>{ cur=i; renderAll(); window.scrollTo({top:0,behavior:"smooth"}); };
+window.advance = ()=>{ state.done[STEPS[cur].id]=true; save(); if(cur<STEPS.length-1) cur++; renderAll(); window.scrollTo({top:0,behavior:"smooth"}); };
+
+function renderAll(){
+  // 시뮬레이터를 벗어날 때 애니메이션/스윕 정리
+  if(simSweep){ clearInterval(simSweep); simSweep=null; }
+  if(simAnim){ cancelAnimationFrame(simAnim); simAnim=null; }
+  renderNav();
+  const id = STEPS[cur].id;
+  ({predict:rPredict, theory:rTheory, kcat:rKcat, sim:rSim, check:rCheck, quiz:rQuiz, ai:rAI, submit:rSubmit}[id])();
+}
+
+/* ---------- STEP 1: PREDICT ---------- */
+function rPredict(){
+  let cards = PREDICT.map((it,qi)=>{
+    const opts = it.opts.map((o,oi)=>{
+      const sel = state.predict[qi]===oi ? " sel":"";
+      return `<button class="opt${sel}" onclick="pickPredict(${qi},${oi})">
+        <span class="k">${"ABC"[oi]}</span><span>${o}</span></button>`;
+    }).join("");
+    return `<div class="qcard"><div class="qh"><span class="qn">Q${qi+1}</span>${it.q}</div>${opts}</div>`;
+  }).join("");
+  main.innerHTML = `<div class="panel">
+    <div class="eyebrow">STEP 01 · 예측 PREDICT</div>
+    <h1 class="h">먼저 예측해 볼까요?</h1>
+    <p class="sub">아직 정답을 몰라도 괜찮습니다. 직관대로 골라 주세요. 예측은 채점되지 않고 보고서에 함께 기록됩니다.</p>
+    ${cards}
+    <p class="note" style="margin-top:6px">예측은 채점되지 않습니다. 나중에 시뮬레이터로 직접 확인하게 됩니다.</p>
+    ${footer(null,"예측 저장하고 시작 →")}</div>`;
+}
+window.pickPredict = (q,o)=>{ state.predict[q]=o; save(); rPredict(); };
+
+/* ---------- STEP 2: THEORY (derivation) ---------- */
+const DERIV = [
+  {t:"반응 도식과 기호 정하기", b:`<p>효소 반응을 다음과 같이 놓습니다.</p>
+    <div class="eqbox"><span class="fx">E + S &nbsp;⇌<sub style="font-size:.6em">k₋₁</sub><sup style="font-size:.6em">k₁</sup>&nbsp; ES &nbsp;→<sup style="font-size:.6em">k₂</sup>&nbsp; E + P</span></div>
+    <p>E는 자유 효소, S는 기질, ES는 효소-기질 복합체, P는 생성물입니다. 반응 속도는 생성물이 만들어지는 속도 <span class="fx">v = k₂[ES]</span> 로 정의합니다.</p>`},
+  {t:"ES 복합체의 생성과 분해 속도", b:`<p><b>생성:</b> E와 S가 만나 ES가 되므로 <span class="fx">k₁[E][S]</span></p>
+    <p><b>분해:</b> ES는 다시 E+S로 돌아가거나(k₋₁) 생성물이 되어(k₂) 사라지므로 <span class="fx">(k₋₁ + k₂)[ES]</span></p>`},
+  {t:"정상상태 가정 (Briggs–Haldane)", b:`<p>반응 초기의 짧은 시간 뒤 [ES]가 거의 일정하게 유지된다고 봅니다.</p>
+    <div class="eqbox"><span class="fx">d[ES]/dt ≈ 0 &nbsp;⇒&nbsp; k₁[E][S] = (k₋₁+k₂)[ES]</span></div>`},
+  {t:"미카엘리스 상수 Km 정의", b:`<p>속도상수들을 하나로 묶어 Km 으로 정의합니다.</p>
+    <div class="eqbox"><span class="fx">Km ≡ (k₋₁+k₂)/k₁ &nbsp;⇒&nbsp; [ES] = [E][S] / Km</span></div>`},
+  {t:"효소 보존식 대입", b:`<p>전체 효소는 자유 효소와 복합체로 나뉩니다: <span class="fx">[E]₀ = [E] + [ES]</span>. [E] = [E]₀ − [ES] 를 대입해 정리하면</p>
+    <div class="eqbox"><span class="fx">[ES] = [E]₀[S] / (Km + [S])</span></div>`},
+  {t:"미카엘리스-멘텐 식 완성", b:`<p><span class="fx">v = k₂[ES]</span> 에 대입하고, 최대 속도 <span class="fx">Vmax = k₂[E]₀</span> 로 놓으면</p>
+    <div class="eqbox"><span class="fx" style="font-size:1.4em">v = Vmax · [S] / (Km + [S])</span></div>
+    <p>기질 농도가 <span class="fx">[S] = Km</span> 일 때 <span class="fx">v = Vmax/2</span> — 즉 <b>Km은 반응속도가 최대의 절반이 되는 기질 농도</b>입니다.</p>`},
+];
+function rTheory(){
+  const accs = DERIV.map((d,i)=>`
+    <div class="acc${i===0?" open":""}" id="acc${i}">
+      <div class="acc-h" onclick="toggleAcc(${i})"><div class="an">${i+1}</div><div class="at">${d.t}</div><div class="caret">▸</div></div>
+      <div class="acc-b">${d.b}</div>
+    </div>`).join("");
+  main.innerHTML = `<div class="panel">
+    <div class="eyebrow">STEP 02 · 이론 유도 DERIVATION</div>
+    <h1 class="h">미카엘리스-멘텐 식 유도</h1>
+    <p class="sub">정상상태 가정으로 반응 속도 v를 기질 농도 [S]로 나타내 봅니다. 각 단계를 눌러 펼쳐 보세요.</p>
+    <div class="prep"><div class="tag">준비</div><p>어느 순간 자유 효소 <span class="kbd">E</span>, 기질 <span class="kbd">S</span> 가 만나 복합체 <span class="kbd">ES</span> 를 이루고, 이것이 생성물 <span class="kbd">P</span> 로 전환됩니다. 전체 효소량은 보존됩니다: <span class="fx">[E]₀ = [E] + [ES]</span>.</p></div>
+    ${accs}
+    ${footer(null,"다음 → 회전수 kcat")}</div>`;
+}
+window.toggleAcc = i=>{ document.getElementById("acc"+i).classList.toggle("open"); };
+
+/* ---------- STEP 3: kcat ---------- */
+function rKcat(){
+  main.innerHTML = `<div class="panel">
+    <div class="eyebrow">STEP 03 · 회전수 TURNOVER</div>
+    <h1 class="h">회전수 kcat 의 의미</h1>
+    <p class="sub">kcat 은 포화 상태에서 효소 1개가 1초에 전환하는 기질 분자 수(회전수)입니다. 로켓의 연소율처럼, 효소의 '일하는 빠르기'를 나타냅니다.</p>
+    <div class="thrust"><div class="lab">최대 속도 &nbsp;·&nbsp; MAX RATE</div><div class="fx">Vmax = k₂ · [E]₀ = kcat · [E]₀</div></div>
+    <div class="call"><div class="ct">낮은 기질 농도에서는 &nbsp;([S] ≪ Km)</div>
+      <p><span class="fx">v ≈ (Vmax/Km)·[S] = (kcat/Km)·[E]₀·[S]</span> — [S]에 비례하는 1차 반응처럼 거동합니다. 이때 <b>촉매효율 kcat/Km</b> 이 얼마나 좋은 효소인지를 결정합니다. (확산 한계 ≈ 10⁸~10⁹ M⁻¹s⁻¹)</p></div>
+    <div class="call amber"><div class="ct">높은 기질 농도에서는 &nbsp;([S] ≫ Km)</div>
+      <p><span class="fx">v ≈ Vmax</span> — 효소가 거의 다 <b>포화</b>되어 [S]를 더 늘려도 속도가 늘지 않는 0차 반응이 됩니다. 이때는 효소 농도([E]₀)나 kcat 을 키워야 빨라집니다.</p></div>
+    ${footer(null,"다음 → 시뮬레이터")}</div>`;
+}
+
+/* ---------- STEP 4: SIMULATOR ---------- */
+let simAnim = null, simSweep = null;
+function computeApparent(){
+  const {Vmax,Km,inh,istr} = state.sim;
+  const alpha = 1 + istr;               // istr: 0..4
+  let KmA = Km, VmaxA = Vmax;
+  if(inh==="comp") KmA = Km*alpha;
+  else if(inh==="noncomp") VmaxA = Vmax/alpha;
+  return {KmA, VmaxA};
+}
+function vAt(S){
+  const {KmA, VmaxA} = computeApparent();
+  return VmaxA*S/(KmA+S);
+}
+const S_MAX = 200, Vaxis_pad = 1.06;
+
+function rSim(){
+  main.innerHTML = `<div class="panel">
+    <div class="eyebrow">STEP 04 · 반응속도 시뮬레이터 SIMULATOR</div>
+    <h1 class="h">[S]에 따라 달라지는 반응속도</h1>
+    <p class="sub">기질 농도 [S]를 바꾸며 반응 장면(왼쪽)과 v–[S] 곡선(오른쪽)을 함께 관찰하세요. 오른쪽 그래프는 이중역수(Lineweaver–Burk)로 전환할 수 있습니다.</p>
+    <div class="sim">
+      <div>
+        <div class="canvas-wrap">
+          <div class="canvas-cap"><span>반응 장면 · ENZYME</span><span id="capTov">회전수 0</span></div>
+          <canvas id="cvScene" width="640" height="220"></canvas>
+        </div>
+        <div class="canvas-wrap" style="margin-top:14px">
+          <div class="canvas-cap"><span id="capPlot">v–[S] 곡선 · SATURATION</span>
+            <span style="cursor:pointer;color:var(--cyan)" onclick="togglePlot()" id="plotToggle">↔ 이중역수 보기</span></div>
+          <canvas id="cvPlot" width="640" height="300"></canvas>
+        </div>
+      </div>
+      <div class="ctrl">
+        <div class="ctrl-row">
+          <button class="csmall go" id="btnRun" onclick="runSweep()">▶ 반응 시작</button>
+          <button class="csmall" onclick="resetSim()">↺ 초기화</button>
+        </div>
+        <div class="sld"><label>최대 속도 Vmax <span class="v" id="lVmax"></span></label>
+          <input type="range" id="sVmax" min="1" max="10" step="0.5"></div>
+        <div class="sld"><label>미카엘리스 상수 Km <span class="v" id="lKm"></span></label>
+          <input type="range" id="sKm" min="2" max="60" step="1"></div>
+        <div class="sld"><label>기질 농도 [S] <span class="v" id="lS"></span></label>
+          <input type="range" id="sS" min="0" max="${S_MAX}" step="1"></div>
+        <div class="sld"><label style="margin-bottom:8px">억제제 종류</label>
+          <div class="seg" id="segInh">
+            <button data-v="none">없음</button>
+            <button data-v="comp">경쟁적</button>
+            <button data-v="noncomp">비경쟁적</button>
+          </div></div>
+        <div class="sld" id="istrWrap"><label>억제제 세기 (I/Ki) <span class="v" id="lIstr"></span></label>
+          <input type="range" id="sIstr" min="0" max="4" step="0.5"></div>
+        <button class="csmall" style="width:100%; margin-bottom:8px" onclick="jumpKm()">⇥ [S] = Km 순간으로</button>
+        <button class="csmall" style="width:100%" onclick="demoInhibitor()">✦ 억제제 데모</button>
+        <div class="chk" id="chkHalf"><span class="box">✓</span> 반포화점 통과 ([S] ≥ Km)</div>
+        <div class="chk" id="chkSat"><span class="box">✓</span> 포화 도달 (v ≥ 0.95 Vmax)</div>
+      </div>
+    </div>
+    <div class="big-read"><div class="rk">반응 속도 · v</div><div class="rv" id="roV">0</div>
+      <div class="hint" id="roVhint"></div></div>
+    <div class="readouts">
+      <div class="ro"><div class="rk">Vmax (겉보기)</div><div class="rv" id="roVmax">—</div></div>
+      <div class="ro"><div class="rk">Km (겉보기)</div><div class="rv" id="roKm">—</div></div>
+      <div class="ro"><div class="rk">v / Vmax</div><div class="rv" id="roFrac">—<span class="ru">%</span></div></div>
+      <div class="ro"><div class="rk">[S] / Km</div><div class="rv" id="roRatio">—</div></div>
+      <div class="ro"><div class="rk">반응 차수 근사</div><div class="rv" id="roOrder">—</div></div>
+      <div class="ro"><div class="rk">억제제</div><div class="rv" id="roInh" style="font-size:14px">—</div></div>
+    </div>
+    ${footer(null,"다음 → 유도 확인")}</div>`;
+
+  // wire controls
+  const sVmax=$("#sVmax"), sKm=$("#sKm"), sS=$("#sS"), sIstr=$("#sIstr");
+  sVmax.value=state.sim.Vmax; sKm.value=state.sim.Km; sS.value=state.sim.S; sIstr.value=state.sim.istr;
+  sVmax.oninput=()=>{state.sim.Vmax=+sVmax.value; save(); simUpdate();};
+  sKm.oninput  =()=>{state.sim.Km=+sKm.value; if(state.sim.S<0)state.sim.S=0; save(); simUpdate();};
+  sS.oninput   =()=>{state.sim.S=+sS.value; save(); simUpdate();};
+  sIstr.oninput=()=>{state.sim.istr=+sIstr.value; save(); simUpdate();};
+  document.querySelectorAll("#segInh button").forEach(b=>{
+    b.onclick=()=>{ state.sim.inh=b.dataset.v; save(); simUpdate(); };
+  });
+  plotMode = "mm";
+  startScene();
+  simUpdate();
+}
+let plotMode="mm";
+window.togglePlot = ()=>{ plotMode = plotMode==="mm"?"lb":"mm"; simUpdate(); };
+
+function simUpdate(){
+  if(!document.getElementById("roV")){ if(simSweep){clearInterval(simSweep);simSweep=null;} return; }
+  const {Vmax,Km,S,inh,istr} = state.sim;
+  const {KmA,VmaxA} = computeApparent();
+  const v = vAt(S);
+  // labels
+  $("#lVmax").textContent = Vmax.toFixed(1)+" μM/s";
+  $("#lKm").textContent   = Km+" mM";
+  $("#lS").textContent    = S+" mM";
+  $("#lIstr").textContent = "×"+(1+istr).toFixed(1);
+  $("#istrWrap").style.opacity = inh==="none"?".4":"1";
+  document.querySelectorAll("#segInh button").forEach(b=>b.classList.toggle("on", b.dataset.v===inh));
+  // readouts
+  $("#roV").textContent = v.toFixed(2)+" μM/s";
+  $("#roVmax").textContent = VmaxA.toFixed(1);
+  $("#roKm").textContent = KmA.toFixed(1);
+  $("#roFrac").innerHTML = (100*v/VmaxA).toFixed(0)+'<span class="ru">%</span>';
+  $("#roRatio").textContent = (S/KmA).toFixed(2);
+  const ratio = S/KmA;
+  $("#roOrder").textContent = ratio<0.2 ? "≈ 1차" : ratio>5 ? "≈ 0차" : "혼합";
+  $("#roInh").textContent = {none:"없음",comp:"경쟁적",noncomp:"비경쟁적"}[inh];
+  $("#roVhint").textContent = ratio>5 ? "효소가 포화되었습니다 — [S]를 더 늘려도 v는 거의 그대로."
+      : ratio<0.2 ? "낮은 [S] — v가 [S]에 거의 비례합니다." : "반포화 부근 — Km 근처입니다.";
+  // checklist
+  $("#chkHalf").classList.toggle("on", S>=KmA);
+  $("#chkSat").classList.toggle("on", v>=0.95*VmaxA);
+  // plot
+  $("#capPlot").textContent = plotMode==="mm" ? "v–[S] 곡선 · SATURATION" : "이중역수 · LINEWEAVER–BURK";
+  $("#plotToggle").textContent = plotMode==="mm" ? "↔ 이중역수 보기" : "↔ 직접 곡선 보기";
+  drawPlot();
+}
+
+/* --- plot drawing --- */
+function drawPlot(){
+  const c=$("#cvPlot"); if(!c) return; const ctx=c.getContext("2d");
+  const W=c.width, H=c.height; ctx.clearRect(0,0,W,H);
+  const {Vmax} = state.sim; const {KmA,VmaxA} = computeApparent();
+  const pad={l:52,r:16,t:16,b:38};
+  const gx=v=>pad.l+(W-pad.l-pad.r)*v, gy=v=>H-pad.b-(H-pad.t-pad.b)*v;
+  // axes
+  ctx.strokeStyle="#26374f"; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(pad.l,pad.t); ctx.lineTo(pad.l,H-pad.b); ctx.lineTo(W-pad.r,H-pad.b); ctx.stroke();
+  ctx.fillStyle="#7e8da0"; ctx.font="11px ui-monospace,monospace";
+
+  if(plotMode==="mm"){
+    const yMax = Vmax*Vaxis_pad;
+    // grid + labels
+    ctx.textAlign="right"; ctx.textBaseline="middle";
+    for(let i=0;i<=4;i++){ const yv=yMax*i/4; const y=gy(i/4);
+      ctx.strokeStyle="#15202f"; ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(W-pad.r,y); ctx.stroke();
+      ctx.fillText(yv.toFixed(1), pad.l-8, y); }
+    ctx.textAlign="center"; ctx.textBaseline="top";
+    for(let i=0;i<=4;i++){ const xv=S_MAX*i/4; const x=gx(i/4); ctx.fillText(xv, x, H-pad.b+8); }
+    ctx.fillStyle="#586479"; ctx.textAlign="left"; ctx.fillText("[S] (mM)", W-pad.r-64, H-pad.b+8);
+    ctx.save(); ctx.translate(14,pad.t+8); ctx.rotate(-Math.PI/2); ctx.fillText("v (μM/s)",-70,0); ctx.restore();
+    // uninhibited faded reference
+    if(state.sim.inh!=="none"){
+      ctx.strokeStyle="rgba(126,141,160,.35)"; ctx.lineWidth=1.4; ctx.setLineDash([5,4]); ctx.beginPath();
+      for(let px=0;px<=1;px+=.01){ const S=px*S_MAX; const v=Vmax*S/(state.sim.Km+S); const X=gx(px),Y=gy(v/yMax); px===0?ctx.moveTo(X,Y):ctx.lineTo(X,Y);} ctx.stroke(); ctx.setLineDash([]);
+    }
+    // Vmax asymptote
+    ctx.strokeStyle="rgba(242,193,78,.5)"; ctx.setLineDash([6,5]); ctx.beginPath();
+    ctx.moveTo(pad.l,gy(VmaxA/yMax)); ctx.lineTo(W-pad.r,gy(VmaxA/yMax)); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle="#f2c14e"; ctx.textAlign="left"; ctx.fillText("Vmax", W-pad.r-40, gy(VmaxA/yMax)-12);
+    // half-Vmax + Km marker
+    const KmX = Math.min(KmA/S_MAX,1);
+    ctx.strokeStyle="rgba(69,211,216,.35)"; ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.moveTo(pad.l,gy(VmaxA/2/yMax)); ctx.lineTo(gx(KmX),gy(VmaxA/2/yMax)); ctx.lineTo(gx(KmX),H-pad.b); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle="#45d3d8"; ctx.fillText("Km", gx(KmX)+4, gy(VmaxA/2/yMax)-4);
+    // main curve
+    ctx.strokeStyle="#45d3d8"; ctx.lineWidth=2.4; ctx.beginPath();
+    for(let px=0;px<=1;px+=.005){ const S=px*S_MAX; const v=vAt(S); const X=gx(px),Y=gy(v/yMax); px===0?ctx.moveTo(X,Y):ctx.lineTo(X,Y);} ctx.stroke();
+    // moving point
+    const px=Math.min(state.sim.S/S_MAX,1), v=vAt(state.sim.S);
+    ctx.fillStyle="#63e6ea"; ctx.beginPath(); ctx.arc(gx(px),gy(v/yMax),6,0,7); ctx.fill();
+    ctx.strokeStyle="#082"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(gx(px),gy(v/yMax)); ctx.lineTo(gx(px),H-pad.b); ctx.strokeStyle="rgba(99,230,234,.4)"; ctx.setLineDash([3,3]); ctx.stroke(); ctx.setLineDash([]);
+  } else {
+    // Lineweaver–Burk : 1/v = (Km/Vmax)(1/S) + 1/Vmax
+    const xMax = 4/KmA;            // 1/S axis
+    const slopeU = state.sim.Km/state.sim.Vmax, intU = 1/state.sim.Vmax;
+    const slope = KmA/VmaxA, inty = 1/VmaxA;
+    const yMax = Math.max(inty + slope*xMax, intU + slopeU*xMax)*1.05;
+    const zeroX = gx(0.18); // x for 1/S = 0, shifted right so negative x-intercept shows
+    const spanX = W-pad.r-zeroX;
+    const gx2 = inv=>zeroX+spanX*(inv/xMax);
+    const gy2 = val=>H-pad.b-(H-pad.t-pad.b)*(val/yMax);
+    // axes crossing at x=0
+    ctx.strokeStyle="#26374f"; ctx.beginPath(); ctx.moveTo(zeroX,pad.t); ctx.lineTo(zeroX,H-pad.b); ctx.stroke();
+    ctx.fillStyle="#586479"; ctx.textAlign="center"; ctx.textBaseline="top"; ctx.fillText("1/[S]", W-pad.r-30, H-pad.b+8);
+    ctx.save(); ctx.translate(14,pad.t+8); ctx.rotate(-Math.PI/2); ctx.fillText("1/v",-40,0); ctx.restore();
+    // reference (uninhibited)
+    if(state.sim.inh!=="none"){
+      ctx.strokeStyle="rgba(126,141,160,.4)"; ctx.lineWidth=1.5; ctx.setLineDash([5,4]); ctx.beginPath();
+      ctx.moveTo(gx2(-intU/slopeU), gy2(0)); ctx.lineTo(gx2(xMax), gy2(intU+slopeU*xMax)); ctx.stroke(); ctx.setLineDash([]);
+    }
+    // main line
+    ctx.strokeStyle="#45d3d8"; ctx.lineWidth=2.4; ctx.beginPath();
+    ctx.moveTo(gx2(-inty/slope), gy2(0)); ctx.lineTo(gx2(xMax), gy2(inty+slope*xMax)); ctx.stroke();
+    // intercept markers
+    ctx.fillStyle="#63e6ea"; ctx.beginPath(); ctx.arc(zeroX, gy2(inty),5,0,7); ctx.fill();
+    ctx.beginPath(); ctx.arc(gx2(-inty/slope), gy2(0),5,0,7); ctx.fill();
+    ctx.fillStyle="#7e8da0"; ctx.textAlign="left"; ctx.textBaseline="middle";
+    ctx.fillText("y절편 = 1/Vmax", zeroX+8, gy2(inty)-10);
+    ctx.fillText("x절편 = −1/Km", gx2(-inty/slope)-6, gy2(0)+16);
+  }
+}
+
+/* --- scene animation --- */
+let scene = {parts:[], tovDisplay:0, t:0};
+function startScene(){
+  if(simAnim) cancelAnimationFrame(simAnim);
+  scene = {parts:[], tovDisplay:0, t:0, last:performance.now(), spawnAcc:0, prodAcc:0};
+  const loop = now=>{
+    const c=$("#cvScene"); if(!c){return;}
+    const dt=Math.min(50, now-scene.last)/1000; scene.last=now; scene.t+=dt;
+    const ctx=c.getContext("2d"); const W=c.width,H=c.height;
+    const {S} = state.sim; const {VmaxA} = computeApparent(); const v=vAt(S);
+    // background
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle="#080f1b"; ctx.fillRect(0,0,W,H);
+    // enzyme body
+    const ex=W/2, ey=H/2;
+    ctx.fillStyle="#132a3a"; ctx.strokeStyle="#1f8288"; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.roundRect(ex-52,ey-46,104,92,16); ctx.fill(); ctx.stroke();
+    // active site notch
+    ctx.fillStyle="#0a1a26"; ctx.beginPath(); ctx.arc(ex-52,ey,15,-Math.PI/2,Math.PI/2); ctx.fill();
+    ctx.fillStyle="#45d3d8"; ctx.font="10px ui-monospace,monospace"; ctx.textAlign="center"; ctx.fillText("효소 E", ex, ey+3);
+    // spawn substrate based on [S]
+    const targetSub = Math.round(2 + 22*(S/S_MAX));
+    const subs = scene.parts.filter(p=>p.type==="S");
+    scene.spawnAcc += dt* (2 + S/12);
+    while(scene.spawnAcc>1 && subs.length + scene.parts.filter(p=>p.type==="S"&&p.new).length < targetSub){
+      scene.spawnAcc-=1;
+      scene.parts.push({type:"S", x:Math.random()*(ex-120)+10, y:Math.random()*(H-30)+15, vx:20+Math.random()*20, vy:(Math.random()-.5)*14});
+    }
+    // spawn product at rate ∝ v (turnover)
+    scene.prodAcc += dt* v*1.1;
+    while(scene.prodAcc>1){ scene.prodAcc-=1; scene.tovDisplay++;
+      scene.parts.push({type:"P", x:ex+50, y:ey+(Math.random()-.5)*30, vx:40+Math.random()*30, vy:(Math.random()-.5)*20, life:1});
+      // consume a nearby substrate
+      const si=scene.parts.findIndex(p=>p.type==="S"&&p.x>ex-90);
+      if(si>=0) scene.parts.splice(si,1);
+    }
+    // update + draw
+    scene.parts.forEach(p=>{
+      if(p.type==="S"){ p.x+=p.vx*dt; p.y+=p.vy*dt;
+        if(p.x>ex-70){ // bounce around active site region
+          if(p.y<15||p.y>H-15) p.vy*=-1; }
+        if(p.x>ex-64 && p.x<ex+64) p.x=ex-64; // stall at enzyme
+        ctx.fillStyle="#33d17f"; ctx.beginPath(); ctx.arc(p.x,p.y,5,0,7); ctx.fill();
+      } else { p.x+=p.vx*dt; p.y+=p.vy*dt; p.life-=dt*0.5;
+        ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle="#f2c14e"; ctx.beginPath(); ctx.arc(p.x,p.y,5,0,7); ctx.fill(); ctx.globalAlpha=1;
+      }
+    });
+    scene.parts = scene.parts.filter(p=> !(p.type==="P"&&(p.life<=0||p.x>W)) && !(p.type==="S"&&p.x>W));
+    // rate gauge
+    const gw=W-40, gx0=20, gy0=H-14;
+    ctx.fillStyle="#0d1a26"; ctx.beginPath(); ctx.roundRect(gx0,gy0-8,gw,10,5); ctx.fill();
+    const frac=Math.min(v/VmaxA,1);
+    ctx.fillStyle="#45d3d8"; ctx.beginPath(); ctx.roundRect(gx0,gy0-8,gw*frac,10,5); ctx.fill();
+    // legend
+    ctx.textAlign="left"; ctx.font="10px ui-monospace,monospace";
+    ctx.fillStyle="#33d17f"; ctx.fillText("● 기질 S", 12, 16);
+    ctx.fillStyle="#f2c14e"; ctx.fillText("● 생성물 P", 82, 16);
+    const cap=$("#capTov"); if(cap) cap.textContent="회전수 "+scene.tovDisplay;
+    simAnim=requestAnimationFrame(loop);
+  };
+  simAnim=requestAnimationFrame(loop);
+}
+
+window.runSweep = ()=>{
+  if(simSweep){ clearInterval(simSweep); simSweep=null; $("#btnRun").textContent="▶ 반응 시작"; return; }
+  $("#btnRun").textContent="⏸ 정지";
+  state.sim.S=0; let t=0;
+  const sS=$("#sS");
+  simSweep=setInterval(()=>{
+    t+=0.02; state.sim.S=Math.round(S_MAX*Math.min(t,1));
+    if(sS) sS.value=state.sim.S; simUpdate();
+    if(t>=1){ clearInterval(simSweep); simSweep=null; if($("#btnRun"))$("#btnRun").textContent="▶ 반응 시작"; save(); }
+  },30);
+};
+window.resetSim = ()=>{ if(simSweep){clearInterval(simSweep);simSweep=null;}
+  state.sim={Vmax:6,Km:12,S:12,inh:"none",istr:0}; save(); rSim(); };
+window.jumpKm = ()=>{ const {KmA}=computeApparent(); state.sim.S=Math.round(KmA);
+  const sS=$("#sS"); if(sS)sS.value=state.sim.S; save(); simUpdate(); toast("[S] = Km 으로 이동 — 이때 v = Vmax/2 입니다."); };
+window.demoInhibitor = ()=>{ const order=["none","comp","noncomp"]; const i=(order.indexOf(state.sim.inh)+1)%3;
+  state.sim.inh=order[i]; if(state.sim.inh!=="none"&&state.sim.istr===0){ state.sim.istr=2; const s=$("#sIstr"); if(s)s.value=2; }
+  save(); simUpdate(); toast({none:"억제제 없음",comp:"경쟁적 억제제 — 겉보기 Km 증가, Vmax 불변",noncomp:"비경쟁적 억제제 — Vmax 감소, Km 불변"}[state.sim.inh]); };
+
+/* ---------- STEP 5 & 6: CHECK / QUIZ ---------- */
+function renderMCQ(bank, store, opts){
+  return bank.map((it,qi)=>{
+    const sel = store[qi];
+    const answered = sel!==undefined;
+    const optsHtml = it.opts.map((o,oi)=>{
+      let cls="";
+      if(opts.reveal && answered){
+        if(oi===it.a) cls=" correct";
+        else if(oi===sel) cls=" wrong";
+      } else if(sel===oi) cls=" sel";
+      return `<button class="opt${cls}" onclick="pickMCQ('${opts.key}',${qi},${oi})">
+        <span class="k">${"ABCD"[oi]}</span><span>${o}</span></button>`;
+    }).join("");
+    const expl = (opts.reveal && answered) ? `<div class="expl">${sel===it.a?"✅ 정답! ":"💡 "}${it.e}</div>` : "";
+    return `<div class="qcard"><div class="qh"><span class="qn">Q${qi+1}</span>${it.q}</div>${optsHtml}${expl}</div>`;
+  }).join("");
+}
+window.pickMCQ = (key,q,o)=>{
+  const store = key==="check"?state.check:state.quiz;
+  store[q]=o; save();
+  key==="check"?rCheck():rQuiz();
+};
+function score(bank, store){ let s=0; bank.forEach((it,i)=>{ if(store[i]===it.a)s++; }); return s; }
+
+function rCheck(){
+  const answered = Object.keys(state.check).length;
+  const graded = answered===CHECK.length;
+  main.innerHTML = `<div class="panel">
+    <div class="eyebrow">STEP 05 · 유도 확인 CHECK</div>
+    <h1 class="h">유도 과정 확인 문제</h1>
+    <p class="sub">방금 유도한 미카엘리스-멘텐 식의 각 단계를 이해했는지 확인합니다. 답을 고르면 즉시 채점·해설이 표시됩니다.</p>
+    ${renderMCQ(CHECK, state.check, {key:"check", reveal:true})}
+    <p class="note" style="margin-top:6px">점수: <b style="color:var(--amber)">${score(CHECK,state.check)} / ${CHECK.length}</b></p>
+    ${footer(null,"다음 → 형성평가", graded, graded?null:"모든 문항에 답하면 다음으로 진행할 수 있습니다.")}</div>`;
+}
+function rQuiz(){
+  const answered = Object.keys(state.quiz).length;
+  const graded = answered===QUIZ.length;
+  main.innerHTML = `<div class="panel">
+    <div class="eyebrow">STEP 06 · 형성평가 FORMATIVE</div>
+    <h1 class="h">형성평가</h1>
+    <p class="sub">포화 반응, 효소 농도, 억제제, 회전수까지 전체 개념을 점검합니다.</p>
+    ${renderMCQ(QUIZ, state.quiz, {key:"quiz", reveal:true})}
+    <p class="note" style="margin-top:6px">점수: <b style="color:var(--amber)">${score(QUIZ,state.quiz)} / ${QUIZ.length}</b></p>
+    ${footer(null,"다음 → 서술형·AI", graded, graded?null:"모든 문항에 답하면 다음으로 진행할 수 있습니다.")}</div>`;
+}
+
+/* ---------- STEP 7: AI ---------- */
+function rAI(){
+  const hasKey = !!localStorage.getItem(LS.apiKey);
+  const essays = ESSAY.map((it,i)=>{
+    const val = state.essay[it.k]||"";
+    return `<div class="qcard essay">
+      <div class="qh"><span class="qn">서술 ${i+1}</span>${it.q}</div>
+      <textarea id="ess_${it.k}" placeholder="여기에 자기 말로 설명해 보세요..." oninput="onEssay('${it.k}')">${val.replace(/</g,"&lt;")}</textarea>
+      <div class="essay-foot">
+        <button class="btn btn-violet" onclick="aiFeedback('${it.k}',${i})">✦ AI 피드백 받기</button>
+        <span class="cc" id="cc_${it.k}">${val.length} 자</span>
+      </div>
+      <div class="ai-out hidden" id="ai_${it.k}"></div>
+    </div>`;
+  }).join("");
+  main.innerHTML = `<div class="panel">
+    <div class="eyebrow">STEP 07 · 서술형 · AI 피드백</div>
+    <h1 class="h">서술형 문항 &amp; AI 피드백</h1>
+    <p class="sub">자기 말로 설명하고 <b>AI 피드백</b>을 받아 스스로 다듬어 보세요. 답안은 보고서에 함께 제출됩니다.</p>
+    <div class="keybox">
+      <div class="kh">✦ CLAUDE API 키 · AI 피드백 사용</div>
+      <div class="keyrow">
+        <input id="apiKey" type="password" placeholder="sk-ant-... (강사에게 받은 키)" value="${(localStorage.getItem(LS.apiKey)||"").replace(/"/g,'&quot;')}">
+        <button class="btn btn-violet" onclick="saveKey()">저장</button>
+      </div>
+      <div class="key-note" id="keyState">${hasKey?"🔓 키가 저장되어 있습니다.":"키가 아직 없습니다. 강사에게 받은 키를 입력하세요."}</div>
+      <div class="key-note">🔒 키는 <b>이 브라우저(localStorage)</b>에만 저장되며, 저희 서버로 전송되지 않습니다. 브라우저에서 Anthropic API를 직접 호출합니다. <a href="#" onclick="clearKey();return false;">키 삭제</a></div>
+    </div>
+    ${essays}
+    ${footer(null,"다음 → 최종 보고서")}</div>`;
+}
+window.onEssay = k=>{ const t=$("#ess_"+k); state.essay[k]=t.value; $("#cc_"+k).textContent=t.value.length+" 자"; save(); };
+window.saveKey = ()=>{ const v=$("#apiKey").value.trim(); if(!v){toast("키를 입력하세요.",true);return;}
+  localStorage.setItem(LS.apiKey,v); $("#keyState").textContent="🔓 키가 저장되었습니다."; toast("API 키가 이 브라우저에 저장되었습니다."); };
+window.clearKey = ()=>{ localStorage.removeItem(LS.apiKey); const el=$("#apiKey"); if(el)el.value=""; const ks=$("#keyState"); if(ks)ks.textContent="키가 삭제되었습니다."; toast("API 키를 삭제했습니다."); };
+
+async function callClaude(system, userText){
+  const key = localStorage.getItem(LS.apiKey);
+  if(!key) throw new Error("API 키가 없습니다. 위에 키를 먼저 입력하세요.");
+  const resp = await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{
+      "content-type":"application/json",
+      "x-api-key":key,
+      "anthropic-version":"2023-06-01",
+      "anthropic-dangerous-direct-browser-access":"true"
+    },
+    body:JSON.stringify({ model:AI_MODEL, max_tokens:900, system, messages:[{role:"user",content:userText}] })
+  });
+  const data = await resp.json().catch(()=>({}));
+  if(!resp.ok) throw new Error((data && data.error && data.error.message) || ("요청 실패 (HTTP "+resp.status+")"));
+  return (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
+}
+window.aiFeedback = async (k, i)=>{
+  const answer = (state.essay[k]||"").trim();
+  const out = $("#ai_"+k);
+  if(answer.length<10){ toast("먼저 답안을 조금 더 작성해 주세요.",true); return; }
+  out.classList.remove("hidden");
+  out.innerHTML = `<div class="ah">AI 피드백</div><span class="spin"></span>피드백을 작성하는 중...`;
+  const system = "당신은 친절한 고등학교 생명과학 교사입니다. 학생이 '효소반응속도(미카엘리스-멘텐)'에 대한 서술형 답안을 작성했습니다. "
+    + "학생을 격려하는 어조로, 정답을 그대로 알려주지 말고 스스로 고칠 수 있도록 힌트를 주세요. "
+    + "다음 세 부분으로 나눠 각각 2~3문장으로, 한국어로 답하세요: 1) 잘한 점, 2) 보완할 점(빠졌거나 부정확한 핵심 개념), 3) 한 단계 더 생각해볼 질문.";
+  const userText = "[문항]\n"+ESSAY[i].q+"\n\n[학생 답안]\n"+answer;
+  try{
+    const fb = await callClaude(system, userText);
+    out.innerHTML = `<div class="ah">AI 피드백</div>${fb.replace(/</g,"&lt;")}`;
+  }catch(err){
+    out.innerHTML = `<div class="ah" style="color:var(--red)">피드백 오류</div>${(err.message||err).replace(/</g,"&lt;")}`;
+  }
+};
+
+/* ---------- STEP 8: SUBMIT ---------- */
+function ansLine(bank, store){
+  return bank.map((it,i)=>{
+    const sel=store[i];
+    const ok = sel===it.a;
+    const txt = sel===undefined ? `<span class="neu">(미응답)</span>`
+      : `<span class="${ok?"ok":"no"}">${"ABCD"[sel]}. ${it.opts[sel]} ${ok?"✓":"✗"}</span>`;
+    return `<div class="qline"><span class="qq">Q${i+1}. ${it.q}</span>
+      <span class="ans"><span class="lab">내 답: </span>${txt}</span></div>`;
+  }).join("");
+}
+function rSubmit(){
+  const cScore=score(CHECK,state.check), qScore=score(QUIZ,state.quiz);
+  const predictLines = PREDICT.map((it,i)=>{
+    const sel=state.predict[i];
+    return `<div class="qline"><span class="qq">P${i+1}. ${it.q}</span>
+      <span class="ans"><span class="lab">내 예측: </span>${sel===undefined?"<span class='neu'>—</span>":("ABC"[sel]+". "+it.opts[sel])}</span></div>`;
+  }).join("");
+  const essayLines = ESSAY.map((it,i)=>{
+    const raw = (state.essay[it.k]||"").trim();
+    const shown = raw ? raw.replace(/&/g,"&amp;").replace(/</g,"&lt;") : "<span class='neu'>—</span>";
+    return `<div class="qline"><span class="qq">서술 ${i+1}. ${it.q}</span>
+      <span class="ans"><span class="lab">내 답안: </span>${shown}</span></div>`;
+  }).join("");
+  const {KmA,VmaxA}=computeApparent();
+  const mode=submitMode();
+  const subDesc = mode==="googleForm" ? "확인 후 제출하면 구글 폼으로 전송되어 연결된 스프레드시트에 기록됩니다. 인쇄(PDF 저장)도 가능합니다."
+    : mode==="endpoint" ? "확인 후 제출하면 설정된 주소로 전송됩니다. 인쇄(PDF 저장)도 가능합니다."
+    : "확인 후 제출하면 보고서가 파일로 저장됩니다. 저장한 파일을 구글 클래스룸/이메일로 제출하세요. 인쇄(PDF 저장)도 가능합니다.";
+  const submitLabel = mode==="download" ? "보고서 저장 →" : "제출하기 →";
+
+  main.innerHTML = `<div class="panel">
+    <div class="eyebrow">STEP 08 · 최종 보고서 REPORT</div>
+    <h1 class="h">최종 보고서</h1>
+    <p class="sub">${subDesc}</p>
+
+    <div class="rsec"><div class="rt">학생 정보</div>
+      <div class="idgrid">
+        <div class="idcell"><div class="il">이름</div><input id="rName" value="${(state.student.name||"").replace(/"/g,'&quot;')}" oninput="onId()"></div>
+        <div class="idcell"><div class="il">학번</div><input id="rId" value="${(state.student.id||"").replace(/"/g,'&quot;')}" oninput="onId()"></div>
+        <div class="idcell"><div class="il">유도 확인</div><div class="big" style="color:var(--amber)">${cScore}/${CHECK.length}</div></div>
+        <div class="idcell"><div class="il">형성평가</div><div class="big" style="color:var(--amber)">${qScore}/${QUIZ.length}</div></div>
+      </div></div>
+
+    <div class="rsec"><div class="rt">예측 (STEP 01)</div>${predictLines}</div>
+    <div class="rsec"><div class="rt"><span>유도 확인</span><span class="score">${cScore}/${CHECK.length}</span></div>${ansLine(CHECK,state.check)}</div>
+    <div class="rsec"><div class="rt"><span>형성평가</span><span class="score">${qScore}/${QUIZ.length}</span></div>${ansLine(QUIZ,state.quiz)}</div>
+    <div class="rsec"><div class="rt">서술형 답안</div>${essayLines}</div>
+    <div class="rsec"><div class="rt">시뮬레이터 최종 설정</div>
+      <div class="qline">Vmax=${state.sim.Vmax} μM/s · Km=${state.sim.Km} mM · [S]=${state.sim.S} mM · 억제제=${{none:"없음",comp:"경쟁적",noncomp:"비경쟁적"}[state.sim.inh]}(×${(1+state.sim.istr).toFixed(1)})
+      → 겉보기 Vmax=${VmaxA.toFixed(1)}, 겉보기 Km=${KmA.toFixed(1)}, v=${vAt(state.sim.S).toFixed(2)} μM/s</div></div>
+
+    <div class="foot">
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-prev" onclick="go(${cur-1})">← 이전</button>
+        <button class="btn btn-prev" onclick="window.print()">🖨 인쇄 / PDF</button>
+        <button class="btn btn-prev" onclick="downloadReport()">⭳ 다운로드</button>
+      </div>
+      <button class="btn btn-next" id="submitBtn" onclick="submitReport()">${submitLabel}</button>
+    </div></div>`;
+}
+window.onId = ()=>{ state.student.name=$("#rName").value; state.student.id=$("#rId").value;
+  localStorage.setItem(LS.student, JSON.stringify(state.student)); $("#whoName").textContent=state.student.name||"—"; save(); };
+
+function buildPayload(){
+  return {
+    timestamp:new Date().toISOString(),
+    topic:"michaelis-menten",
+    name:state.student.name, studentId:state.student.id,
+    predict:state.predict,
+    check:state.check, checkScore:score(CHECK,state.check), checkMax:CHECK.length,
+    quiz:state.quiz, quizScore:score(QUIZ,state.quiz), quizMax:QUIZ.length,
+    essay:state.essay, sim:state.sim
+  };
+}
+function submitMode(){
+  const s = CONFIG.submit||{}; const m = s.mode;
+  if(m==="googleForm" && s.googleForm && s.googleForm.formId) return "googleForm";
+  if(m==="endpoint" && s.endpoint) return "endpoint";
+  return "download";
+}
+window.downloadReport = ()=>{
+  const blob=new Blob([JSON.stringify(buildPayload(),null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download=`효소반응속도_보고서_${state.student.name||"학생"}.json`; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+};
+function submitViaGoogleForm(payload){
+  return new Promise((resolve)=>{
+    const gf = CONFIG.submit.googleForm;
+    let sink = document.getElementById("gform_sink");
+    if(!sink){ sink=document.createElement("iframe"); sink.id="gform_sink"; sink.name="gform_sink"; sink.style.display="none"; document.body.appendChild(sink); }
+    const form=document.createElement("form"); form.style.display="none";
+    form.action="https://docs.google.com/forms/d/e/"+gf.formId+"/formResponse";
+    form.method="POST"; form.target="gform_sink";
+    const vals={ name:payload.name, studentId:payload.studentId,
+      checkScore:payload.checkScore+"/"+payload.checkMax, quizScore:payload.quizScore+"/"+payload.quizMax,
+      essay1:(payload.essay&&payload.essay.s1)||"", essay2:(payload.essay&&payload.essay.s2)||"",
+      payload:JSON.stringify(payload) };
+    const map=gf.entries||{};
+    Object.keys(map).forEach(k=>{ if(map[k]){ const inp=document.createElement("input"); inp.type="hidden";
+      inp.name=map[k]; inp.value=(vals[k]!=null?vals[k]:""); form.appendChild(inp); } });
+    let done=false; const finish=()=>{ if(done)return; done=true; resolve(); };
+    sink.addEventListener("load", finish, {once:true});
+    document.body.appendChild(form); form.submit();
+    // 구글 폼은 CORS 로 응답을 읽을 수 없어, 전송 후 타임아웃으로 성공 처리합니다.
+    setTimeout(finish, 2500);
+    setTimeout(()=>{ try{form.remove();}catch(e){} }, 3200);
+  });
+}
+window.submitReport = async ()=>{
+  if(!state.student.name){ toast("이름을 입력해 주세요.",true); return; }
+  const btn=$("#submitBtn"); const orig=btn.textContent; btn.disabled=true; btn.textContent="제출 중...";
+  const payload=buildPayload(); const mode=submitMode();
+  try{
+    if(mode==="googleForm"){ await submitViaGoogleForm(payload); toast("제출되었습니다. 수고했어요!"); }
+    else if(mode==="endpoint"){
+      const r=await fetch(CONFIG.submit.endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+      if(!r.ok) throw new Error("HTTP "+r.status);
+      toast("제출되었습니다. 수고했어요!");
+    } else {
+      window.downloadReport(); toast("보고서를 파일로 저장했습니다. 이 파일을 제출하세요.");
+    }
+    state.done.submit=true; save(); renderNav();
+  }catch(err){
+    toast("제출 실패: "+(err.message||err),true);
+  }finally{ btn.disabled=false; btn.textContent=orig; }
+};
+
+/* ---------- toast ---------- */
+let toTimer=null;
+function toast(msg, err){
+  const t=$("#toast"); t.textContent=msg; t.className="toast show"+(err?" err":"");
+  clearTimeout(toTimer); toTimer=setTimeout(()=>t.className="toast",3200);
+}
+
+/* ============================================================
+   부팅
+   ============================================================ */
+function boot(){
+  load();
+  $("#whoName").textContent = state.student.name||"—";
+  if(state.student.name){ $("#intro").classList.add("hidden"); }
+  else {
+    $("#inName").value=state.student.name||""; $("#inId").value=state.student.id||"";
+  }
+  $("#introGo").onclick=()=>{
+    const n=$("#inName").value.trim(), id=$("#inId").value.trim();
+    if(!n){ $("#inName").focus(); return; }
+    state.student={name:n,id:id}; localStorage.setItem(LS.student,JSON.stringify(state.student)); save();
+    $("#whoName").textContent=n; $("#intro").classList.add("hidden");
+  };
+  $("#inName") && $("#inName").addEventListener("keydown",e=>{ if(e.key==="Enter")$("#inId").focus(); });
+  $("#inId") && $("#inId").addEventListener("keydown",e=>{ if(e.key==="Enter")$("#introGo").click(); });
+  $("#btnReset").onclick=()=>{
+    if(confirm("모든 답안과 진행 상황을 초기화할까요? (API 키는 유지됩니다)")){
+      localStorage.removeItem(LS.state); localStorage.removeItem(LS.student); location.reload();
+    }
+  };
+  renderAll();
+}
+boot();
+</script>
