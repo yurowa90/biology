@@ -81,6 +81,9 @@
   배포된 사이트에는 빌드 때 실제 값이 들어갑니다. 저장소 스냅샷도 채우려면 **Actions → Refresh ONI snapshot → Run workflow**를 한 번 누르거나,
   인터넷이 되는 PC에서 `node scripts/fetch-oni.mjs --inject activities/enso.html` 을 실행해 커밋하세요.
 - 수집에 실패해도 배포는 멈추지 않습니다(스크립트가 경고만 남기고 기존 파일 유지). 검증: 600행 이상, 연도·계절·편차 범위 확인.
+- ⚠️ **Settings → Pages → Build and deployment → Source 는 반드시 "GitHub Actions"** 여야 합니다. "Deploy from a branch"로 되어 있으면
+  푸시마다 브랜치 원본 빌드("pages build and deployment")가 이 워크플로 배포와 동시에 돌아, 늦게 끝난 쪽이 게시됩니다.
+  브랜치 원본이 이기면 자리표시 `data/oni.json`이 게시되어 화면에 "데이터 없음"이 뜹니다(활동은 정상 동작, 파일 불러오기 가능).
 - GitHub `schedule`은 **저장소 기본 브랜치**에 있는 워크플로 파일로만 실행됩니다. 이 저장소의 기본 브랜치는 현재 `claude/bioscience-webapp-se292i` 입니다.
   기본 브랜치를 `main`으로 바꾸면 이 워크플로 파일도 `main`에 있어야 주간 갱신이 돕니다. (공개 저장소에서 60일간 활동이 없으면 GitHub이 예약 실행을 자동으로 멈춥니다.)
 - API 키·비밀값은 쓰지 않습니다.

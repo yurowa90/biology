@@ -40,7 +40,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Refresh climate data (NOAA ONI)
         # 실패해도 배포를 막지 않습니다(커밋된 스냅샷으로 폴백).
