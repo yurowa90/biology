@@ -8,6 +8,9 @@
      GitHub Pages 배포 워크플로가 빌드 시점에 NOAA에서 받아 두 곳을 채웁니다(scripts/fetch-oni.mjs).
    · 실시간 해수면 온도 — Open-Meteo Marine API(키 불필요)를 버튼을 눌렀을 때만 호출합니다.
   제출 방식은 CONFIG.submit 에서 선택합니다: "download"(기본) · "googleForm" · "endpoint"
+  API 키·비밀값은 쓰지 않습니다. GRASPS 산출물 피드백은 이 브라우저 안에서 만듭니다:
+   키워드 자가 점검 · 평가 기준별 학생 자기평가(충족/부분/보완) · 예시 개요(60자 이상 작성 후 열람, 기록됨)
+   · (선택) 'AI 도우미용 프롬프트 복사' — 클립보드 복사만 함. CONFIG.showPromptCopy 로 끄고 켭니다.
 -->
 <!doctype html>
 <html lang="ko">
@@ -104,8 +107,10 @@
   .btn-next{background:linear-gradient(180deg,#1a6f74,#12545a); border-color:#1f8288; color:#e7fdff; box-shadow:0 10px 30px -14px var(--cyan)}
   .btn-next:hover{filter:brightness(1.08)}
   .btn-next:disabled{opacity:.4; cursor:not-allowed; box-shadow:none}
-  .btn-violet{background:linear-gradient(180deg,#5a44b0,#43338a); border-color:#6f57c9; color:#efeaff}
   .btn-sm{font-size:12.5px; padding:8px 13px; border-radius:9px}
+  .btn-check{background:linear-gradient(180deg,#12545a,#0e444a); border-color:#1f8288; color:#dffbff}
+  .btn-check:hover{filter:brightness(1.1)}
+  .btn-prev:disabled{opacity:.45; cursor:not-allowed}
   .kbd{font-family:var(--mono); font-size:.92em; background:#0c1728; border:1px solid var(--line2); border-radius:6px; padding:1px 6px; color:var(--cyan2)}
 
   /* ---------- MCQ ---------- */
@@ -243,18 +248,48 @@
   .pick{font-family:var(--mono); font-size:11px; padding:6px 10px; border-radius:8px; border:1px solid var(--line2); color:var(--muted); align-self:flex-start}
   .bundle.sel .pick{background:var(--amber); color:#2a1d00; border-color:var(--amber)}
 
-  /* ---------- AI ---------- */
-  .keybox{border:1px solid var(--line2); border-radius:14px; padding:16px 18px; margin:16px 0; background:linear-gradient(180deg,#130f24,#0e0b1c)}
-  .keybox .kh{font-family:var(--mono); font-size:11px; letter-spacing:.14em; color:var(--violet); margin-bottom:10px}
-  .keyrow{display:flex; gap:10px; flex-wrap:wrap}
-  .keyrow input{flex:1; min-width:180px; font-family:var(--mono); font-size:13px; padding:10px 12px; border-radius:9px; border:1px solid var(--line2); background:#0b1220; color:var(--txt)}
-  .keyrow input:focus{outline:none; border-color:var(--violet)}
-  .key-note{font-size:12px; color:var(--muted); margin-top:9px; line-height:1.55}
-  .ai-out{margin-top:12px; border:1px solid var(--line2); border-radius:11px; padding:14px 16px; background:rgba(169,139,255,.06); font-size:14px; line-height:1.7; white-space:pre-wrap; color:#e3ddf6}
-  .ai-out .ah{font-family:var(--mono); font-size:10px; letter-spacing:.14em; color:var(--violet); margin-bottom:8px}
-  .spin{display:inline-block; width:13px; height:13px; border:2px solid var(--violet); border-top-color:transparent; border-radius:50%; animation:sp .7s linear infinite; vertical-align:-2px; margin-right:7px}
-  @keyframes sp{to{transform:rotate(360deg)}}
+  /* ---------- GRASPS 자가 점검 · 자기평가 (모두 로컬, 네트워크 없음) ---------- */
   .cc{font-size:12px; color:var(--faint); font-family:var(--mono)}
+  .review{border:1px solid var(--line2); border-radius:14px; padding:16px 18px; margin:16px 0; background:linear-gradient(180deg,#0d1c2b,#0b1624)}
+  @media(max-width:560px){ .review{padding:14px 12px} }
+  .review .kh{font-family:var(--mono); font-size:11px; letter-spacing:.14em; color:var(--cyan); margin-bottom:6px}
+  .tools{display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 4px}
+  .gate{font-size:12px; color:var(--faint); margin-top:6px; line-height:1.5}
+  .gate.seen{color:#f7dfa0}
+  .sc-out,.ex-out,.pc-out{margin-top:12px; border:1px solid var(--line2); border-radius:11px; padding:13px 15px; background:rgba(10,17,30,.6)}
+  .sc-out{border-color:var(--cyandim); background:rgba(69,211,216,.05)}
+  .ex-out{border-color:#6a5320; background:rgba(242,193,78,.06)}
+  .sc-head,.ex-head,.pc-head{display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; color:var(--cyan); margin-bottom:6px}
+  .ex-head{color:var(--amber)} .pc-head{color:var(--muted)}
+  .sc-score{color:var(--amber)}
+  .sc-note{font-size:12px; color:var(--muted); line-height:1.55; margin-bottom:8px}
+  .sc-list{list-style:none; margin:0; padding:0}
+  .sc-list li{display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-top:1px solid var(--line); font-size:13.5px; line-height:1.55}
+  .sc-list li:first-child{border-top:none}
+  .sc-list .mk{flex:0 0 22px; width:22px; height:22px; border-radius:6px; display:grid; place-items:center; font-size:12px; font-weight:700}
+  .sc-list li.ok .mk{background:var(--green); color:#04240f}
+  .sc-list li.miss .mk{border:1px solid var(--amber); color:var(--amber)}
+  .sc-list li.ok .sl{color:#bfeed4}
+  .sc-list .sh{font-size:12.5px; color:var(--muted); margin-top:2px}
+  .sc-list .sd{font-family:var(--mono); font-size:11px; color:var(--faint); margin-left:4px}
+  .sc-stale{font-size:12px; color:var(--amber); margin-top:8px}
+  .ex-body{font-size:13.5px; line-height:1.72; color:#efe6c8; white-space:pre-wrap}
+  .ex-note{font-size:12px; color:var(--muted); margin-top:8px; line-height:1.5}
+  .pc-out textarea{min-height:150px; font-family:var(--mono); font-size:12px; line-height:1.5}
+  .pc-note{font-size:12px; color:var(--muted); margin:8px 0; line-height:1.5}
+  .selfrate{margin-top:14px}
+  .srow{border-top:1px solid var(--line); padding:11px 0}
+  .srow:first-of-type{border-top:none}
+  .srow .stxt{font-size:13.5px; line-height:1.55}
+  .srow .stxt .src{font-family:var(--mono); font-size:10px; color:var(--cyan)}
+  .chips{display:flex; gap:6px; flex-wrap:wrap; margin:7px 0 8px; align-items:center; font-size:11.5px; color:var(--faint)}
+  .chip{font-family:var(--mono); font-size:11px; padding:2px 8px; border-radius:20px; border:1px solid var(--line2); color:var(--muted); white-space:nowrap}
+  .chip.ok{color:#bfeed4; border-color:#1e5f3c; background:rgba(51,209,127,.08)}
+  .chip.miss{color:#f7dfa0; border-color:#6a5320; background:rgba(242,193,78,.08)}
+  .rate{display:flex; gap:6px; flex-wrap:wrap}
+  .rchip{display:inline-flex; align-items:center; gap:6px; padding:6px 11px; border:1px solid var(--line2); border-radius:9px; cursor:pointer; font-size:13px; color:var(--muted); background:#0c1524}
+  .rchip input{accent-color:var(--cyan); margin:0}
+  .rchip:has(input:checked){border-color:#1f8288; background:#12545a; color:#dffbff}
 
   /* ---------- reflect ---------- */
   .kwl{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px}
@@ -356,19 +391,24 @@ const CONFIG = {
     googleForm: {
       formId: "",   // https://docs.google.com/forms/d/e/<formId>/viewform 의 <formId>
       entries: {    // 항목명 → entry.XXXXXXX (사용할 항목만. payload 하나만 써도 됨)
-        name:"", studentId:"", quizScore:"", bundle:"", product:"", reflection:"", payload:""
+        //  selfAssessment: GRASPS 학생 자기평가 + 자동 점검 요약(선택)
+        name:"", studentId:"", quizScore:"", bundle:"", product:"", selfAssessment:"", reflection:"", payload:""
       }
     },
     endpoint: ""
   },
   // 도입 영상 주소(선택). 비워 두면 표시하지 않습니다. 예: 기후 위기·기상 이변 영상 링크
-  introVideoUrl: ""
+  introVideoUrl: "",
+  // GRASPS 단계의 'AI 도우미용 프롬프트 복사' 버튼 표시 여부.
+  //   이 버튼은 과제·평가 기준·학생 산출물로 만든 글을 클립보드에 복사만 합니다(인터넷 전송·키 필요 없음).
+  //   학교에서 허용한 AI 도구가 없거나 쓰지 않으려면 선생님이 false 로 바꾸세요. 버튼이 숨겨집니다.
+  showPromptCopy: true
 };
-// GRASPS 산출물 AI 피드백에 쓰는 Claude API 모델(API 요청 파라미터). 필요하면 강사가 바꿀 수 있습니다.
-const AI_MODEL = "claude-opus-5";
 
-// 학생 정보·API 키는 같은 사이트의 효소 워크북과 공유합니다(한 번만 입력).
-const LS = { student:"mm_student", state:"enso_state", apiKey:"mm_anthropic_key" };
+// 학생 정보는 같은 사이트의 효소 워크북과 공유합니다(한 번만 입력).
+const LS = { student:"mm_student", state:"enso_state" };
+// 예전 버전이 이 브라우저에 저장했던 키를 지웁니다(이제 어떤 키도 쓰지 않습니다).
+try{ localStorage.removeItem("mm_anthropic_key") }catch(e){}
 const ONI_URL = "https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt";
 
 /* ============================================================
@@ -390,7 +430,8 @@ const DEFAULT_STATE = () => ({
   sim:{ w:1.0, check:{}, note:"", presets:{} },
   data:{ events:{}, strongest:"", common:"", live:null, judge:"", reason:"" },
   quiz:{},
-  grasps:{ bundle:"", product:"", ai:"" },
+  // self: {과제id: {기준번호: "met"|"partial"|"needs"}} · check: 마지막 자가 점검 · exemplar: {과제id: {at, len}} 예시 개요 열람 기록
+  grasps:{ bundle:"", product:"", self:{}, check:null, checkCount:0, exemplar:{} },
   reflect:{ l:"", wDone:"", self:{}, citizen:"" },
   done:{}
 });
@@ -413,6 +454,16 @@ function load(){
     const stu = JSON.parse(localStorage.getItem(LS.student)||"null");
     if(stu && typeof stu==="object") state.student = {name:stu.name||"", id:stu.id||""};
   }catch(e){}
+  // 예전 저장본 호환: 예전 AI 피드백 초안 칸은 무시(삭제)하고, 새 칸은 형식을 맞춥니다.
+  const obj = o=>!!o && typeof o==="object" && !Array.isArray(o);
+  if(!obj(state.grasps)) state.grasps = DEFAULT_STATE().grasps;
+  const g = state.grasps;
+  delete g.ai;
+  if(!obj(g.self)) g.self = {};
+  if(!obj(g.exemplar)) g.exemplar = {};
+  if(!obj(g.check)) g.check = null;
+  if(typeof g.checkCount!=="number") g.checkCount = 0;
+  if(typeof g.product!=="string") g.product = "";
 }
 
 /* ============================================================
@@ -493,10 +544,11 @@ const BUNDLES = [
     goal:"무역풍 약화 → 따뜻한 해수 이동 → 용승·수온약층 변화 → 강수 중심 이동 → 지역별 기상 이변으로 이어지는 인과 사슬을 친구들이 스스로 설명할 수 있게 한다.",
     product:"인과 사슬 설명문(5단계 이상) + 1분 발표 대본. 시뮬레이터 또는 ONI 데이터의 수치를 2개 이상 인용.",
     scaffold:"① 한 문장 요약:\n② 인과 사슬 (1→2→3→4→5):\n③ 근거 수치 2개 (시뮬레이터/ONI, 출처 포함):\n④ 친구가 헷갈릴 만한 점과 쉬운 비유:\n⑤ 1분 발표 대본:",
+    // checks: 이 기준과 관련된 자동 점검 항목(GRASPS_CHECKS) — 자기평가 옆에 함께 보여 줍니다.
     standards:[
-      {t:"인과 사슬의 각 단계(무역풍–해수–용승/수온약층–대류·강수–지역 영향)가 빠짐없이 순서대로 연결된다.", src:"Stage 1 · U1"},
-      {t:"시뮬레이터 수치나 실제 ONI 값을 근거로 2개 이상 정확히 인용한다.", src:"성취기준 [10통과2-02-03] ‘분석’ · Stage 1 · U2"},
-      {t:"용어를 친구 눈높이로 풀어 쓰고, 오개념이 생길 만한 지점을 짚는다.", src:"청중(교실)의 요구"}
+      {t:"인과 사슬의 각 단계(무역풍–해수–용승/수온약층–대류·강수–지역 영향)가 빠짐없이 순서대로 연결된다.", src:"Stage 1 · U1", checks:["mech","atmos","impact"]},
+      {t:"시뮬레이터 수치나 실제 ONI 값을 근거로 2개 이상 정확히 인용한다.", src:"성취기준 [10통과2-02-03] ‘분석’ · Stage 1 · U2", checks:["data","source"]},
+      {t:"용어를 친구 눈높이로 풀어 쓰고, 오개념이 생길 만한 지점을 짚는다.", src:"청중(교실)의 요구", checks:["rec"]}
     ]},
   { id:"school_community", proxLabel:"중간 청중 · 학교 공동체",
     designLogic:"기후 정보는 우리 공동체의 실제 결정과 이어질 때 실천이 된다 — 그래서 청중은 학교 운영 주체, 상황은 다음 학기 계획 수립, 산출물은 데이터에 근거한 실천 제안서다.",
@@ -507,9 +559,9 @@ const BUNDLES = [
     product:"1쪽 실천 제안서: 근거 데이터 → 예상 영향(불확실성 포함) → 실천안 3가지 → 담당·시기·비용 → 기대 효과.",
     scaffold:"① 현재 상태 (ONI 최신값·판정, 출처):\n② 우리 지역·학교에 예상되는 영향과 불확실성:\n③ 실천안 1 / 2 / 3:\n④ 담당·시기·비용:\n⑤ 기대 효과와 점검 방법:",
     standards:[
-      {t:"ONI 최신값·판정을 출처와 함께 제시하고, 엘니뇨의 영향이 '확정 예보'가 아닌 '경향'임을 구분한다.", src:"Stage 1 · U2"},
-      {t:"각 실천안이 예상 영향과 인과적으로 연결된다(왜 이 대책인가).", src:"성취기준 [10통과2-02-03] ‘대처 방안’ · Stage 1 · U3"},
-      {t:"담당·시기·비용 등 실행 가능성을 구체적으로 제시한다.", src:"청중(학교 운영 주체)의 요구"}
+      {t:"ONI 최신값·판정을 출처와 함께 제시하고, 엘니뇨의 영향이 '확정 예보'가 아닌 '경향'임을 구분한다.", src:"Stage 1 · U2", checks:["data","source","uncert"]},
+      {t:"각 실천안이 예상 영향과 인과적으로 연결된다(왜 이 대책인가).", src:"성취기준 [10통과2-02-03] ‘대처 방안’ · Stage 1 · U3", checks:["mech","impact","rec"]},
+      {t:"담당·시기·비용 등 실행 가능성을 구체적으로 제시한다.", src:"청중(학교 운영 주체)의 요구", checks:["rec"]}
     ]},
   { id:"expert_public", proxLabel:"먼 청중 · 전문가·국제 사회",
     designLogic:"엘니뇨의 피해는 국경을 넘고 지역마다 반대로 나타난다 — 그래서 청중은 국제 정책 결정자, 상황은 국제 공동 대응 논의, 산출물은 과학적 근거를 갖춘 정책 브리프다.",
@@ -520,11 +572,88 @@ const BUNDLES = [
     product:"정책 브리프: 요약 → 과학적 근거(메커니즘 + 과거 강한 엘니뇨 데이터) → 지역별 대응 → 국제 협력 방안 → 한계와 불확실성.",
     scaffold:"① 요약 (3문장):\n② 과학적 근거 — 메커니즘:\n③ 과학적 근거 — 과거 사례 데이터 (예: 1997–98, 2015–16, 2023–24 최고 ONI와 출처):\n④ 지역별 대응 (서태평양 / 남미 서해안 / 기타):\n⑤ 국제 협력 방안:\n⑥ 한계와 불확실성:",
     standards:[
-      {t:"워커 순환 약화와 강수 중심 이동으로 지역별 상반된 피해(가뭄 vs 홍수)를 설명한다.", src:"Stage 1 · U1, U3"},
-      {t:"과거 강한 엘니뇨의 실제 ONI 자료를 근거로 인용하고 출처를 밝힌다.", src:"성취기준 [10통과2-02-03] · Stage 1 · U2"},
-      {t:"예측의 불확실성과 정책의 한계를 명시한다.", src:"과학적 태도 · 청중(전문가)의 요구"}
+      {t:"워커 순환 약화와 강수 중심 이동으로 지역별 상반된 피해(가뭄 vs 홍수)를 설명한다.", src:"Stage 1 · U1, U3", checks:["mech","atmos","impact"]},
+      {t:"과거 강한 엘니뇨의 실제 ONI 자료를 근거로 인용하고 출처를 밝힌다.", src:"성취기준 [10통과2-02-03] · Stage 1 · U2", checks:["data","source"]},
+      {t:"예측의 불확실성과 정책의 한계를 명시한다.", src:"과학적 태도 · 청중(전문가)의 요구", checks:["uncert","rec"]}
     ]},
 ];
+
+/* ============================================================
+   GRASPS 자가 점검 (키워드 기반 · 이 브라우저 안에서만 동작 · 네트워크 없음)
+   - 공통 5항목: 근거 수치(ONI·±0.5 ℃) · 메커니즘(무역풍·용승·수온약층) · 지역 영향 · 청중 맞춤 제안 · 출처
+   - 과제별 추가: 대기 순환·강수(교실, 전문가) · 불확실성(학교 공동체, 전문가)
+   - label 은 빠진 항목에도 보이므로 정답을 드러내지 않게, hint 는 안내 질문으로 씁니다.
+   키워드가 보인다는 뜻일 뿐 내용의 옳고 그름까지 판정하지는 않습니다(최종 평가는 선생님).
+   ============================================================ */
+const MIN_EXEMPLAR_LEN = 60;   // 예시 개요를 열 수 있는 최소 글자 수(작성 틀 문구 제외)
+const NUM_RE = /[+\-−±]?\s?\d+(?:\.\d+)?\s*(?:℃|°\s*C|도|m\b|%)/g;
+const GRASPS_CHECKS = {
+  data:   {short:"근거 수치", label:"근거 수치 인용 (관측 지수·판정 기준·시뮬레이터 값)",
+           hint:"주장을 뒷받침하는 수치(지수 값과 시기, 판정 기준, 시뮬레이터에서 읽은 값 등)를 단위와 함께 넣었나요?",
+           test:t=>{ const n=(t.match(NUM_RE)||[]).length;
+             return /±\s*0\.5|[+\-−]\s*0\.5|0\.5\s*(?:℃|°\s*C|도)?\s*(?:이상|이하)/.test(t)
+               || (/ONI|Ni[ñn]o\s*3\.4|니뇨\s*3\.4|엘니뇨\s*지수/i.test(t) && (n>=1 || /[+\-−]?\d+\.\d/.test(t)))
+               || n>=2; },
+           detail:t=>"수치 "+((t.match(NUM_RE)||[]).length)+"개"},
+  mech:   {short:"바람·바다", label:"메커니즘 — 바람과 바다의 변화",
+           hint:"무역풍의 변화가 바다(따뜻한 해수의 분포, 깊은 곳 찬물의 움직임, 동태평양 수온)를 어떻게 바꾸는지 단계별로 적었나요?",
+           test:t=>/무역풍|trade\s*wind/i.test(t)
+             && /용승|upwelling|수온\s*약층|thermocline|동태평양[^.\n]{0,15}(?:수온|해수면\s*온도|바다|해수)|따뜻한\s*(?:해수|바닷물|물)[^.\n]{0,15}(?:동쪽|이동|퍼)/i.test(t)},
+  atmos:  {short:"대기·강수", label:"메커니즘 — 대기 순환과 강수의 변화",
+           hint:"바다의 변화가 대기(공기가 오르내리는 곳, 비가 많이 오는 곳)를 어떻게 바꾸는지 이어서 설명했나요?",
+           test:t=>/워커|walker|상승\s*기류|하강\s*기류|강수\s*중심|대류|비구름[^.\n]{0,10}이동|비가\s*(?:많이\s*)?(?:오는|내리는)\s*(?:곳|지역|중심)/i.test(t)},
+  impact: {short:"지역 영향", label:"지역별 영향",
+           hint:"어느 지역에 어떤 기상 변화가 나타나는지 지역 이름과 함께 적었나요? 같은 엘니뇨라도 지역마다 다를 수 있다는 점도 생각해 보세요.",
+           test:t=>/인도네시아|호주|오스트레일리아|페루|에콰도르|남미|남아메리카|한국|우리나라|한반도|우리\s*(?:지역|학교)|인도|아프리카|북아메리카|미국|서태평양|동태평양|필리핀|동남아/.test(t)
+             && /가뭄|홍수|산불|강수|폭우|호우|폭염|어획|이상\s*기온|기온|강우|태풍|건조|습윤|몬순|장마|한파|기상\s*이변|침수/.test(t)},
+  source: {short:"출처", label:"자료 출처 밝히기",
+           hint:"인용한 수치나 자료가 어디에서 왔는지(기관·자료 이름) 밝혔나요?",
+           test:t=>/출처|NOAA|CPC|기후\s*예측\s*센터|기상청|Open-?Meteo|오픈\s*메테오|KMA|WMO|세계\s*기상\s*기구|자료\s*[:：]|데이터\s*[:：]/i.test(t)},
+  uncert: {short:"불확실성", label:"불확실성·한계 구분",
+           hint:"엘니뇨의 영향이 확정된 결과인지 '경향'인지 구분했나요? 예측이나 대책의 한계도 적어 보세요.",
+           test:t=>/경향|가능성|불확실|한계|확률|해마다|예외|단정|확정/.test(t)},
+  rec: {
+    classroom:        {short:"청중 맞춤", label:"청중 맞춤 — 친구 눈높이 설명",
+                       hint:"처음 듣는 친구도 이해하도록 쉬운 비유나 예시를 들고, 헷갈리기 쉬운 점을 짚었나요?",
+                       test:t=>/비유|예를\s*들|예시|쉽게\s*(?:말|설명)|마치|헷갈|오해|착각|오개념|흔히|잘못\s*(?:알|생각)/.test(t)},
+    school_community: {short:"청중 맞춤", label:"청중 맞춤 — 실행할 수 있는 실천안",
+                       hint:"학교가 실제로 실행할 수 있도록 실천안마다 누가·언제·얼마로 할지 적었나요?",
+                       test:t=>/실천|제안|대책|방안|계획/.test(t) && /담당|시기|비용|예산|일정|학기|방학|\d+\s*월|\d+\s*(?:만\s*)?원/.test(t)},
+    expert_public:    {short:"청중 맞춤", label:"청중 맞춤 — 구체적인 정책·협력 제안",
+                       hint:"정책 결정자에게 누가 무엇을 해야 하는지 구체적인 대응·협력 방안을 제안했나요?",
+                       test:t=>/정책|제안|권고|선언|대응/.test(t) && /국제|협력|공동|조기\s*경보|기금|지원|공유|원조/.test(t)}
+  }
+};
+const GRASPS_CHECK_SET = {
+  classroom:        ["mech","atmos","impact","data","source","rec"],
+  school_community: ["mech","impact","data","source","uncert","rec"],
+  expert_public:    ["mech","atmos","impact","data","source","uncert","rec"]
+};
+function graspsCheckDef(bundleId, id){ return id==="rec" ? GRASPS_CHECKS.rec[bundleId] : GRASPS_CHECKS[id]; }
+const RATE = [["met","충족"],["partial","부분"],["needs","보완"]];
+
+/* 예시 개요 — 산출물을 60자 이상 쓴 뒤에만 열 수 있고, 열람 기록은 보고서에 남습니다. [ ] 는 자기 자료로 채울 자리입니다. */
+const GRASPS_EXEMPLAR = {
+  classroom:
+"① 한 문장 요약\n  엘니뇨는 적도 태평양의 무역풍이 약해져 동태평양 바다가 평소보다 따뜻해지고, 그 결과 대기 순환이 바뀌어 멀리 떨어진 지역의 날씨까지 달라지는 현상이다.\n\n"
++"② 인과 사슬\n  1) 무역풍 약화 → 2) 서쪽에 쌓였던 따뜻한 표층 해수가 동쪽으로 퍼짐 → 3) 동태평양 수온약층이 깊어지고 찬 심층수의 용승이 약해짐\n  → 4) 동태평양 표층 수온 상승(ONI +0.5 ℃ 이상) → 5) 상승 기류와 강수 중심이 중·동태평양으로 이동(워커 순환 약화)\n  → 6) 인도네시아·호주는 건조(가뭄·산불), 페루 해안은 강수 증가(홍수)·어획량 감소\n\n"
++"③ 근거 수치 2개 (출처 포함)\n  - 시뮬레이터: 엘니뇨 프리셋에서 Niño3.4 편차 [ ] ℃, 동쪽 수온약층 깊이 [ ] m\n  - 실제 자료: 최신 ONI [ ] ℃ ([계절]) — 출처 NOAA CPC\n\n"
++"④ 헷갈릴 만한 점과 쉬운 비유\n  - '엘니뇨 = 지구 전체가 뜨거워지는 것'이 아니라 적도 태평양의 바다·대기 흐름이 바뀌는 것\n  - 비유: 욕조 물을 한쪽으로 밀던 바람이 약해지면 쌓였던 물이 반대쪽으로 되돌아 퍼지는 것과 비슷함\n  - 우리나라 날씨 영향은 '경향'일 뿐 해마다 다름\n\n"
++"⑤ 1분 발표 대본\n  질문으로 시작(\"태평양 바람이 약해지면?\") → 인과 사슬 → 수치 2개 → 우리 생활과의 연결 → 한 문장 정리",
+  school_community:
+"① 현재 상태\n  최신 ONI [ ] ℃ ([계절]) → 판정 [엘니뇨/중립/라니냐] (기준: ±0.5 ℃가 연속 5개 계절) — 출처: NOAA CPC ONI, 수집 시각 [ ]\n\n"
++"② 예상 영향과 불확실성\n  - 원리 한 줄: 무역풍이 약해지면 동태평양의 찬물 용승이 약해져 수온이 오르고, 대기 순환이 바뀌어 먼 지역 날씨에도 영향을 줌\n  - 엘니뇨 시기 우리나라는 겨울이 따뜻하고 강수가 많은 '경향'이 보고되지만 해마다 차이가 큼 → 확정 예보가 아님\n  - 기상청의 계절 전망과 특보를 함께 확인해 계획을 조정\n\n"
++"③ 실천안 1 / 2 / 3 (예상 영향 → 대책의 이유)\n  1) 집중호우 대비: 배수로·옥상 배수구 점검, 호우 특보 때 등하교 안내 체계\n  2) 폭염 대비: 냉방·그늘막 점검, 한낮 야외 활동 시간 조정, 온열 질환 예방 안내\n  3) 온실가스 줄이기(완화): 교내 에너지 절약 캠페인 — 엘니뇨 자체를 막는 대책이 아니라 지구온난화에 대응하는 실천임을 구분\n\n"
++"④ 담당·시기·비용\n  1) 행정실 · 장마 전 [ ]월 · [ ]원   2) 보건·체육 · [ ]월~[ ]월 · [ ]원   3) 학생회 환경부 · 학기 중 · [ ]원\n\n"
++"⑤ 기대 효과와 점검 방법\n  침수·온열 질환 사고 예방, 전기 사용량 [ ]% 절감 목표 → 학기 말에 기록을 비교해 점검",
+  expert_public:
+"① 요약 (3문장)\n  강한 엘니뇨는 적도 태평양의 대기–해양 상호작용 변화로 생기며, 지역에 따라 가뭄과 홍수라는 상반된 피해를 낳는다.\n  ONI 감시에 기반한 조기 경보를 공유하면 대비할 시간을 벌 수 있다.\n  지역별 피해 유형에 맞춘 국제 협력 대응을 제안한다.\n\n"
++"② 과학적 근거 — 메커니즘\n  무역풍 약화 → 따뜻한 해수 동쪽 이동 → 동태평양 수온약층이 깊어지고 용승 약화 → 표층 수온 상승\n  → 워커 순환 약화, 강수 중심이 중·동태평양으로 이동 → 서태평양은 하강 기류로 건조, 동태평양 연안은 강수 증가\n\n"
++"③ 과학적 근거 — 과거 사례 데이터\n  1997–98 · 2015–16 · 2023–24 최고 ONI [ ] / [ ] / [ ] ℃ (데이터 단계 과제 1에서 찾은 값, 출처 NOAA CPC ONI)\n  세 사건 모두 +1.5 ℃를 넘는 강한 엘니뇨 — 최고점이 나타난 시기의 공통점(과제 1)도 함께 제시\n\n"
++"④ 지역별 대응\n  - 서태평양(인도네시아·호주): 가뭄·산불 → 물 비축, 산불 조기 감시\n  - 남미 서해안(페루·에콰도르): 홍수·어획량 감소 → 홍수 대비 시설, 어민 소득 지원\n  - 기타(인도 몬순 약화 경향 등): 농업 가뭄 대비\n\n"
++"⑤ 국제 협력 방안\n  ONI·해양 관측 자료와 조기 경보의 공동 공유, 피해국 지원 기금, 적도 태평양 관측망 유지\n\n"
++"⑥ 한계와 불확실성\n  원격 영향은 '경향'이며 해마다 다름 · 엘니뇨 예측은 몇 달 앞까지만 믿을 만하고 봄철에는 특히 어려움\n  · 지구온난화가 엘니뇨의 빈도·강도를 어떻게 바꾸는지는 아직 연구 중"
+};
 
 const SELF = [
   {k:"cause", t:"무역풍 변화에서 지역별 기상 이변까지 인과 사슬로 설명할 수 있다"},
@@ -1248,9 +1377,28 @@ function rQuiz(){
 /* ============================================================
    STEP 6 · GRASPS
    ============================================================ */
+const exOpen = {};   // 화면에서 예시 개요를 펼쳐 둔 상태(저장하지 않음)
+function curBundle(){ return BUNDLES.find(x=>x.id===state.grasps.bundle) || null; }
+// 작성 틀 문구를 뺀 '학생이 직접 쓴 부분' — 글자 수 기준과 자동 점검에 씁니다(틀 안의 낱말로 점검이 통과되지 않도록).
+function ownProduct(b){
+  let t = String(state.grasps.product||"");
+  if(b) b.scaffold.split("\n").forEach(line=>{ const l=line.trim(); if(l) t = t.split(l).join(" "); });
+  return t.normalize("NFC");
+}
+function textLen(s){ return String(s||"").replace(/\s+/g," ").trim().length; }
+function fmtTime(iso){ const d=new Date(iso); return isNaN(d) ? "" : d.toLocaleString("ko-KR",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"}); }
+function runGraspsCheck(b){
+  const t = ownProduct(b);
+  const items = GRASPS_CHECK_SET[b.id].map(id=>{
+    const d = graspsCheckDef(b.id, id);
+    return {id, short:d.short, label:d.label, hint:d.hint, ok:!!d.test(t), detail:d.detail?d.detail(t):""};
+  });
+  return {items, met:items.filter(x=>x.ok).length, total:items.length};
+}
+function selfOf(b){ const s=state.grasps.self; if(!s[b.id] || typeof s[b.id]!=="object") s[b.id]={}; return s[b.id]; }
+
 function rGrasps(){
-  const b = BUNDLES.find(x=>x.id===state.grasps.bundle);
-  const hasKey = (()=>{ try{ return !!localStorage.getItem(LS.apiKey); }catch(e){ return false; } })();
+  const b = curBundle();
   const cards = BUNDLES.map(x=>`
     <div class="bundle${x.id===state.grasps.bundle?" sel":""}" role="button" tabindex="0" onclick="pickBundle('${x.id}')" onkeydown="if(event.key==='Enter')pickBundle('${x.id}')">
       <div class="prox">${x.proxLabel}</div>
@@ -1273,16 +1421,21 @@ function rGrasps(){
       <button class="btn btn-prev btn-sm" onclick="useScaffold()">작성 틀 넣기</button>
       <span class="cc" id="pcc">${state.grasps.product.length} 자</span>
     </div>
-    <div class="keybox">
-      <div class="kh">✦ AI 피드백 (선택) · CLAUDE API</div>
-      <div class="keyrow">
-        <input id="apiKey" type="password" placeholder="sk-ant-... (선생님께 받은 키)" value="${esc((()=>{ try{ return localStorage.getItem(LS.apiKey)||""; }catch(e){ return ""; } })())}">
-        <button class="btn btn-violet btn-sm" onclick="saveKey()">저장</button>
-        <button class="btn btn-violet btn-sm" onclick="aiFeedback()">✦ 평가 기준으로 피드백 받기</button>
+    <div class="review" id="reviewBox">
+      <div class="kh">✓ 자가 점검 · 자기평가</div>
+      <div class="note">키워드 기반 자동 점검 — 참고용이며 최종 평가는 선생님이 합니다. 이 브라우저 안에서만 동작하고 산출물을 어디에도 보내지 않습니다.</div>
+      <div class="tools">
+        <button class="btn btn-check btn-sm" id="gCheckBtn" onclick="graspsCheck()">✓ 자가 점검</button>
+        <button class="btn btn-prev btn-sm" id="gExBtn" onclick="toggleGraspsExemplar()">예시 개요 보기</button>
+        ${CONFIG.showPromptCopy ? `<button class="btn btn-prev btn-sm" id="gPcBtn" onclick="copyGraspsPrompt()">AI 도우미용 프롬프트 복사</button>` : ""}
       </div>
-      <div class="key-note" id="keyState">${hasKey?"🔓 키가 저장되어 있습니다(효소 워크북과 공유).":"키가 없어도 활동은 모두 할 수 있습니다. AI 피드백을 쓰려면 선생님께 받은 키를 입력하세요."}</div>
-      <div class="key-note">🔒 키는 이 브라우저(localStorage)에만 저장되고 Anthropic API로 직접 전송됩니다. AI 피드백은 <b>초안</b>이며, 최종 평가는 선생님이 검토합니다. <a href="#" onclick="clearKey();return false;">키 삭제</a></div>
-      <div class="ai-out${state.grasps.ai?"":" hidden"}" id="aiOut">${state.grasps.ai?`<div class="ah">AI 피드백 (초안)</div>${esc(state.grasps.ai)}`:""}</div>
+      <div class="gate" id="gExGate"></div>
+      <div class="sc-out hidden" id="gCheckOut"></div>
+      <div class="ex-out hidden" id="gEx"></div>
+      <div class="pc-out hidden" id="gPc"></div>
+      <h3 class="sh" style="margin-top:18px">자기평가 — 평가 기준마다 내 산출물을 스스로 판단해 보세요</h3>
+      <div class="selfrate" id="selfRate"></div>
+      <p class="note" style="margin:8px 0 0">보고서에는 <b>학생 자기평가 + 자동 점검(키워드 기반) · 교사 확인 필요</b>로 기록됩니다.</p>
     </div>`;
   main.innerHTML = `<div class="panel">
     <div class="eyebrow">STEP 06 · GRASPS 수행과제</div>
@@ -1293,67 +1446,157 @@ function rGrasps(){
     <div class="bundles">${cards}</div>
     ${work}
     ${footer("다음 → 성찰")}</div>`;
+  if(b){
+    updateGraspsGate(); renderSelfRate();
+    const c=state.grasps.check; if(c && c.bundle===b.id) renderGraspsCheck(runGraspsCheck(b));   // 이전 점검 결과 다시 보기
+    if(exOpen[b.id] && state.grasps.exemplar[b.id]) renderGraspsExemplar();
+  }
 }
 window.pickBundle = id=>{
   if(state.grasps.bundle && state.grasps.bundle!==id && state.grasps.product.trim().length>20 &&
      !confirm("과제를 바꾸면 작성한 산출물은 그대로 남지만 평가 기준이 달라집니다. 바꿀까요?")) return;
-  state.grasps.bundle=id; state.grasps.ai=""; save(); rGrasps();
+  state.grasps.bundle=id; save(); rGrasps();
 };
-window.onProduct = ()=>{ const t=$("#product"); state.grasps.product=t.value; $("#pcc").textContent=t.value.length+" 자"; save(); };
-window.useScaffold = ()=>{ const b=BUNDLES.find(x=>x.id===state.grasps.bundle); const t=$("#product"); if(!b||!t) return;
+window.onProduct = ()=>{
+  const t=$("#product"); state.grasps.product=t.value; $("#pcc").textContent=t.value.length+" 자"; save();
+  updateGraspsGate();
+  const st=$("#gCheckStale"); if(st) st.classList.remove("hidden");
+};
+window.useScaffold = ()=>{ const b=curBundle(); const t=$("#product"); if(!b||!t) return;
   if(t.value.trim() && !confirm("작성 틀을 현재 내용 뒤에 붙일까요?")) return;
   t.value = (t.value.trim()? t.value+"\n\n" : "") + b.scaffold; onProduct(); t.focus(); };
-window.saveKey = ()=>{ const v=$("#apiKey").value.trim(); if(!v){ toast("키를 입력하세요.",true); return; }
-  try{ localStorage.setItem(LS.apiKey,v); }catch(e){} $("#keyState").textContent="🔓 키가 저장되었습니다."; toast("API 키가 이 브라우저에 저장되었습니다."); };
-window.clearKey = ()=>{ try{ localStorage.removeItem(LS.apiKey); }catch(e){} const el=$("#apiKey"); if(el) el.value=""; const ks=$("#keyState"); if(ks) ks.textContent="키가 삭제되었습니다."; toast("API 키를 삭제했습니다."); };
 
-async function callClaude(system, userText){
-  let key=""; try{ key = localStorage.getItem(LS.apiKey)||""; }catch(e){}
-  if(!key) throw new Error("API 키가 없습니다. 위에 키를 먼저 입력하세요.");
-  const resp = await fetch("https://api.anthropic.com/v1/messages", {
-    method:"POST",
-    headers:{
-      "content-type":"application/json",
-      "x-api-key":key,
-      "anthropic-version":"2023-06-01",
-      "anthropic-dangerous-direct-browser-access":"true",
-      "anthropic-beta":"server-side-fallback-2026-07-01"
-    },
-    body: JSON.stringify({
-      model: AI_MODEL, fallbacks: "default", max_tokens: 16000,
-      output_config: {effort: "medium"},
-      system, messages:[{role:"user", content:userText}]
-    })
-  });
-  const data = await resp.json().catch(()=>({}));
-  if(!resp.ok) throw new Error((data && data.error && data.error.message) || ("요청 실패 (HTTP "+resp.status+")"));
-  if(data.stop_reason==="refusal") throw new Error("AI가 이 요청에 답하지 않았습니다. 내용을 다듬어 다시 시도하거나 선생님께 문의하세요.");
-  const text = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
-  if(!text) throw new Error("피드백이 비어 있습니다. 잠시 후 다시 시도하세요.");
-  return text;
+function updateGraspsGate(){
+  const b=curBundle(), btn=$("#gExBtn"), g=$("#gExGate"); if(!b||!btn||!g) return;
+  const v=state.grasps.exemplar[b.id], n=textLen(ownProduct(b));
+  btn.disabled = !v && n<MIN_EXEMPLAR_LEN;
+  btn.textContent = v ? (exOpen[b.id] ? "예시 개요 숨기기" : "예시 개요 다시 보기") : "예시 개요 보기";
+  g.className = "gate" + (v ? " seen" : "");
+  g.textContent = v ? `예시 개요 열람 기록: ${fmtTime(v.at)} (열람 당시 직접 쓴 부분 ${v.len!=null?v.len:"?"}자) — 보고서에 함께 표시됩니다.`
+    : n<MIN_EXEMPLAR_LEN ? `예시 개요는 먼저 ${MIN_EXEMPLAR_LEN}자 이상 스스로 쓴 뒤에 열 수 있어요 (작성 틀 문구를 뺀 직접 쓴 부분 ${n}자). 열람 여부는 보고서에 기록됩니다.`
+    : "이제 예시 개요를 열 수 있어요. 열람 여부와 시각은 보고서에 기록됩니다.";
 }
-window.aiFeedback = async ()=>{
-  const b = BUNDLES.find(x=>x.id===state.grasps.bundle); const out=$("#aiOut");
-  const product = (state.grasps.product||"").trim();
-  if(!b) return;
-  if(product.length<80){ toast("산출물을 조금 더 작성한 뒤 피드백을 받아 보세요(80자 이상).",true); return; }
-  out.classList.remove("hidden"); out.innerHTML = `<div class="ah">AI 피드백 (초안)</div><span class="spin"></span>평가 기준에 따라 읽는 중...`;
-  const system = "당신은 고등학교 통합과학 교사를 돕는 피드백 조수입니다. 학생이 엘니뇨(ENSO) 단원의 GRASPS 수행과제 산출물을 제출했습니다. "
-    + "성취기준 [10통과2-02-03]과 주어진 평가 기준에 비추어, 학생을 격려하는 어조의 한국어로 피드백 초안을 작성하세요. 정답 문장을 대신 써 주지 말고 스스로 고칠 수 있게 안내하세요. "
-    + "형식: 1) 평가 기준별로 '충족 / 부분 충족 / 보완 필요' 중 하나와 근거 한 문장, 2) 가장 먼저 고칠 점 두 가지, 3) 한 단계 더 생각해 볼 질문 하나. "
-    + "과학적으로 틀린 내용이 있으면 분명히 짚되, 엘니뇨의 원격 영향은 '경향'이라는 점을 존중하세요. 이 피드백은 교사가 최종 검토한다는 점을 전제로 합니다.";
-  const userText = "[과제 설계 논리]\n"+b.designLogic
-    + "\n\n[역할] "+b.role+"\n[청중] "+b.audience+"\n[상황] "+b.situation+"\n[목표] "+b.goal+"\n[산출물] "+b.product
-    + "\n\n[평가 기준]\n"+b.standards.map((s,i)=>(i+1)+". "+s.t+" (출처: "+s.src+")").join("\n")
-    + "\n\n[학생 산출물]\n"+product;
-  try{
-    const fb = await callClaude(system, userText);
-    state.grasps.ai = fb; save();
-    out.innerHTML = `<div class="ah">AI 피드백 (초안)</div>${esc(fb)}`;
-  }catch(err){
-    out.innerHTML = `<div class="ah" style="color:var(--red)">피드백 오류</div>${esc(err.message||err)}`;
-  }
+window.graspsCheck = ()=>{
+  const b=curBundle(); if(!b) return;
+  if(textLen(ownProduct(b))<10){ toast("먼저 산출물을 조금 더 작성해 주세요(작성 틀 문구 제외).",true); return; }
+  const res=runGraspsCheck(b);
+  state.grasps.check={bundle:b.id, at:new Date().toISOString(), found:res.items.filter(x=>x.ok).map(x=>x.id)};
+  state.grasps.checkCount=(state.grasps.checkCount||0)+1; save();
+  renderGraspsCheck(res); renderSelfRate();
 };
+function renderGraspsCheck(res){
+  const box=$("#gCheckOut"); if(!box) return;
+  box.classList.remove("hidden");
+  box.innerHTML = `<div class="sc-head"><span>자가 점검 · 키워드 기반</span><span class="sc-score">${res.met} / ${res.total} 항목 발견</span></div>
+    <div class="sc-note">키워드 기반 자동 점검 — 참고용이며 최종 평가는 선생님이 합니다. ✓는 관련 표현이 보인다는 뜻일 뿐, 내용이 맞는지까지 확인한 것은 아닙니다. 작성 틀 문구는 점검에서 뺍니다.</div>
+    <ul class="sc-list">${res.items.map(it=>`<li class="${it.ok?"ok":"miss"}"><span class="mk" aria-label="${it.ok?"발견":"보완 필요"}">${it.ok?"✓":"△"}</span>
+      <div><div class="sl">${esc(it.label)}${it.detail?`<span class="sd">· ${esc(it.detail)}</span>`:""}</div>${it.ok?"":`<div class="sh">💡 ${esc(it.hint)}</div>`}</div></li>`).join("")}</ul>
+    <div class="sc-stale hidden" id="gCheckStale">✎ 산출물이 바뀌었어요. 다시 점검하려면 '자가 점검'을 누르세요.</div>`;
+}
+function renderSelfRate(){
+  const b=curBundle(), box=$("#selfRate"); if(!b||!box) return;
+  const self=selfOf(b), c=state.grasps.check, checked = c && c.bundle===b.id ? c.found : null;
+  box.innerHTML = b.standards.map((s,i)=>{
+    const chips = (s.checks||[]).map(id=>{ const d=graspsCheckDef(b.id,id); if(!d) return "";
+      if(!checked) return `<span class="chip">${esc(d.short)}</span>`;
+      const ok=checked.indexOf(id)>=0; return `<span class="chip ${ok?"ok":"miss"}">${esc(d.short)} ${ok?"✓":"△"}</span>`; }).join("");
+    return `<div class="srow">
+      <div class="stxt"><b style="color:var(--cyan2)">기준 ${i+1}</b> ${esc(s.t)} <span class="src">[${esc(s.src)}]</span></div>
+      <div class="chips"><span>자동 점검${checked?"":" (점검 전)"}:</span>${chips}</div>
+      <div class="rate" role="radiogroup" aria-label="기준 ${i+1} 자기평가">${RATE.map(([v,t])=>`<label class="rchip"><input type="radio" name="sr_${b.id}_${i}" value="${v}" ${self[i]===v?"checked":""} onchange="pickSelfRate(${i},'${v}')"><span>${t}</span></label>`).join("")}</div>
+    </div>`;
+  }).join("");
+}
+window.pickSelfRate = (i,v)=>{ const b=curBundle(); if(!b) return; selfOf(b)[i]=v; save(); };
+window.toggleGraspsExemplar = ()=>{
+  const b=curBundle(); if(!b) return;
+  if(!state.grasps.exemplar[b.id]){
+    const n=textLen(ownProduct(b));
+    if(n<MIN_EXEMPLAR_LEN){ toast(`예시 개요는 ${MIN_EXEMPLAR_LEN}자 이상 쓴 뒤에 열 수 있어요 (지금 ${n}자).`,true); return; }
+    if(!confirm("예시 개요를 열면 열람 기록(시각)이 보고서에 남습니다. 지금 열까요?")) return;
+    state.grasps.exemplar[b.id] = {at:new Date().toISOString(), len:n}; save();
+    exOpen[b.id]=true;
+  } else exOpen[b.id]=!exOpen[b.id];
+  renderGraspsExemplar(); updateGraspsGate();
+};
+function renderGraspsExemplar(){
+  const b=curBundle(), box=$("#gEx"); if(!b||!box) return;
+  if(!exOpen[b.id]){ box.classList.add("hidden"); return; }
+  box.classList.remove("hidden");
+  box.innerHTML = `<div class="ex-head"><span>예시 개요 — ${esc(b.proxLabel)}</span><span>열람 기록됨</span></div>
+    <div class="ex-body">${esc(GRASPS_EXEMPLAR[b.id])}</div>
+    <div class="ex-note">완성된 답이 아니라 뼈대입니다. [ ] 자리는 내가 찾은 자료(ONI 값·시뮬레이터 수치·출처)로 채우고, 문장은 <b>내 말로</b> 쓰세요.</div>`;
+}
+
+/* ---- (선택) AI 도우미용 프롬프트 복사: 클립보드 복사만 함 · 네트워크 호출 없음 · 키 필요 없음 ---- */
+function buildGraspsPrompt(b){
+  return [
+    "당신은 고등학생의 과학 수행과제 산출물에 피드백을 주는 학습 도우미입니다.",
+    "완성된 문장이나 모범 답안을 대신 써 주지 말고, 학생이 스스로 고칠 수 있도록 질문과 힌트로만 안내해 주세요.",
+    "",
+    "[단원] 통합과학2 기후 변화와 지구 환경 — 엘니뇨·라니냐(ENSO), 성취기준 [10통과2-02-03]",
+    "[역할] " + b.role, "[청중] " + b.audience, "[상황] " + b.situation, "[목표] " + b.goal, "[산출물] " + b.product,
+    "",
+    "[평가 기준]",
+    ...b.standards.map((s,i)=>(i+1)+". "+s.t),
+    "",
+    "[점검 항목]",
+    ...GRASPS_CHECK_SET[b.id].map((id,i)=>{ const d=graspsCheckDef(b.id,id); return (i+1)+". "+d.label+" — "+d.hint; }),
+    "",
+    "[학생 산출물]",
+    (state.grasps.product||"").trim() || "(아직 작성하지 않음)",
+    "",
+    "[요청]",
+    "1) 평가 기준별로 잘한 점과 보완할 점을 한두 문장씩 — 정답을 알려 주지 말고 생각해 볼 질문으로",
+    "2) 가장 먼저 고칠 점 두 가지",
+    "3) 한 단계 더 생각해 볼 질문 하나",
+    "한국어로, 격려하는 말투로 짧게 답해 주세요. 과학적으로 틀린 내용이 있으면 어느 부분인지 짚고, 엘니뇨의 원격 영향은 '경향'이라는 점을 존중해 주세요."
+  ].join("\n");
+}
+window.copyGraspsPrompt = ()=>{ const b=curBundle(); if(b) copyPrompt(buildGraspsPrompt(b), "gPc"); };
+async function copyPrompt(text, hostId){
+  let ok=false;
+  try{
+    if(navigator.clipboard && window.isSecureContext){
+      await Promise.race([navigator.clipboard.writeText(text), new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),1500))]);
+      ok=true;
+    }
+  }catch(e){ ok=false; }
+  const host=document.getElementById(hostId);
+  if(host) showPromptBox(host, text, ok);
+  if(ok){ toast("프롬프트를 복사했습니다. 학교에서 허용한 AI 도구에 붙여 넣으세요."); return; }
+  // 대체 경로: 텍스트 상자를 선택해 두고 복사를 시도합니다. 실패해도 학생이 직접 복사할 수 있습니다.
+  const ta = host && host.querySelector("textarea");
+  if(ta){
+    try{ ta.focus(); ta.select(); ta.setSelectionRange(0, ta.value.length); }catch(e){}
+    let copied=false; try{ copied = !!(document.execCommand && document.execCommand("copy")); }catch(e){ copied=false; }
+    if(copied){ const h=host.querySelector(".pc-head span"); if(h) h.textContent="AI 도우미용 프롬프트 · 복사됨 ✓"; toast("프롬프트를 복사했습니다. 학교에서 허용한 AI 도구에 붙여 넣으세요."); return; }
+  }
+  toast("자동 복사가 막혀 있어요. 아래 상자의 글을 선택해 복사하세요(Ctrl+C · 길게 눌러 복사).", true);
+}
+function showPromptBox(host, text, copied){
+  host.classList.remove("hidden");
+  host.innerHTML = `<div class="pc-head"><span>AI 도우미용 프롬프트 · ${copied?"복사됨 ✓":"아래 글을 선택해 복사하세요"}</span></div>
+    <textarea readonly aria-label="AI 도우미용 프롬프트">${esc(text)}</textarea>
+    <div class="pc-note">이 버튼은 글을 클립보드에 복사만 합니다(인터넷 전송 없음 · 키 필요 없음). <b>학교에서 허용한 AI 도구</b>에만 붙여 넣고, 이름·학번 같은 개인정보는 넣지 마세요. AI의 답도 참고용입니다.</div>
+    <button class="btn btn-prev btn-sm" onclick="this.parentNode.classList.add('hidden')">닫기</button>`;
+}
+
+/* 보고서·제출용: 학생 자기평가 + 자동 점검(최종 산출물 기준) + 예시 개요 열람 기록 */
+const REVIEW_LABEL = "학생 자기평가 + 자동 점검(키워드 기반) · 교사 확인 필요";
+function graspsReview(){
+  const b=curBundle(); if(!b) return null;
+  const res=runGraspsCheck(b), self=selfOf(b), found=res.items.filter(x=>x.ok).map(x=>x.id), ex=state.grasps.exemplar[b.id]||null;
+  return {
+    label: REVIEW_LABEL,
+    selfAssessment: b.standards.map((s,i)=>({ standard:s.t, src:s.src, rating:self[i]||null,
+      ratingLabel:(RATE.find(r=>r[0]===self[i])||[null,null])[1],
+      autoCheck:(s.checks||[]).map(id=>({id, ok:found.indexOf(id)>=0})) })),
+    autoCheck:{ method:"keyword", met:res.met, total:res.total, found, missing:res.items.filter(x=>!x.ok).map(x=>x.id),
+      checkCount:state.grasps.checkCount||0, lastCheckedAt:(state.grasps.check&&state.grasps.check.at)||null },
+    exemplarViewed: !!ex, exemplarViewedAt: ex?ex.at:null, exemplarLenAtView: ex?ex.len:null
+  };
+}
 
 /* ============================================================
    STEP 7 · 성찰 (KWL)
@@ -1395,6 +1638,13 @@ function rSubmit(){
   const ck=state.sim.check, ckN=["normal","elnino","lanina","flat","dateline"].filter(k=>ck[k]).length;
   const st = ONI.state==="ok" ? currentStatus(ONI.series) : null;
   const L = state.data.live;
+  const gr = graspsReview();
+  const grHtml = !gr ? "" : `<div class="qline"><span class="qq"><b>${esc(gr.label)}</b></span>
+      <span class="ans">${gr.selfAssessment.map((s,i)=>`<span class="lab">기준 ${i+1}.</span> ${esc(s.standard)}
+  → 자기평가: <span class="${s.rating==="met"?"ok":s.rating?"":"neu"}">${s.ratingLabel?esc(s.ratingLabel):"(미응답)"}</span>
+    · 자동 점검: ${s.autoCheck.length ? s.autoCheck.map(c=>esc(graspsCheckDef(b.id,c.id).short)+(c.ok?" ✓":" △")).join(", ") : "—"}`).join("\n")}
+<span class="neu">자동 점검 합계 ${gr.autoCheck.met}/${gr.autoCheck.total} 항목 (최종 산출물 기준, 학생 점검 ${gr.autoCheck.checkCount}회) · 키워드 기반 자동 점검 — 참고용이며 최종 평가는 선생님이 합니다.</span></span></div>
+    ${line("예시 개요", gr.exemplarViewed ? `<span style="color:var(--amber)">열람함</span> (${esc(fmtTime(gr.exemplarViewedAt))}, 열람 당시 직접 쓴 부분 ${gr.exemplarLenAtView!=null?gr.exemplarLenAtView:"?"}자)` : "열람 안 함")}`;
   main.innerHTML = `<div class="panel">
     <div class="eyebrow">STEP 08 · 보고서 REPORT</div>
     <h1 class="h">최종 보고서</h1>
@@ -1425,7 +1675,7 @@ function rSubmit(){
     <div class="rsec"><div class="rt">GRASPS 수행과제 (STEP 06)</div>
       ${line("선택한 과제", b ? esc(b.proxLabel)+" — "+esc(b.role)+" → "+esc(b.audience) : "—")}
       ${line("산출물", txt(state.grasps.product))}
-      ${state.grasps.ai ? line("AI 피드백 초안 (교사 검토 전)", txt(state.grasps.ai)) : ""}</div>
+      ${grHtml}</div>
     <div class="rsec"><div class="rt">성찰 (STEP 07)</div>
       ${line("L · 배운 것", txt(state.reflect.l))}
       ${line("W 해결", {yes:"해결됐다",part:"일부 해결",no:"아직 궁금하다"}[state.reflect.wDone]||"—")}
@@ -1447,7 +1697,7 @@ function buildPayload(){
   const m=model(state.sim.w), st = ONI.state==="ok" ? currentStatus(ONI.series) : null;
   const b=BUNDLES.find(x=>x.id===state.grasps.bundle);
   return {
-    activityId:"enso", activityVersion:1, topic:"enso",
+    activityId:"enso", activityVersion:2, topic:"enso",
     unit:"통합과학2 Ⅴ-2 기후 변화와 지구 환경", standard:"[10통과2-02-03]",
     timestamp:new Date().toISOString(),
     name:state.student.name, studentId:state.student.id,
@@ -1461,7 +1711,11 @@ function buildPayload(){
       live:state.data.live, judge:state.data.judge, reason:state.data.reason
     },
     quiz:state.quiz, quizScore:score(QUIZ,state.quiz), quizMax:QUIZ.length,
-    grasps:{ bundle:state.grasps.bundle, proximity: b?b.id:null, product:state.grasps.product, aiFeedbackDraft:state.grasps.ai },
+    // review: 학생 자기평가(기준별 충족/부분/보완) + 자동 점검(키워드 기반) + 예시 개요 열람 기록 — 교사 확인 필요
+    grasps:(()=>{ const gr=graspsReview();
+      return { bundle:state.grasps.bundle, proximity: b?b.id:null, product:state.grasps.product,
+        review: gr,
+        exemplarViewed: gr ? gr.exemplarViewed : false, exemplarViewedAt: gr ? gr.exemplarViewedAt : null }; })(),
     reflect:{ self:state.reflect.self, citizen:state.reflect.citizen }
   };
 }
@@ -1486,6 +1740,9 @@ function submitViaGoogleForm(payload){
     form.action="https://docs.google.com/forms/d/e/"+gf.formId+"/formResponse"; form.method="POST"; form.target="gform_sink";
     const vals={ name:payload.name, studentId:payload.studentId, quizScore:payload.quizScore+"/"+payload.quizMax,
       bundle:payload.grasps.bundle||"", product:payload.grasps.product||"",
+      selfAssessment: payload.grasps.review ? payload.grasps.review.selfAssessment.map((s,i)=>"기준"+(i+1)+" "+(s.ratingLabel||"미응답")).join(", ")
+        + " · 자동 점검 "+payload.grasps.review.autoCheck.met+"/"+payload.grasps.review.autoCheck.total
+        + " · 예시 개요 "+(payload.grasps.exemplarViewed?"열람("+payload.grasps.exemplarViewedAt+")":"미열람") : "",
       reflection:(payload.kwl.l||"")+(payload.reflect.citizen?"\n[세계 시민] "+payload.reflect.citizen:""),
       payload:JSON.stringify(payload) };
     const map=gf.entries||{};
@@ -1531,7 +1788,7 @@ async function boot(){
   $("#inName").addEventListener("keydown",e=>{ if(e.key==="Enter")$("#inId").focus(); });
   $("#inId").addEventListener("keydown",e=>{ if(e.key==="Enter")$("#introGo").click(); });
   $("#btnReset").onclick=()=>{
-    if(confirm("이 활동의 답안과 진행 상황을 초기화할까요? (이름·API 키는 유지됩니다)")){
+    if(confirm("이 활동의 답안과 진행 상황을 초기화할까요? (이름은 유지됩니다)")){
       try{ localStorage.removeItem(LS.state); }catch(e){} location.hash=""; location.reload();
     }
   };

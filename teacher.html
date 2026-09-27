@@ -7,6 +7,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>교사 대시보드 · 효소반응속도 워크북</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230e1626'/%3E%3Cpath d='M8 24V15M16 24V9M24 24V18' fill='none' stroke='%2345d3d8' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
 <style>
   :root{
     --bg:#070b14; --panel:#0e1626; --panel2:#111d31; --line:#1d2b41; --line2:#26374f;
@@ -194,7 +195,19 @@ function normalize(r){
   n.checkScore=toNum(n.checkScore); n.quizScore=toNum(n.quizScore);
   n.checkMax=toNum(n.checkMax)||BANK.check.length; n.quizMax=toNum(n.quizMax)||BANK.quiz.length;
   n.predict=n.predict||{}; n.check=n.check||{}; n.quiz=n.quiz||{}; n.essay=n.essay||{};
+  // 서술형 자가 점검·예시 답안 열람 기록(새 버전 보고서). 예전 보고서에는 없으므로 빈 객체로 둠.
+  n.essayReview=(n.essayReview && typeof n.essayReview==="object") ? n.essayReview : {};
   return n;
+}
+function exemplarViewed(r,k){ const v=r.essayReview&&r.essayReview[k]; return !!(v&&v.exemplarViewed); }
+function reviewLine(r,k){
+  const v=r.essayReview&&r.essayReview[k]; if(!v||typeof v!=="object") return "";
+  const parts=[]; const sc=v.selfCheck;
+  if(sc && sc.total) parts.push(`<span class="pill">키워드 점검 ${esc(sc.met)}/${esc(sc.total)}${sc.checkCount!=null?` · 학생 점검 ${esc(sc.checkCount)}회`:""}</span>`);
+  parts.push(v.exemplarViewed
+    ? `<span class="pill a">예시답안 열람 · ${fmtTime(v.exemplarViewedAt)}${v.exemplarLenAtView!=null?` · 열람 당시 ${esc(v.exemplarLenAtView)}자`:""}</span>`
+    : `<span class="pill">예시답안 미열람</span>`);
+  return `<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">${parts.join("")}</div>`;
 }
 // 이 대시보드는 효소 워크북 전용 — 다른 활동(activityId/topic)의 기록은 오집계하지 않도록 건너뜀
 let lastSkipped=0;
@@ -283,10 +296,11 @@ function recordsFromCSV(text){
 $("#clearAll").onclick=()=>{ if(records.length && confirm("누적된 "+records.length+"명 데이터를 모두 지울까요?")){ records=[]; persist(); detailKey=null; render(); toast("모두 지웠습니다."); } };
 $("#exportCsv").onclick=()=>{
   if(!records.length){ toast("내보낼 데이터가 없습니다.",true); return; }
-  const head=["제출시각","이름","학번","유도확인","형성평가"];
+  const head=["제출시각","이름","학번","유도확인","형성평가","예시답안 열람"];
   const esc=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
   const lines=[head.join(",")];
-  records.forEach(r=>lines.push([r.timestamp,r.name,r.studentId, (r.checkScore??"")+"/"+r.checkMax, (r.quizScore??"")+"/"+r.quizMax].map(esc).join(",")));
+  const exCol=r=>["s1","s2"].filter(k=>exemplarViewed(r,k)).map(k=>k==="s1"?"서술1":"서술2").join("·");
+  records.forEach(r=>lines.push([r.timestamp,r.name,r.studentId, (r.checkScore??"")+"/"+r.checkMax, (r.quizScore??"")+"/"+r.quizMax, exCol(r)].map(esc).join(",")));
   const blob=new Blob(["﻿"+lines.join("\n")],{type:"text/csv;charset=utf-8"});
   const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="효소반응속도_반별집계.csv"; a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),1000);
@@ -366,7 +380,7 @@ function renderRoster(){
     html+=`<tr data-k="${encodeURIComponent(x.key)}"><td>${esc(x.name)}</td><td class="mono">${esc(x.id)}</td>
       <td>${scorePill(x.c,x.cM)}</td><td>${scorePill(x.q,x.qM)}</td>
       <td style="color:var(--muted);font-size:12px">${fmtTime(x.ts)}</td>
-      <td>${x.e?'<span class="yes">●</span>':'<span class="no">○</span>'}</td></tr>`;
+      <td>${x.e?'<span class="yes">●</span>':'<span class="no">○</span>'}${(exemplarViewed(x._r,"s1")||exemplarViewed(x._r,"s2"))?' <span class="pill a" title="예시 답안을 열람함">예시답안 열람</span>':''}</td></tr>`;
     if(detailKey===x.key) html+=`<tr><td colspan="6">${renderDetail(x._r)}</td></tr>`;
   });
   html+=`</tbody></table></div></div>`;
@@ -383,8 +397,8 @@ function renderDetail(r){
     <h4 style="margin-top:14px">유도 확인</h4>${mc("check","check")}
     <h4 style="margin-top:14px">형성평가</h4>${mc("quiz","quiz")}
     <h4 style="margin-top:14px">서술형</h4>
-    <div class="dline"><span class="lab">서술1</span>${esc(BANK.essay[0])}<div class="dessay">${esc(r.essay&&r.essay.s1||"—")}</div></div>
-    <div class="dline"><span class="lab">서술2</span>${esc(BANK.essay[1])}<div class="dessay">${esc(r.essay&&r.essay.s2||"—")}</div></div>
+    <div class="dline"><span class="lab">서술1</span>${esc(BANK.essay[0])}<div class="dessay">${esc(r.essay&&r.essay.s1||"—")}</div>${reviewLine(r,"s1")}</div>
+    <div class="dline"><span class="lab">서술2</span>${esc(BANK.essay[1])}<div class="dessay">${esc(r.essay&&r.essay.s2||"—")}</div>${reviewLine(r,"s2")}</div>
   </div>`;
 }
 function bindRoster(){
@@ -421,8 +435,9 @@ function renderEssays(){
   return `<div class="card"><h2>서술형 답안 (${withE.length}명)</h2>
     <p class="csub">서술1: ${esc(BANK.essay[0])} · 서술2: ${esc(BANK.essay[1])}</p>
     ${withE.map(r=>`<div class="detail"><h4>${esc(r.name||"(이름 없음)")} <span style="color:var(--faint);font-family:var(--mono);font-size:11px">${esc(r.studentId||"")}</span></h4>
-      <div class="dline"><span class="lab">서술1</span><div class="dessay">${esc(r.essay.s1||"—")}</div></div>
-      <div class="dline"><span class="lab">서술2</span><div class="dessay">${esc(r.essay.s2||"—")}</div></div></div>`).join("")}</div>`;
+      <div class="dline"><span class="lab">서술1</span><div class="dessay">${esc(r.essay.s1||"—")}</div>${reviewLine(r,"s1")}</div>
+      <div class="dline"><span class="lab">서술2</span><div class="dessay">${esc(r.essay.s2||"—")}</div>${reviewLine(r,"s2")}</div></div>`).join("")}
+    <p class="csub" style="margin-top:12px">키워드 점검은 학생 화면의 자동 점검(참고용)을 최종 답안으로 다시 계산한 값입니다. 예시답안 열람 표시는 학생이 모범답안을 연 시각과 그때의 답안 길이입니다.</p></div>`;
 }
 
 /* ── 유틸 ── */

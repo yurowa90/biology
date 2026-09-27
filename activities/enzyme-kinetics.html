@@ -1,13 +1,17 @@
 <!--
   효소반응속도 학습 워크북 — 미카엘리스-멘텐 (Michaelis–Menten)
   단일 파일 정적 웹앱. GitHub Pages 등 어떤 정적 호스팅에도 그대로 올리면 동작합니다.
-  서버(백엔드)가 전혀 필요 없습니다.
+  서버(백엔드)가 전혀 필요 없고, API 키·비밀값도 쓰지 않습니다.
   - 제출 방식은 아래 CONFIG.submit 에서 선택합니다.
       "download"(기본, 설정 불필요) · "googleForm"(구글 폼, Apps Script 아님) · "endpoint"(임의 POST URL)
+  - 서술형 피드백은 모두 이 브라우저 안에서 만듭니다(네트워크 호출 없음):
+      키워드 루브릭 자가 점검 · 예시 답안(60자 이상 작성 후 열람, 열람 기록은 보고서에 남음)
+      · (선택) 'AI 도우미용 프롬프트 복사' — 클립보드 복사만 함. CONFIG.showPromptCopy 로 끄고 켭니다.
 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>효소반응속도 학습 워크북 · 미카엘리스-멘텐</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230e1626'/%3E%3Cpath d='M5 26C9 12 15 8 27 7' fill='none' stroke='%2345d3d8' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
 <style>
   :root{
     --bg:#070b14; --bg2:#0a1120; --panel:#0e1626; --panel2:#111d31;
@@ -33,7 +37,7 @@
 
   /* ---------- header ---------- */
   header.top{
-    display:flex; align-items:center; gap:20px;
+    display:flex; align-items:center; gap:20px; flex-wrap:wrap;
     padding:14px 26px; border-bottom:1px solid var(--line);
     background:rgba(8,13,22,.7); backdrop-filter:blur(6px);
     position:sticky; top:0; z-index:20;
@@ -50,8 +54,16 @@
   .btn-exit:hover{color:var(--txt); border-color:var(--cyandim)}
 
   /* ---------- layout ---------- */
-  .wrap{display:grid; grid-template-columns:270px 1fr; gap:26px; max-width:1240px; margin:0 auto; padding:26px 26px 70px}
-  @media(max-width:880px){ .wrap{grid-template-columns:1fr} nav.steps{position:static !important} }
+  .wrap{display:grid; grid-template-columns:270px minmax(0,1fr); gap:26px; max-width:1240px; margin:0 auto; padding:26px 26px 70px}
+  @media(max-width:880px){ .wrap{grid-template-columns:minmax(0,1fr)} nav.steps{position:static !important} }
+  @media(max-width:560px){
+    header.top{padding:12px 14px; gap:6px 14px}
+    .top-right{gap:10px}
+    .wrap{padding:16px 14px 60px}
+    .panel{padding:20px 16px 18px !important; border-radius:14px !important}
+    h1.h{font-size:23px !important}
+    .qcard{padding:14px 13px !important}
+  }
 
   /* ---------- sidebar ---------- */
   nav.steps{position:sticky; top:78px; align-self:start; display:flex; flex-direction:column; gap:10px}
@@ -93,7 +105,12 @@
   .btn-next{background:linear-gradient(180deg,#1a6f74,#12545a); border-color:#1f8288; color:#e7fdff; box-shadow:0 10px 30px -14px var(--cyan)}
   .btn-next:hover{filter:brightness(1.08)}
   .btn-next:disabled{opacity:.4; cursor:not-allowed; box-shadow:none}
-  .btn-violet{background:linear-gradient(180deg,#5a44b0,#43338a); border-color:#6f57c9; color:#efeaff}
+  .btn-sm{font-size:12.5px; padding:8px 13px; border-radius:9px}
+  .btn-check{background:linear-gradient(180deg,#12545a,#0e444a); border-color:#1f8288; color:#dffbff}
+  .btn-check:hover{filter:brightness(1.1)}
+  .btn-ghost{background:transparent; border-color:var(--line2); color:var(--muted)}
+  .btn-ghost:hover:not(:disabled){color:var(--txt); border-color:var(--cyandim)}
+  .btn:disabled{opacity:.45; cursor:not-allowed}
 
   /* ---------- formula / chips ---------- */
   .kbd{font-family:var(--mono); font-size:.92em; background:#0c1728; border:1px solid var(--line2); border-radius:6px; padding:1px 6px; color:var(--cyan2)}
@@ -184,22 +201,35 @@
   .big-read .rv{font-family:var(--mono); font-size:30px; font-weight:700; color:var(--cyan2)}
   .big-read .hint{font-size:12px; color:var(--muted); margin-top:2px}
 
-  /* ---------- AI ---------- */
-  .keybox{border:1px solid var(--line2); border-radius:14px; padding:18px 20px; margin-bottom:22px; background:linear-gradient(180deg,#130f24,#0e0b1c)}
-  .keybox .kh{font-family:var(--mono); font-size:11px; letter-spacing:.14em; color:var(--violet); margin-bottom:12px}
-  .keyrow{display:flex; gap:10px}
-  .keyrow input{flex:1; font-family:var(--mono); font-size:13px; padding:11px 13px; border-radius:9px; border:1px solid var(--line2); background:#0b1220; color:var(--txt)}
-  .keyrow input:focus{outline:none; border-color:var(--violet)}
-  .key-note{font-size:12px; color:var(--muted); margin-top:10px; display:flex; align-items:center; gap:6px}
+  /* ---------- 서술형 · 자가 점검 (모두 로컬, 네트워크 없음) ---------- */
   .essay textarea{width:100%; min-height:120px; resize:vertical; font-family:var(--sans); font-size:14px; line-height:1.6;
     padding:13px 15px; border-radius:11px; border:1px solid var(--line2); background:#0a1220; color:var(--txt)}
   .essay textarea:focus{outline:none; border-color:var(--cyandim)}
-  .essay-foot{display:flex; align-items:center; justify-content:space-between; margin-top:10px}
+  .essay-foot{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:10px}
+  .tools{display:flex; gap:8px; flex-wrap:wrap}
   .cc{font-size:12px; color:var(--faint); font-family:var(--mono)}
-  .ai-out{margin-top:14px; border:1px solid var(--line2); border-radius:11px; padding:15px 17px; background:rgba(169,139,255,.06); font-size:14px; line-height:1.7; white-space:pre-wrap; color:#e3ddf6}
-  .ai-out .ah{font-family:var(--mono); font-size:10px; letter-spacing:.14em; color:var(--violet); margin-bottom:9px}
-  .spin{display:inline-block; width:13px; height:13px; border:2px solid var(--violet); border-top-color:transparent; border-radius:50%; animation:sp .7s linear infinite; vertical-align:-2px; margin-right:7px}
-  @keyframes sp{to{transform:rotate(360deg)}}
+  .gate{font-size:12px; color:var(--faint); margin-top:8px; line-height:1.5}
+  .gate.seen{color:#f7dfa0}
+  .sc-out,.ex-out,.pc-out{margin-top:12px; border:1px solid var(--line2); border-radius:11px; padding:14px 16px; background:rgba(10,17,30,.6)}
+  .sc-out{border-color:var(--cyandim); background:rgba(69,211,216,.05)}
+  .ex-out{border-color:#6a5320; background:rgba(242,193,78,.06)}
+  .sc-head,.ex-head,.pc-head{display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; color:var(--cyan); margin-bottom:6px}
+  .ex-head{color:var(--amber)} .pc-head{color:var(--muted)}
+  .sc-score{color:var(--amber)}
+  .sc-note{font-size:12px; color:var(--muted); line-height:1.55; margin-bottom:10px}
+  .sc-list{list-style:none; margin:0; padding:0}
+  .sc-list li{display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-top:1px solid var(--line); font-size:13.5px; line-height:1.55}
+  .sc-list li:first-child{border-top:none}
+  .sc-list .mk{flex:0 0 22px; width:22px; height:22px; border-radius:6px; display:grid; place-items:center; font-size:12px; font-weight:700}
+  .sc-list li.ok .mk{background:var(--green); color:#04240f}
+  .sc-list li.miss .mk{background:transparent; border:1px solid var(--amber); color:var(--amber)}
+  .sc-list li.ok .sl{color:#bfeed4}
+  .sc-list .sh{font-size:12.5px; color:var(--muted); margin-top:2px}
+  .sc-stale{font-size:12px; color:var(--amber); margin-top:8px}
+  .ex-body{font-size:14px; line-height:1.75; color:#efe6c8; white-space:pre-wrap}
+  .ex-note{font-size:12px; color:var(--muted); margin-top:8px; line-height:1.5}
+  .pc-out textarea{width:100%; min-height:150px; font-family:var(--mono); font-size:12px; line-height:1.5; padding:10px 12px; border-radius:9px; border:1px solid var(--line2); background:#0a1220; color:var(--txt); resize:vertical}
+  .pc-note{font-size:12px; color:var(--muted); margin:8px 0; line-height:1.5}
 
   /* ---------- report ---------- */
   .rsec{border:1px solid var(--line); border-radius:13px; padding:18px 20px; margin-bottom:16px; background:rgba(10,17,30,.5)}
@@ -291,19 +321,24 @@ const CONFIG = {
     googleForm: {
       formId: "",   // https://docs.google.com/forms/d/e/<formId>/viewform 의 <formId>
       entries: {    // 항목명 → entry.XXXXXXX 번호 (사용할 항목만 채우면 됩니다. payload 하나만 써도 됩니다)
-        name:"", studentId:"", checkScore:"", quizScore:"", essay1:"", essay2:"", payload:""
+        //  review: 서술형 자가 점검 결과·예시 답안 열람 여부 요약(선택)
+        name:"", studentId:"", checkScore:"", quizScore:"", essay1:"", essay2:"", review:"", payload:""
       }
     },
 
     // mode:"endpoint" 일 때만 사용. JSON 을 POST 로 받는 URL.
     endpoint: ""
-  }
-};
-// AI 서술형 피드백에 사용할 Claude 모델. 강사가 비용/품질에 따라 바꿀 수 있습니다.
-//   claude-haiku-4-5  (가장 저렴)  ·  claude-sonnet-5  (권장, 균형)  ·  claude-opus-5 (최고 품질)
-const AI_MODEL = "claude-sonnet-5";
+  },
 
-const LS = { student:"mm_student", state:"mm_state", apiKey:"mm_anthropic_key" };
+  // 서술형의 'AI 도우미용 프롬프트 복사' 버튼 표시 여부.
+  //   이 버튼은 문항·점검 기준·학생 답안으로 만든 글을 클립보드에 복사만 합니다(인터넷 전송·키 필요 없음).
+  //   학교에서 허용한 AI 도구가 없거나 쓰지 않으려면 선생님이 false 로 바꾸세요. 버튼이 숨겨집니다.
+  showPromptCopy: true
+};
+
+const LS = { student:"mm_student", state:"mm_state" };
+// 예전 버전이 이 브라우저에 저장했던 키를 지웁니다(이제 어떤 키도 쓰지 않습니다).
+try{ localStorage.removeItem("mm_anthropic_key") }catch(e){}
 
 /* ============================================================
    상태
@@ -315,13 +350,16 @@ const STEPS = [
   {id:"sim",     lbl:"SIMULATOR", nm:"반응속도 시뮬레이터"},
   {id:"check",   lbl:"CHECK",     nm:"유도 확인"},
   {id:"quiz",    lbl:"FORMATIVE", nm:"형성평가"},
-  {id:"ai",      lbl:"AI",        nm:"서술형 · AI"},
+  {id:"essay",   lbl:"ESSAY",     nm:"서술형 · 자가 점검"},
   {id:"submit",  lbl:"SUBMIT",    nm:"최종 보고서"},
 ];
 
 let state = {
   student:{name:"", id:""},
   predict:{}, check:{}, quiz:{}, essay:{s1:"",s2:""},
+  // 서술형별 자가 점검 사용 기록과 예시 답안 열람 기록 (보고서에 함께 제출)
+  //   {s1:{checks, lastCheckAt, exemplarViewed, exemplarViewedAt, exemplarLenAtView}, s2:{...}}
+  review:{s1:{}, s2:{}},
   sim:{Vmax:6, Km:12, S:12, inh:"none", istr:0},
   done:{}
 };
@@ -329,13 +367,21 @@ let cur = 0;
 
 /* ---------- persistence ---------- */
 function save(){ try{ localStorage.setItem(LS.state, JSON.stringify(state)); }catch(e){} }
+function isObj(o){ return !!o && typeof o==="object" && !Array.isArray(o); }
 function load(){
   try{
     const st = JSON.parse(localStorage.getItem(LS.state)||"null");
-    if(st) state = Object.assign(state, st);
+    if(isObj(st)) state = Object.assign(state, st);
     const stu = JSON.parse(localStorage.getItem(LS.student)||"null");
-    if(stu) state.student = stu;
+    if(isObj(stu)) state.student = stu;
   }catch(e){}
+  // 예전 저장본 호환: 없는 칸은 기본값으로, 예전 AI 피드백 관련 칸은 무시(삭제)합니다.
+  if(!isObj(state.essay)) state.essay = {s1:"", s2:""};
+  if(!isObj(state.review)) state.review = {};
+  ["s1","s2"].forEach(k=>{ if(!isObj(state.review[k])) state.review[k] = {}; });
+  if(!isObj(state.done)) state.done = {};
+  if(state.done.ai){ state.done.essay = true; }
+  ["ai","aiFeedback"].forEach(k=>{ delete state[k]; delete state.done[k]; });
 }
 
 /* ============================================================
@@ -385,6 +431,122 @@ const ESSAY = [
 ];
 
 /* ============================================================
+   서술형 자가 점검 루브릭 (키워드 기반 · 이 브라우저 안에서만 동작)
+   - label : 점검 항목 이름. 빠진 항목에도 그대로 보이므로 '정답'이 드러나지 않게 씁니다.
+   - hint  : 빠졌을 때 보여 주는 안내 질문(정답 문장을 주지 않음).
+   - scope : "all"(전체) · "comp"(경쟁적 억제제를 다룬 부분) · "noncomp"(비경쟁적 억제제를 다룬 부분)
+   - any   : 정규식 중 하나라도 맞으면 ✓ / all : 각 묶음에서 하나씩 맞아야 ✓
+   키워드가 보인다는 뜻일 뿐 내용의 옳고 그름까지 판정하지는 않습니다(최종 평가는 선생님).
+   ============================================================ */
+const MIN_EXEMPLAR_LEN = 60;   // 예시 답안을 열 수 있는 최소 글자 수(앞뒤 공백 제외)
+const RX = {
+  KM:   "(?:K\\s*(?:_\\s*)?[mₘ]|미카엘리스\\s*상수)",
+  VMAX: "(?:V\\s*(?:_\\s*)?max|Vₘₐₓ|최대\\s*(?:반응\\s*)?속도)",
+  UP:   "(?:증가|커지|커진|커졌|커져|커짐|크게|높아|늘어|늘고|늘면|↑|상승|올라|많아)",
+  DOWN: "(?:감소|작아|줄어|줄고|줄면|낮아|떨어|↓|하락|저하)",
+  SAME: "(?:불변|변하지\\s*않|변화(?:가|는|하지)?\\s*(?:없|않)|그대로|일정|같[다은고아게으]|동일|유지|영향(?:을|이)?\\s*(?:받지\\s*않|없|주지\\s*않))",
+  YINT: "(?:y\\s*축?\\s*절편|세로\\s*축?\\s*절편|1\\s*\\/\\s*V\\s*max)",
+  XINT: "(?:x\\s*축?\\s*절편|가로\\s*축?\\s*절편|[-−]\\s*1\\s*\\/\\s*K\\s*m)",
+  LOW:  "(?:낮은|낮을|낮으|작은|작을|작으|적은|적을|적으|≪|<<|묽|low)",
+  HIGH: "(?:높은|높을|높으|큰\\s|클\\s*때|많은|많을|많으|≫|>>|과량|high)"
+};
+// a 와 b 가 같은 문장 안에서 gap 글자 이내로 이어지는지(사이에 stop 토큰이 끼면 안 됨)
+function near(a, b, gap, stop){
+  const mid = stop ? `(?:(?!${stop})[^.。!?\\n]){0,${gap}}` : `[^.。!?\\n]{0,${gap}}`;
+  return new RegExp(a + mid + b, "i");
+}
+const ESSAY_RUBRIC = {
+  s1: [
+    {id:"lowOrder", label:"낮은 [S]에서 v와 [S]의 관계 · 반응 차수",
+     hint:"[S]가 Km보다 훨씬 작을 때 v와 [S]는 어떤 관계인가요? 그때 반응은 몇 차 반응처럼 보이나요?",
+     all:[[new RegExp(RX.LOW,"i")], [/1\s*차|일차|first[\s-]*order|비례|proportional/i, /V\s*max\s*\/\s*K\s*m|kcat\s*\/\s*K\s*m/i]]},
+    {id:"lowWhy", label:"낮은 [S]에서 그렇게 되는 까닭 (효소의 상태)",
+     hint:"기질이 적을 때 효소의 활성 부위는 대부분 어떤 상태일까요? 기질이 늘면 ES 복합체는 어떻게 될까요?",
+     any:[/비어|빈\s*(?:자리|활성|효소|부위)|자유\s*효소|결합(?:하지|되지)\s*않은\s*효소|효소가\s*남|남아\s*있|남는\s*효소|여유/,
+          /(?:만날|만나는|충돌).{0,10}(?:확률|빈도|횟수|기회)/, new RegExp("ES[^.。!?\\n]{0,15}"+RX.UP)]},
+    {id:"highOrder", label:"높은 [S]에서의 반응 속도 · 반응 차수",
+     hint:"[S]가 Km보다 훨씬 클 때 v는 어떤 값에 가까워지나요? [S]를 더 늘리면 v는 어떻게 되고, 그때는 몇 차 반응처럼 보이나요?",
+     all:[[new RegExp(RX.HIGH,"i")], [/0\s*차|영차|zero[\s-]*order/i, /v\s*[≈=]\s*V\s*max/i,
+          near(RX.VMAX, "(?:에|와|과)?\\s*(?:가까|근접|수렴|도달|같아)", 8),
+          /무관|상관\s*(?:이\s*)?없|관계\s*(?:가\s*)?없|늘지\s*않|증가하지\s*않|더\s*(?:이상\s*)?(?:빨라지지|커지지)\s*않/]]},
+    {id:"saturation", label:"'효소 포화'의 뜻 — 활성 부위의 상태",
+     hint:"'효소가 포화되었다'는 것이 효소의 활성 부위가 어떤 상태라는 뜻인지 구체적으로 적어 보세요.",
+     all:[[/포화|saturat/i], [/활성\s*(?:부위|자리|중심)|active\s*site/i, /ES\s*(?:복합체)?\s*(?:상태|형태|로)/,
+          /(?:모든|모두|전부|대부분|거의).{0,12}(?:효소|결합|차\s*있|채워|사용|점유)/, /(?:효소|활성\s*부위).{0,12}(?:모두|전부|다|거의|대부분).{0,8}(?:결합|차|채워|사용|점유|쓰)/]]},
+    {id:"equation", label:"미카엘리스–멘텐 식을 근거로 사용",
+     hint:"식 v = Vmax[S]/(Km+[S])를 두 조건에 각각 적용하면 어떻게 간단해지는지 보여 주세요. 분모에서 어느 항이 더 큰지가 열쇠입니다.",
+     any:[/분모|근사|≈|무시/, /K\s*m\s*\+\s*\[?\s*S|\[\s*S\s*\]\s*\+\s*K\s*m/i, /V\s*max\s*·?\s*\[\s*S\s*\]\s*\//i]},
+    {id:"km", label:"Km의 의미",
+     hint:"Km이 어떤 기질 농도인지 v와 Vmax의 관계로 적으면, '낮은/높은 [S]'를 나누는 기준이 분명해집니다.",
+     any:[/V\s*max\s*\/\s*2|반\s*포화|절반|1\s*\/\s*2/i, near(RX.VMAX, "(?:의\\s*)?(?:반|절반)", 4)]},
+  ],
+  s2: [
+    {id:"compSite", scope:"comp", label:"경쟁적 억제제가 결합하는 자리",
+     hint:"경쟁적 억제제는 효소의 어느 자리에 결합하나요? 무엇과 '경쟁'하는지 적어 보세요.",
+     any:[/활성\s*(?:부위|자리|중심)|active\s*site/i, /기질(?:과|와)\s*(?:같은\s*자리|자리를?\s*두고|경쟁)/, /(?:모양|구조)\s*(?:이|가)?\s*(?:비슷|유사|닮)/]},
+    {id:"compKm", scope:"comp", label:"경쟁적 억제제 — Km의 변화",
+     hint:"경쟁적 억제제가 있으면 Vmax의 절반 속도에 이르는 데 기질이 더 필요할까요, 덜 필요할까요? 그것이 Km에 어떻게 나타나나요?",
+     any:[near(RX.KM, RX.UP, 20, RX.VMAX), /친화(?:력|도|성).{0,10}(?:감소|낮아|떨어|줄|약해)/]},
+    {id:"compVmax", scope:"comp", label:"경쟁적 억제제 — Vmax의 변화",
+     hint:"기질을 아주 많이 넣었을 때, 경쟁적 억제제가 있을 때의 최대 속도를 억제제가 없을 때와 비교해 보세요.",
+     any:[near(RX.VMAX, RX.SAME, 20, RX.KM), near(RX.SAME, RX.VMAX, 4, RX.KM)]},
+    {id:"compOvercome", scope:"comp", label:"경쟁적 억제제 — 기질 농도를 크게 높였을 때",
+     hint:"기질 농도를 크게 높이면 경쟁적 억제의 효과는 어떻게 되나요? 까닭과 함께 적어 보세요.",
+     any:[/극복|이겨\s*(?:낼|내|낸)|상쇄/, /(?:기질|\[\s*S\s*\]).{0,25}(?:높|많|늘|증가|충분|과량).{0,30}(?:회복|이기|밀어|되찾|원래|도달|사라|약해)/]},
+    {id:"ncSite", scope:"noncomp", label:"비경쟁적 억제제가 결합하는 자리",
+     hint:"비경쟁적 억제제가 결합하는 자리는 기질이 결합하는 자리와 같은가요, 다른가요? 그 자리의 이름도 적어 보세요.",
+     any:[/알로스테릭|allosteric|다른\s*(?:자리|부위|곳|위치)|활성\s*(?:부위|자리)\s*(?:가|이)?\s*아닌|활성\s*(?:부위|자리)\s*(?:외|밖|말고|이외)/i]},
+    {id:"ncVmax", scope:"noncomp", label:"비경쟁적 억제제 — Vmax의 변화",
+     hint:"비경쟁적 억제제가 결합한 효소는 일을 할 수 있나요? '작동하는 효소의 양'이 최대 속도에 어떻게 나타나는지 적어 보세요.",
+     any:[near(RX.VMAX, RX.DOWN, 20, RX.KM)]},
+    {id:"ncKm", scope:"noncomp", label:"비경쟁적 억제제 — Km의 변화",
+     hint:"비경쟁적 억제제는 남아 있는 정상 효소가 기질과 결합하는 정도를 바꾸나요? 그것이 Km에 어떻게 나타나는지 적어 보세요.",
+     any:[near(RX.KM, RX.SAME, 20, RX.VMAX), near(RX.SAME, RX.KM, 4, RX.VMAX)]},
+    {id:"lbComp", scope:"comp", label:"이중역수 그래프 — 경쟁적 억제제의 절편·기울기",
+     hint:"1/v = (Km/Vmax)·(1/[S]) + 1/Vmax 에서 경쟁적 억제제가 바꾸는 값이 y절편·x절편·기울기 중 어디에 나타나는지 적어 보세요.",
+     any:[near(RX.YINT, RX.SAME, 15), near(RX.XINT, "(?:변|이동|가까|오른쪽|달라|"+RX.UP+"|"+RX.DOWN+")", 15), near("기울기", RX.UP, 12)]},
+    {id:"lbNoncomp", scope:"noncomp", label:"이중역수 그래프 — 비경쟁적 억제제의 절편·기울기",
+     hint:"같은 방법으로, 비경쟁적 억제제가 있을 때 y절편·x절편·기울기가 각각 어떻게 되는지 적어 보세요.",
+     any:[near(RX.YINT, RX.UP, 15), near(RX.XINT, RX.SAME, 15), near(RX.SAME, RX.XINT, 4)]},
+  ]
+};
+// 서술 2: 답안을 '경쟁적'을 다룬 부분과 '비경쟁적'을 다룬 부분으로 나눕니다.
+//  ① 언급 위치를 기준으로 다음 언급 전까지를 한 구간으로 보고, ② 한쪽만 언급한 절(문장·쉼표 단위)도 더합니다.
+function inhibitorScopes(text){
+  const t = String(text||""); const marks = []; const re = /(비\s*)?경쟁\s*(?:적|형)|(non[\s-]*)?competitive/gi; let m;
+  while((m = re.exec(t))){ marks.push({i:m.index, k:(m[1]||m[2]) ? "noncomp" : "comp"}); }
+  if(!marks.length) return {all:t, comp:t, noncomp:t};
+  const pre = t.slice(0, marks[0].i); const out = {all:t, comp:pre, noncomp:pre};
+  marks.forEach((mk,j)=>{ out[mk.k] += "\n" + t.slice(mk.i, j+1<marks.length ? marks[j+1].i : t.length); });
+  t.split(/[.。!?\n,;]|지만|반면|반해|한편/).forEach(cl=>{
+    const c = /(^|[^비\s])\s*경쟁\s*(?:적|형)|^\s*경쟁\s*(?:적|형)/.test(cl), n = /비\s*경쟁\s*(?:적|형)|non[\s-]*competitive/i.test(cl);
+    if(c && !n) out.comp += "\n" + cl; else if(n && !c) out.noncomp += "\n" + cl;
+  });
+  return out;
+}
+function runRubric(k, text){
+  const t = String(text||"").normalize("NFC");
+  const scopes = k==="s2" ? inhibitorScopes(t) : {all:t};
+  const items = ESSAY_RUBRIC[k].map(c=>{
+    const s = scopes[c.scope||"all"] || t;
+    const ok = c.all ? c.all.every(g=>g.some(r=>r.test(s))) : c.any.some(r=>r.test(s));
+    return {id:c.id, label:c.label, hint:c.hint, ok};
+  });
+  const met = items.filter(x=>x.ok).length;
+  return {items, met, total:items.length};
+}
+
+/* 예시 답안(모범답안) — 학생이 60자 이상 쓴 뒤에만 열 수 있고, 열람 기록은 보고서에 남습니다. */
+const EXEMPLAR = {
+  s1: "미카엘리스–멘텐 식 v = Vmax[S]/(Km+[S])에서 [S]≪Km이면 분모 Km+[S]≈Km이므로 v ≈ (Vmax/Km)[S]가 된다. 즉 반응 속도가 기질 농도에 비례하는 1차 반응처럼 보인다. 이때는 효소의 활성 부위가 대부분 비어 있어서, 기질이 늘어나는 만큼 ES 복합체가 늘고 속도도 함께 커진다.\n\n"
+    + "반대로 [S]≫Km이면 Km+[S]≈[S]이므로 v ≈ Vmax가 되어, 속도가 [S]와 거의 무관한 0차 반응처럼 보인다. 거의 모든 효소의 활성 부위가 기질과 결합해 ES 상태로 있는 '효소 포화' 상태라서, 기질을 더 넣어도 결합할 빈 효소가 없기 때문이다. 이때 속도는 효소의 양과 회전수로 정해진다(Vmax = kcat·[E]₀).\n\n"
+    + "Km은 v = Vmax/2가 되는 기질 농도(반포화 농도)이므로, [S]가 Km보다 훨씬 작은지 큰지가 두 영역을 나누는 기준이 된다.",
+  s2: "경쟁적 억제제는 기질과 모양이 비슷해 효소의 활성 부위에 결합하며 기질과 자리를 두고 경쟁한다. 같은 속도를 내려면 기질이 더 많이 필요하므로 겉보기 Km이 증가한다. 그러나 기질 농도를 충분히 높이면 기질이 억제제를 이겨 내므로 Vmax는 변하지 않는다.\n\n"
+    + "비경쟁적 억제제는 활성 부위가 아닌 다른 자리(알로스테릭 부위)에 결합해 효소의 구조를 바꾸어 촉매 작용이 일어나지 못하게 한다. 억제제가 붙은 효소는 일을 하지 못해 작동하는 효소의 양이 줄어든 것과 같으므로 Vmax가 감소하고, 기질 농도를 높여도 회복되지 않는다. 남아 있는 정상 효소가 기질과 결합하는 정도는 그대로이므로 Km은 변하지 않는다(순수 비경쟁적 억제).\n\n"
+    + "이중역수 식 1/v = (Km/Vmax)·(1/[S]) + 1/Vmax 로 보면, 경쟁적 억제제는 y절편(1/Vmax)은 그대로이고 기울기(Km/Vmax)가 커지며 x절편(−1/Km)이 원점 쪽으로 옮겨 간다. 비경쟁적 억제제는 y절편이 커지고(1/Vmax 증가) 기울기도 커지지만 x절편(−1/Km)은 그대로다. 따라서 억제제가 있을 때와 없을 때의 직선은 경쟁적이면 y축 위에서, 비경쟁적이면 x축 위에서 만난다."
+};
+
+/* ============================================================
    렌더링
    ============================================================ */
 const $ = s=>document.querySelector(s);
@@ -420,7 +582,7 @@ function renderAll(){
   if(simAnim){ cancelAnimationFrame(simAnim); simAnim=null; }
   renderNav();
   const id = STEPS[cur].id;
-  ({predict:rPredict, theory:rTheory, kcat:rKcat, sim:rSim, check:rCheck, quiz:rQuiz, ai:rAI, submit:rSubmit}[id])();
+  ({predict:rPredict, theory:rTheory, kcat:rKcat, sim:rSim, check:rCheck, quiz:rQuiz, essay:rEssay, submit:rSubmit}[id])();
 }
 
 /* ---------- STEP 1: PREDICT ---------- */
@@ -811,79 +973,168 @@ function rQuiz(){
     <p class="sub">포화 반응, 효소 농도, 억제제, 회전수까지 전체 개념을 점검합니다.</p>
     ${renderMCQ(QUIZ, state.quiz, {key:"quiz", reveal:true})}
     <p class="note" style="margin-top:6px">점수: <b style="color:var(--amber)">${score(QUIZ,state.quiz)} / ${QUIZ.length}</b></p>
-    ${footer(null,"다음 → 서술형·AI", graded, graded?null:"모든 문항에 답하면 다음으로 진행할 수 있습니다.")}</div>`;
+    ${footer(null,"다음 → 서술형", graded, graded?null:"모든 문항에 답하면 다음으로 진행할 수 있습니다.")}</div>`;
 }
 
-/* ---------- STEP 7: AI ---------- */
-function rAI(){
-  const hasKey = !!localStorage.getItem(LS.apiKey);
+/* ---------- STEP 7: 서술형 · 자가 점검 (모두 로컬, 네트워크 없음) ---------- */
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function essayLen(k){ return String(state.essay[k]||"").replace(/\s+/g," ").trim().length; }
+function rv(k){ if(!isObj(state.review[k])) state.review[k] = {}; return state.review[k]; }
+function fmtTime(iso){ const d=new Date(iso); return isNaN(d) ? "" : d.toLocaleString("ko-KR",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"}); }
+const exOpen = {};   // 화면에서 예시 답안을 펼쳐 둔 상태(저장하지 않음)
+
+function rEssay(){
   const essays = ESSAY.map((it,i)=>{
     const val = state.essay[it.k]||"";
     return `<div class="qcard essay">
       <div class="qh"><span class="qn">서술 ${i+1}</span>${it.q}</div>
-      <textarea id="ess_${it.k}" placeholder="여기에 자기 말로 설명해 보세요..." oninput="onEssay('${it.k}')">${val.replace(/</g,"&lt;")}</textarea>
+      <textarea id="ess_${it.k}" placeholder="여기에 자기 말로 설명해 보세요..." oninput="onEssay('${it.k}')">${esc(val)}</textarea>
       <div class="essay-foot">
-        <button class="btn btn-violet" onclick="aiFeedback('${it.k}',${i})">✦ AI 피드백 받기</button>
+        <div class="tools">
+          <button class="btn btn-sm btn-check" id="scb_${it.k}" onclick="selfCheck('${it.k}')">✓ 자가 점검</button>
+          <button class="btn btn-sm btn-ghost" id="exb_${it.k}" onclick="toggleExemplar('${it.k}')">예시 답안 보기</button>
+          ${CONFIG.showPromptCopy ? `<button class="btn btn-sm btn-ghost" id="pcb_${it.k}" onclick="copyEssayPrompt('${it.k}')">AI 도우미용 프롬프트 복사</button>` : ""}
+        </div>
         <span class="cc" id="cc_${it.k}">${val.length} 자</span>
       </div>
-      <div class="ai-out hidden" id="ai_${it.k}"></div>
+      <div class="gate" id="exg_${it.k}"></div>
+      <div class="sc-out hidden" id="sc_${it.k}"></div>
+      <div class="ex-out hidden" id="ex_${it.k}"></div>
+      <div class="pc-out hidden" id="pc_${it.k}"></div>
     </div>`;
   }).join("");
   main.innerHTML = `<div class="panel">
-    <div class="eyebrow">STEP 07 · 서술형 · AI 피드백</div>
-    <h1 class="h">서술형 문항 &amp; AI 피드백</h1>
-    <p class="sub">자기 말로 설명하고 <b>AI 피드백</b>을 받아 스스로 다듬어 보세요. 답안은 보고서에 함께 제출됩니다.</p>
-    <div class="keybox">
-      <div class="kh">✦ CLAUDE API 키 · AI 피드백 사용</div>
-      <div class="keyrow">
-        <input id="apiKey" type="password" placeholder="sk-ant-... (강사에게 받은 키)" value="${(localStorage.getItem(LS.apiKey)||"").replace(/"/g,'&quot;')}">
-        <button class="btn btn-violet" onclick="saveKey()">저장</button>
-      </div>
-      <div class="key-note" id="keyState">${hasKey?"🔓 키가 저장되어 있습니다.":"키가 아직 없습니다. 강사에게 받은 키를 입력하세요."}</div>
-      <div class="key-note">🔒 키는 <b>이 브라우저(localStorage)</b>에만 저장되며, 저희 서버로 전송되지 않습니다. 브라우저에서 Anthropic API를 직접 호출합니다. <a href="#" onclick="clearKey();return false;">키 삭제</a></div>
-    </div>
+    <div class="eyebrow">STEP 07 · 서술형 · 자가 점검</div>
+    <h1 class="h">서술형 문항 &amp; 자가 점검</h1>
+    <p class="sub">자기 말로 설명한 뒤 <b>자가 점검</b>으로 빠진 개념이 없는지 확인하고 스스로 다듬어 보세요.
+      예시 답안은 먼저 <b>${MIN_EXEMPLAR_LEN}자 이상</b> 써 본 뒤에 열 수 있으며, 열람 여부는 보고서에 함께 기록됩니다.</p>
+    <div class="call"><div class="ct">자가 점검 안내</div>
+      <p>키워드 기반 자동 점검 — 참고용이며 최종 평가는 선생님이 합니다. 이 브라우저 안에서만 동작하고 답안을 어디에도 보내지 않습니다.</p></div>
     ${essays}
     ${footer(null,"다음 → 최종 보고서")}</div>`;
-}
-window.onEssay = k=>{ const t=$("#ess_"+k); state.essay[k]=t.value; $("#cc_"+k).textContent=t.value.length+" 자"; save(); };
-window.saveKey = ()=>{ const v=$("#apiKey").value.trim(); if(!v){toast("키를 입력하세요.",true);return;}
-  localStorage.setItem(LS.apiKey,v); $("#keyState").textContent="🔓 키가 저장되었습니다."; toast("API 키가 이 브라우저에 저장되었습니다."); };
-window.clearKey = ()=>{ localStorage.removeItem(LS.apiKey); const el=$("#apiKey"); if(el)el.value=""; const ks=$("#keyState"); if(ks)ks.textContent="키가 삭제되었습니다."; toast("API 키를 삭제했습니다."); };
-
-async function callClaude(system, userText){
-  const key = localStorage.getItem(LS.apiKey);
-  if(!key) throw new Error("API 키가 없습니다. 위에 키를 먼저 입력하세요.");
-  const resp = await fetch("https://api.anthropic.com/v1/messages",{
-    method:"POST",
-    headers:{
-      "content-type":"application/json",
-      "x-api-key":key,
-      "anthropic-version":"2023-06-01",
-      "anthropic-dangerous-direct-browser-access":"true"
-    },
-    body:JSON.stringify({ model:AI_MODEL, max_tokens:900, system, messages:[{role:"user",content:userText}] })
+  ESSAY.forEach(it=>{
+    updateGate(it.k);
+    if(rv(it.k).checks) renderCheck(it.k, runRubric(it.k, state.essay[it.k]));   // 이전에 점검했다면 결과를 다시 보여 줌
+    if(exOpen[it.k] && rv(it.k).exemplarViewed) renderExemplar(it.k);
   });
-  const data = await resp.json().catch(()=>({}));
-  if(!resp.ok) throw new Error((data && data.error && data.error.message) || ("요청 실패 (HTTP "+resp.status+")"));
-  return (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
 }
-window.aiFeedback = async (k, i)=>{
-  const answer = (state.essay[k]||"").trim();
-  const out = $("#ai_"+k);
-  if(answer.length<10){ toast("먼저 답안을 조금 더 작성해 주세요.",true); return; }
-  out.classList.remove("hidden");
-  out.innerHTML = `<div class="ah">AI 피드백</div><span class="spin"></span>피드백을 작성하는 중...`;
-  const system = "당신은 친절한 고등학교 생명과학 교사입니다. 학생이 '효소반응속도(미카엘리스-멘텐)'에 대한 서술형 답안을 작성했습니다. "
-    + "학생을 격려하는 어조로, 정답을 그대로 알려주지 말고 스스로 고칠 수 있도록 힌트를 주세요. "
-    + "다음 세 부분으로 나눠 각각 2~3문장으로, 한국어로 답하세요: 1) 잘한 점, 2) 보완할 점(빠졌거나 부정확한 핵심 개념), 3) 한 단계 더 생각해볼 질문.";
-  const userText = "[문항]\n"+ESSAY[i].q+"\n\n[학생 답안]\n"+answer;
-  try{
-    const fb = await callClaude(system, userText);
-    out.innerHTML = `<div class="ah">AI 피드백</div>${fb.replace(/</g,"&lt;")}`;
-  }catch(err){
-    out.innerHTML = `<div class="ah" style="color:var(--red)">피드백 오류</div>${(err.message||err).replace(/</g,"&lt;")}`;
-  }
+window.onEssay = k=>{
+  const t=$("#ess_"+k); state.essay[k]=t.value; $("#cc_"+k).textContent=t.value.length+" 자"; save();
+  updateGate(k);
+  const st=$("#scs_"+k); if(st) st.classList.remove("hidden");
 };
+function updateGate(k){
+  const btn=$("#exb_"+k), g=$("#exg_"+k); if(!btn||!g) return;
+  const r=rv(k), n=essayLen(k), seen=!!r.exemplarViewed;
+  btn.disabled = !seen && n<MIN_EXEMPLAR_LEN;
+  btn.textContent = seen ? (exOpen[k] ? "예시 답안 숨기기" : "예시 답안 다시 보기") : "예시 답안 보기";
+  g.className = "gate" + (seen ? " seen" : "");
+  g.textContent = seen ? `예시 답안 열람 기록: ${fmtTime(r.exemplarViewedAt)} (열람 당시 ${r.exemplarLenAtView!=null?r.exemplarLenAtView:"?"}자) — 보고서에 함께 표시됩니다.`
+    : n<MIN_EXEMPLAR_LEN ? `예시 답안은 먼저 ${MIN_EXEMPLAR_LEN}자 이상 스스로 쓴 뒤에 열 수 있어요 (지금 ${n}자). 열람 여부는 보고서에 기록됩니다.`
+    : "이제 예시 답안을 열 수 있어요. 열람 여부와 시각은 보고서에 기록됩니다.";
+}
+window.selfCheck = k=>{
+  if(essayLen(k)<10){ toast("먼저 답안을 조금 더 작성해 주세요.",true); return; }
+  const r=rv(k); r.checks=(r.checks||0)+1; r.lastCheckAt=new Date().toISOString(); save();
+  renderCheck(k, runRubric(k, state.essay[k]));
+};
+function renderCheck(k, res){
+  const box=$("#sc_"+k); if(!box) return;
+  box.classList.remove("hidden");
+  box.innerHTML = `<div class="sc-head"><span>자가 점검 · 키워드 기반</span><span class="sc-score">${res.met} / ${res.total} 항목 발견</span></div>
+    <div class="sc-note">키워드 기반 자동 점검 — 참고용이며 최종 평가는 선생님이 합니다. ✓는 관련 표현이 보인다는 뜻일 뿐, 내용이 맞는지까지 확인한 것은 아닙니다.</div>
+    <ul class="sc-list">${res.items.map(it=>`<li class="${it.ok?"ok":"miss"}"><span class="mk" aria-label="${it.ok?"발견":"보완 필요"}">${it.ok?"✓":"△"}</span>
+      <div><div class="sl">${esc(it.label)}</div>${it.ok?"":`<div class="sh">💡 ${esc(it.hint)}</div>`}</div></li>`).join("")}</ul>
+    <div class="sc-stale hidden" id="scs_${k}">✎ 답안이 바뀌었어요. 다시 점검하려면 '자가 점검'을 누르세요.</div>`;
+}
+window.toggleExemplar = k=>{
+  const r=rv(k);
+  if(!r.exemplarViewed){
+    const n=essayLen(k);
+    if(n<MIN_EXEMPLAR_LEN){ toast(`예시 답안은 ${MIN_EXEMPLAR_LEN}자 이상 쓴 뒤에 열 수 있어요 (지금 ${n}자).`,true); return; }
+    if(!confirm("예시 답안을 열면 열람 기록(시각)이 보고서에 남습니다. 지금 열까요?")) return;
+    r.exemplarViewed=true; r.exemplarViewedAt=new Date().toISOString(); r.exemplarLenAtView=n; save();
+    exOpen[k]=true;
+  } else exOpen[k]=!exOpen[k];
+  renderExemplar(k); updateGate(k);
+};
+function renderExemplar(k){
+  const box=$("#ex_"+k); if(!box) return;
+  if(!exOpen[k]){ box.classList.add("hidden"); return; }
+  box.classList.remove("hidden");
+  box.innerHTML = `<div class="ex-head"><span>예시 답안 (모범답안)</span><span>열람 기록됨</span></div>
+    <div class="ex-body">${esc(EXEMPLAR[k])}</div>
+    <div class="ex-note">그대로 옮겨 적기보다, 내 답안에서 빠졌거나 흐릿한 개념을 찾아 <b>내 말로</b> 고쳐 써 보세요. 고친 답안이 보고서에 제출됩니다.</div>`;
+}
+
+/* ---- (선택) AI 도우미용 프롬프트 복사: 클립보드 복사만 함 · 네트워크 호출 없음 · 키 필요 없음 ---- */
+function buildEssayPrompt(k){
+  const i = ESSAY.findIndex(e=>e.k===k);
+  return [
+    "당신은 고등학생의 과학 서술형 답안에 피드백을 주는 학습 도우미입니다.",
+    "정답이나 모범답안 문장을 대신 써 주지 말고, 학생이 스스로 고칠 수 있도록 질문과 힌트로만 안내해 주세요.",
+    "",
+    "[단원] 효소 반응 속도 — 미카엘리스–멘텐 식 (v = Vmax·[S]/(Km+[S]))",
+    "[문항] " + ESSAY[i].q,
+    "",
+    "[점검 기준]",
+    ...ESSAY_RUBRIC[k].map((c,j)=>(j+1)+". "+c.label+" — "+c.hint),
+    "",
+    "[학생 답안]",
+    (state.essay[k]||"").trim() || "(아직 작성하지 않음)",
+    "",
+    "[요청]",
+    "1) 잘한 점 1~2가지",
+    "2) 점검 기준 중 빠졌거나 부정확한 부분 — 정답을 알려 주지 말고 생각해 볼 질문으로",
+    "3) 한 단계 더 생각해 볼 질문 1개",
+    "한국어로, 격려하는 말투로 짧게 답해 주세요. 과학적으로 틀린 내용이 있으면 어느 부분인지 짚어 주세요."
+  ].join("\n");
+}
+window.copyEssayPrompt = k=>copyPrompt(buildEssayPrompt(k), "pc_"+k);
+async function copyPrompt(text, hostId){
+  let ok=false;
+  try{
+    if(navigator.clipboard && window.isSecureContext){
+      await Promise.race([navigator.clipboard.writeText(text), new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),1500))]);
+      ok=true;
+    }
+  }catch(e){ ok=false; }
+  const host=document.getElementById(hostId);
+  if(host) showPromptBox(host, text, ok);
+  if(ok){ toast("프롬프트를 복사했습니다. 학교에서 허용한 AI 도구에 붙여 넣으세요."); return; }
+  // 대체 경로: 텍스트 상자를 선택해 두고 복사를 시도합니다. 실패해도 학생이 직접 복사할 수 있습니다.
+  const ta = host && host.querySelector("textarea");
+  if(ta){
+    try{ ta.focus(); ta.select(); ta.setSelectionRange(0, ta.value.length); }catch(e){}
+    let copied=false; try{ copied = !!(document.execCommand && document.execCommand("copy")); }catch(e){ copied=false; }
+    if(copied){ const h=host.querySelector(".pc-head span"); if(h) h.textContent="AI 도우미용 프롬프트 · 복사됨 ✓"; toast("프롬프트를 복사했습니다. 학교에서 허용한 AI 도구에 붙여 넣으세요."); return; }
+  }
+  toast("자동 복사가 막혀 있어요. 아래 상자의 글을 선택해 복사하세요(Ctrl+C · 길게 눌러 복사).", true);
+}
+function showPromptBox(host, text, copied){
+  host.classList.remove("hidden");
+  host.innerHTML = `<div class="pc-head"><span>AI 도우미용 프롬프트 · ${copied?"복사됨 ✓":"아래 글을 선택해 복사하세요"}</span></div>
+    <textarea readonly aria-label="AI 도우미용 프롬프트">${esc(text)}</textarea>
+    <div class="pc-note">이 버튼은 글을 클립보드에 복사만 합니다(인터넷 전송 없음 · 키 필요 없음). <b>학교에서 허용한 AI 도구</b>에만 붙여 넣고, 이름·학번 같은 개인정보는 넣지 마세요. AI의 답도 참고용입니다.</div>
+    <button class="btn btn-sm btn-ghost" onclick="this.parentNode.classList.add('hidden')">닫기</button>`;
+}
+
+/* 보고서·제출용 요약: 최종 답안으로 다시 점검한 결과 + 학생의 점검 횟수 + 예시 답안 열람 기록 */
+function essayReview(){
+  const out={};
+  ESSAY.forEach(it=>{
+    const r=rv(it.k), res=runRubric(it.k, state.essay[it.k]);
+    out[it.k] = {
+      selfCheck:{ method:"keyword", met:res.met, total:res.total,
+        found:res.items.filter(x=>x.ok).map(x=>x.id), missing:res.items.filter(x=>!x.ok).map(x=>x.id),
+        checkCount:r.checks||0, lastCheckedAt:r.lastCheckAt||null },
+      exemplarViewed: !!r.exemplarViewed,
+      exemplarViewedAt: r.exemplarViewedAt||null,
+      exemplarLenAtView: r.exemplarViewed ? (r.exemplarLenAtView!=null ? r.exemplarLenAtView : null) : null
+    };
+  });
+  return out;
+}
 
 /* ---------- STEP 8: SUBMIT ---------- */
 function ansLine(bank, store){
@@ -903,11 +1154,16 @@ function rSubmit(){
     return `<div class="qline"><span class="qq">P${i+1}. ${it.q}</span>
       <span class="ans"><span class="lab">내 예측: </span>${sel===undefined?"<span class='neu'>—</span>":("ABC"[sel]+". "+it.opts[sel])}</span></div>`;
   }).join("");
+  const review = essayReview();
   const essayLines = ESSAY.map((it,i)=>{
     const raw = (state.essay[it.k]||"").trim();
     const shown = raw ? raw.replace(/&/g,"&amp;").replace(/</g,"&lt;") : "<span class='neu'>—</span>";
+    const rvw = review[it.k], sc = rvw.selfCheck;
+    const ex = rvw.exemplarViewed ? `<span style="color:var(--amber)">열람함</span> (${esc(fmtTime(rvw.exemplarViewedAt))}, 열람 당시 ${rvw.exemplarLenAtView!=null?rvw.exemplarLenAtView:"?"}자)` : "열람 안 함";
     return `<div class="qline"><span class="qq">서술 ${i+1}. ${it.q}</span>
-      <span class="ans"><span class="lab">내 답안: </span>${shown}</span></div>`;
+      <span class="ans"><span class="lab">내 답안: </span>${shown}</span>
+      <span class="ans" style="font-size:12.5px; color:var(--muted)"><span class="lab">자가 점검(키워드 기반·참고용): </span>${sc.met}/${sc.total} 항목 · 점검 ${sc.checkCount}회
+        · <span class="lab">예시 답안: </span>${ex}</span></div>`;
   }).join("");
   const {KmA,VmaxA}=computeApparent();
   const mode=submitMode();
@@ -932,7 +1188,8 @@ function rSubmit(){
     <div class="rsec"><div class="rt">예측 (STEP 01)</div>${predictLines}</div>
     <div class="rsec"><div class="rt"><span>유도 확인</span><span class="score">${cScore}/${CHECK.length}</span></div>${ansLine(CHECK,state.check)}</div>
     <div class="rsec"><div class="rt"><span>형성평가</span><span class="score">${qScore}/${QUIZ.length}</span></div>${ansLine(QUIZ,state.quiz)}</div>
-    <div class="rsec"><div class="rt">서술형 답안</div>${essayLines}</div>
+    <div class="rsec"><div class="rt">서술형 답안</div>${essayLines}
+      <div class="note">자가 점검은 키워드 기반 자동 점검 — 참고용이며 최종 평가는 선생님이 합니다.</div></div>
     <div class="rsec"><div class="rt">시뮬레이터 최종 설정</div>
       <div class="qline">Vmax=${state.sim.Vmax} μM/s · Km=${state.sim.Km} mM · [S]=${state.sim.S} mM · 억제제=${{none:"없음",comp:"경쟁적",noncomp:"비경쟁적"}[state.sim.inh]}(×${(1+state.sim.istr).toFixed(1)})
       → 겉보기 Vmax=${VmaxA.toFixed(1)}, 겉보기 Km=${KmA.toFixed(1)}, v=${vAt(state.sim.S).toFixed(2)} μM/s</div></div>
@@ -957,7 +1214,10 @@ function buildPayload(){
     predict:state.predict,
     check:state.check, checkScore:score(CHECK,state.check), checkMax:CHECK.length,
     quiz:state.quiz, quizScore:score(QUIZ,state.quiz), quizMax:QUIZ.length,
-    essay:state.essay, sim:state.sim
+    essay:state.essay,
+    // 서술형별 자가 점검(키워드 기반, 최종 답안 기준)과 예시 답안 열람 기록(exemplarViewed · exemplarViewedAt)
+    essayReview:essayReview(),
+    sim:state.sim
   };
 }
 function submitMode(){
@@ -983,6 +1243,8 @@ function submitViaGoogleForm(payload){
     const vals={ name:payload.name, studentId:payload.studentId,
       checkScore:payload.checkScore+"/"+payload.checkMax, quizScore:payload.quizScore+"/"+payload.quizMax,
       essay1:(payload.essay&&payload.essay.s1)||"", essay2:(payload.essay&&payload.essay.s2)||"",
+      review:ESSAY.map((it,i)=>{ const r=(payload.essayReview||{})[it.k]; if(!r) return "";
+        return "서술"+(i+1)+": 키워드 점검 "+r.selfCheck.met+"/"+r.selfCheck.total+" · 예시답안 "+(r.exemplarViewed?"열람("+r.exemplarViewedAt+")":"미열람"); }).join(" | "),
       payload:JSON.stringify(payload) };
     const map=gf.entries||{};
     Object.keys(map).forEach(k=>{ if(map[k]){ const inp=document.createElement("input"); inp.type="hidden";
@@ -1040,7 +1302,7 @@ function boot(){
   $("#inName") && $("#inName").addEventListener("keydown",e=>{ if(e.key==="Enter")$("#inId").focus(); });
   $("#inId") && $("#inId").addEventListener("keydown",e=>{ if(e.key==="Enter")$("#introGo").click(); });
   $("#btnReset").onclick=()=>{
-    if(confirm("모든 답안과 진행 상황을 초기화할까요? (API 키는 유지됩니다)")){
+    if(confirm("모든 답안과 진행 상황을 초기화할까요?")){
       localStorage.removeItem(LS.state); localStorage.removeItem(LS.student); location.reload();
     }
   };
