@@ -1,0 +1,1 @@
+{"schema":1,"status":"pending","source":"NOAA Climate Prediction Center — Oceanic Niño Index (ONI)","url":"https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt","note":"자리표시 파일입니다. GitHub Pages 배포 시 워크플로가 NOAA에서 실제 값을 받아 이 파일을 채웁니다. 저장소 스냅샷은 Actions의 'Refresh ONI snapshot'을 한 번 실행하거나 'node scripts/fetch-oni.mjs --inject activities/enso.html'로 갱신하세요.","count":0,"series":[]}

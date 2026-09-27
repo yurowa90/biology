@@ -1,0 +1,1547 @@
+<!--
+  엘니뇨·라니냐(ENSO) 탐구 워크북 — 통합과학2 Ⅴ-2 기후 변화와 지구 환경 · [10통과2-02-03]
+  단일 파일 정적 웹앱(외부 라이브러리 없음). 진행 상황은 이 브라우저(localStorage)에만 저장됩니다.
+
+  데이터:
+   · NOAA CPC 해양 엘니뇨 지수(ONI) — 같은 사이트의 ../data/oni.json 을 먼저 읽고,
+     실패하면 아래 내장 스냅샷(ONI_SNAPSHOT)을, 그것도 없으면 '파일 직접 불러오기'를 안내합니다.
+     GitHub Pages 배포 워크플로가 빌드 시점에 NOAA에서 받아 두 곳을 채웁니다(scripts/fetch-oni.mjs).
+   · 실시간 해수면 온도 — Open-Meteo Marine API(키 불필요)를 버튼을 눌렀을 때만 호출합니다.
+  제출 방식은 CONFIG.submit 에서 선택합니다: "download"(기본) · "googleForm" · "endpoint"
+-->
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>엘니뇨·라니냐 탐구 워크북</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230e1626'/%3E%3Cpath d='M4 19c4-5 8 5 12 0s8 5 12 0' fill='none' stroke='%2345d3d8' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#070b14; --bg2:#0a1120; --panel:#0e1626; --panel2:#111d31;
+    --line:#1d2b41; --line2:#26374f;
+    --txt:#e6edf6; --muted:#7e8da0; --faint:#586479;
+    --cyan:#45d3d8; --cyan2:#63e6ea; --cyandim:#1c5a5e;
+    --green:#33d17f; --amber:#f2c14e; --violet:#a98bff; --red:#ff6b7d; --blue:#5aa9ff;
+    --warm:#f0873e;
+    --mono:ui-monospace,SFMono-Regular,Menlo,"Cascadia Mono",monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:var(--sans); color:var(--txt);
+    background:radial-gradient(1200px 700px at 78% -8%,#122036 0,transparent 55%),
+               radial-gradient(900px 600px at 5% 0,#0d1a2c 0,transparent 50%),
+               linear-gradient(180deg,#070b14,#060910 60%);
+    min-height:100vh; -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--cyan)}
+  .mono{font-family:var(--mono)}
+  .hidden{display:none !important}
+
+  /* ---------- header ---------- */
+  header.top{
+    display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+    padding:14px 26px; border-bottom:1px solid var(--line);
+    background:rgba(8,13,22,.72); backdrop-filter:blur(6px);
+    position:sticky; top:0; z-index:20;
+  }
+  .brand{font-family:var(--mono); font-size:11.5px; letter-spacing:.2em; color:var(--faint); white-space:nowrap}
+  .brand b{color:var(--cyan)}
+  .title{font-size:18px; font-weight:700}
+  .title span{color:var(--cyan)}
+  .top-right{margin-left:auto; display:flex; align-items:center; gap:12px; flex-wrap:wrap}
+  .who{font-size:13px; color:var(--muted)}
+  .who b{color:var(--txt)}
+  .btn-exit{font-family:var(--mono); font-size:11px; letter-spacing:.12em; padding:7px 13px; text-decoration:none;
+    border:1px solid var(--line2); border-radius:8px; background:transparent; color:var(--muted); cursor:pointer}
+  .btn-exit:hover{color:var(--txt); border-color:var(--cyandim)}
+
+  /* ---------- layout ---------- */
+  .wrap{display:grid; grid-template-columns:250px minmax(0,1fr); gap:24px; max-width:1260px; margin:0 auto; padding:24px 22px 70px}
+  @media(max-width:880px){
+    .wrap{grid-template-columns:minmax(0,1fr); padding:16px 14px 60px}
+    nav.steps{position:static !important; display:grid !important; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px !important}
+    .step{padding:9px 6px !important; flex-direction:column; gap:5px !important; text-align:center !important}
+    .step .lbl{display:none}
+    .step .nm{font-size:11.5px !important; margin:0 !important}
+    header.top{padding:12px 14px}
+  }
+
+  /* ---------- sidebar ---------- */
+  nav.steps{position:sticky; top:78px; align-self:start; display:flex; flex-direction:column; gap:9px}
+  .step{
+    display:flex; align-items:center; gap:12px; text-align:left;
+    padding:12px 14px; border:1px solid var(--line); border-radius:13px;
+    background:linear-gradient(180deg,#0d1626,#0b1320); color:var(--muted); cursor:pointer; width:100%;
+  }
+  .step:hover{border-color:var(--line2)}
+  .step .num{flex:0 0 26px; width:26px; height:26px; border-radius:50%; border:1.5px solid var(--line2);
+    display:grid; place-items:center; font-family:var(--mono); font-size:12.5px; color:var(--muted)}
+  .step .lbl{font-family:var(--mono); font-size:10px; letter-spacing:.16em; color:var(--faint)}
+  .step .nm{font-size:14px; font-weight:600; margin-top:2px; color:var(--muted)}
+  .step.active{border-color:var(--cyan); box-shadow:0 0 0 1px var(--cyandim) inset, 0 8px 30px -18px var(--cyan)}
+  .step.active .num{border-color:var(--cyan); color:var(--cyan)}
+  .step.active .nm{color:var(--txt)}
+  .step.done .num{background:var(--green); border-color:var(--green); color:#04240f}
+  .step.done .nm{color:#bfeed4}
+
+  /* ---------- panel ---------- */
+  .panel{border:1px solid var(--line); border-radius:18px; padding:28px 30px 24px; min-width:0;
+    background:linear-gradient(180deg,rgba(16,24,40,.9),rgba(9,15,26,.9)); box-shadow:0 30px 80px -50px #000}
+  @media(max-width:560px){ .panel{padding:20px 16px 18px; border-radius:14px} }
+  .eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.2em; color:var(--cyan); margin-bottom:12px}
+  h1.h{font-size:27px; margin:0 0 8px; letter-spacing:-.01em}
+  @media(max-width:560px){ h1.h{font-size:22px} }
+  h3.sh{font-size:15.5px; margin:26px 0 10px}
+  .sub{color:var(--muted); font-size:15px; line-height:1.65; margin:0 0 22px; max-width:72ch}
+  .foot{display:flex; align-items:center; justify-content:space-between; margin-top:26px; gap:14px; flex-wrap:wrap}
+  .note{color:var(--faint); font-size:12.5px; line-height:1.55}
+  .btn{font-size:14px; font-weight:600; padding:11px 20px; border-radius:11px; cursor:pointer; border:1px solid transparent; font-family:var(--sans)}
+  .btn-prev{background:transparent; border-color:var(--line2); color:var(--muted)}
+  .btn-prev:hover{color:var(--txt); border-color:var(--cyandim)}
+  .btn-next{background:linear-gradient(180deg,#1a6f74,#12545a); border-color:#1f8288; color:#e7fdff; box-shadow:0 10px 30px -14px var(--cyan)}
+  .btn-next:hover{filter:brightness(1.08)}
+  .btn-next:disabled{opacity:.4; cursor:not-allowed; box-shadow:none}
+  .btn-violet{background:linear-gradient(180deg,#5a44b0,#43338a); border-color:#6f57c9; color:#efeaff}
+  .btn-sm{font-size:12.5px; padding:8px 13px; border-radius:9px}
+  .kbd{font-family:var(--mono); font-size:.92em; background:#0c1728; border:1px solid var(--line2); border-radius:6px; padding:1px 6px; color:var(--cyan2)}
+
+  /* ---------- MCQ ---------- */
+  .qcard{border:1px solid var(--line); border-radius:14px; padding:18px 20px; margin-bottom:16px; background:rgba(10,17,30,.6)}
+  @media(max-width:560px){ .qcard{padding:14px 13px} }
+  .qh{font-size:15.5px; font-weight:600; margin-bottom:14px; line-height:1.5}
+  .qh .qn{color:var(--cyan); font-family:var(--mono); margin-right:8px}
+  .opt{display:flex; align-items:center; gap:14px; width:100%; text-align:left; padding:13px 15px; border:1px solid var(--line);
+    border-radius:11px; margin-bottom:10px; background:linear-gradient(180deg,#0c1524,#0a1220); color:var(--txt); cursor:pointer; font-size:14.5px; font-family:var(--sans); line-height:1.45}
+  .opt:last-child{margin-bottom:0}
+  .opt:hover{border-color:var(--line2)}
+  .opt .k{flex:0 0 26px; width:26px; height:26px; border-radius:7px; border:1px solid var(--line2);
+    display:grid; place-items:center; font-family:var(--mono); font-size:12px; color:var(--muted)}
+  .opt.sel{border-color:var(--cyan); background:linear-gradient(180deg,#0e2733,#0b1c27)}
+  .opt.sel .k{background:var(--cyan); border-color:var(--cyan); color:#04222a}
+  .opt.correct{border-color:var(--green); background:linear-gradient(180deg,#0d2419,#0a1c15)}
+  .opt.correct .k{background:var(--green); border-color:var(--green); color:#04240f}
+  .opt.wrong{border-color:var(--red); background:linear-gradient(180deg,#2a1216,#1c0e12)}
+  .opt.wrong .k{background:var(--red); border-color:var(--red); color:#2a0006}
+  .expl{font-size:13px; color:var(--muted); margin-top:10px; padding:10px 13px; border-left:2px solid var(--cyandim); background:rgba(69,211,216,.05); border-radius:0 8px 8px 0; line-height:1.6}
+
+  textarea, .inp{width:100%; font-family:var(--sans); font-size:14px; line-height:1.6; padding:12px 14px; border-radius:11px;
+    border:1px solid var(--line2); background:#0a1220; color:var(--txt)}
+  textarea{min-height:96px; resize:vertical}
+  textarea:focus, .inp:focus{outline:none; border-color:var(--cyandim)}
+  .inp{padding:9px 12px}
+  label.fl{display:block; font-size:12px; color:var(--faint); font-family:var(--mono); letter-spacing:.08em; margin:0 0 7px}
+
+  /* ---------- accordion / callouts ---------- */
+  .acc{border:1px solid var(--line); border-radius:12px; margin-bottom:11px; overflow:hidden; background:rgba(10,17,30,.5)}
+  .acc-h{display:flex; align-items:center; gap:14px; padding:14px 16px; cursor:pointer}
+  .acc-h .an{flex:0 0 26px; width:26px; height:26px; border-radius:50%; background:#0c1c2a; border:1px solid var(--cyandim);
+    display:grid; place-items:center; font-family:var(--mono); font-size:12px; color:var(--cyan)}
+  .acc-h .at{font-weight:600; font-size:15px}
+  .acc-h .caret{margin-left:auto; color:var(--faint); transition:transform .18s}
+  .acc.open .caret{transform:rotate(90deg)}
+  .acc-b{padding:0 18px; max-height:0; overflow:hidden; transition:max-height .25s ease, padding .2s}
+  .acc.open .acc-b{padding:2px 18px 16px; max-height:900px}
+  .acc-b p{font-size:14px; line-height:1.72; color:#cdd8e6; margin:6px 0}
+  .acc-b b{color:var(--txt)}
+  .call{border-left:3px solid var(--violet); background:rgba(169,139,255,.06); border-radius:0 10px 10px 0; padding:13px 17px; margin-bottom:12px}
+  .call.amber{border-color:var(--amber); background:rgba(242,193,78,.06)}
+  .call.cyan{border-color:var(--cyan); background:rgba(69,211,216,.05)}
+  .call .ct{font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; color:var(--violet); margin-bottom:6px}
+  .call.amber .ct{color:var(--amber)} .call.cyan .ct{color:var(--cyan)}
+  .call p{margin:0; font-size:14px; line-height:1.68; color:#d3dce8}
+
+  /* ---------- simulator ---------- */
+  .sim{display:grid; grid-template-columns:minmax(0,1fr) 290px; gap:18px}
+  @media(max-width:980px){ .sim{grid-template-columns:minmax(0,1fr)} }
+  .canvas-wrap{border:1px solid var(--line); border-radius:12px; background:#080f1b; padding:10px; position:relative; min-width:0}
+  .canvas-cap{font-family:var(--mono); font-size:10px; letter-spacing:.1em; color:var(--faint); margin-bottom:6px; display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap}
+  canvas{width:100%; display:block; border-radius:8px; touch-action:none}
+  .ctrl{border:1px solid var(--line); border-radius:12px; padding:15px; background:linear-gradient(180deg,#0e1626,#0b1220); min-width:0}
+  .ctrl-row{display:flex; gap:8px; margin-bottom:13px; flex-wrap:wrap}
+  .csmall{flex:1; font-family:var(--mono); font-size:11px; letter-spacing:.04em; padding:9px 6px; border-radius:9px; border:1px solid var(--line2); background:#0c1524; color:var(--muted); cursor:pointer; white-space:nowrap}
+  .csmall:hover{color:var(--txt); border-color:var(--cyandim)}
+  .csmall.on{background:#12545a; border-color:#1f8288; color:#dffbff}
+  .csmall.p-el{border-color:#6a3a20} .csmall.p-el.on{background:#6a3a20; border-color:var(--warm); color:#ffe3cc}
+  .csmall.p-la{border-color:#254a6e} .csmall.p-la.on{background:#1d3f66; border-color:var(--blue); color:#dcecff}
+  .sld{margin-bottom:14px}
+  .sld label{display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:6px}
+  .sld label .v{font-family:var(--mono); color:var(--cyan2)}
+  .sld input[type=range]{width:100%; accent-color:var(--cyan)}
+  .sld .ticks{display:flex; justify-content:space-between; font-family:var(--mono); font-size:9.5px; color:var(--faint); margin-top:3px}
+  .verdict{border-radius:11px; padding:12px 14px; margin-bottom:12px; border:1px solid var(--line2); background:#0a1220}
+  .verdict .vk{font-family:var(--mono); font-size:9.5px; letter-spacing:.12em; color:var(--faint)}
+  .verdict .vv{font-size:19px; font-weight:700; margin-top:2px}
+  .verdict.el{border-color:#6a3a20; background:rgba(240,135,62,.08)} .verdict.el .vv{color:#ffb27a}
+  .verdict.la{border-color:#254a6e; background:rgba(90,169,255,.08)} .verdict.la .vv{color:#9cc9ff}
+  .verdict.ne .vv{color:var(--cyan2)}
+  .chk{font-size:12.5px; color:var(--muted); display:flex; align-items:flex-start; gap:8px; margin-top:8px; line-height:1.45}
+  .chk .box{flex:0 0 16px; width:16px; height:16px; border-radius:5px; border:1px solid var(--line2); display:grid; place-items:center; font-size:11px; color:transparent; margin-top:1px}
+  .chk.on .box{background:var(--green); border-color:var(--green); color:#04240f}
+  .chk.on{color:#bfeed4}
+
+  .readouts{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-top:14px}
+  @media(max-width:720px){ .readouts{grid-template-columns:repeat(2,minmax(0,1fr))} }
+  .ro{border:1px solid var(--line); border-radius:11px; padding:11px 12px; background:rgba(10,17,30,.55); min-width:0}
+  .ro .rk{font-family:var(--mono); font-size:9.5px; letter-spacing:.06em; color:var(--faint); margin-bottom:4px}
+  .ro .rv{font-family:var(--mono); font-size:18px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .ro .ru{font-size:11px; color:var(--muted); margin-left:3px}
+
+  .impacts{display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:10px}
+  .imp{border:1px solid var(--line); border-radius:11px; padding:11px 13px; background:rgba(10,17,30,.5); font-size:13px; line-height:1.5}
+  .imp .in{font-weight:700; font-size:13px; margin-bottom:3px}
+  .imp .it{color:var(--muted)}
+  .imp.el{border-color:#6a3a20} .imp.el .it{color:#ffcfa8}
+  .imp.la{border-color:#254a6e} .imp.la .it{color:#bcdcff}
+
+  /* ---------- data ---------- */
+  .srcbar{display:flex; align-items:center; gap:10px; flex-wrap:wrap; border:1px solid var(--line); border-radius:12px; padding:11px 14px; background:rgba(10,17,30,.5); font-size:12.5px; color:var(--muted); margin-bottom:14px; line-height:1.55}
+  .srcbar b{color:var(--txt)}
+  .pill{font-family:var(--mono); font-size:11px; padding:2px 9px; border-radius:20px; border:1px solid var(--line2); white-space:nowrap}
+  .pill.g{color:#bfeed4; border-color:#1e5f3c; background:rgba(51,209,127,.08)}
+  .pill.a{color:#f7dfa0; border-color:#6a5320; background:rgba(242,193,78,.08)}
+  .pill.r{color:#ffc2ca; border-color:#5a2530; background:rgba(255,107,125,.08)}
+  .status{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-bottom:14px}
+  @media(max-width:720px){ .status{grid-template-columns:minmax(0,1fr)} }
+  .rangebar{display:flex; gap:6px; flex-wrap:wrap}
+  .chart-read{font-size:12.5px; color:var(--muted); margin-top:8px; min-height:20px; font-family:var(--mono)}
+  .task{border:1px solid var(--line); border-radius:13px; padding:15px 16px; margin-bottom:14px; background:rgba(10,17,30,.5)}
+  .task .tt{font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; color:var(--amber); margin-bottom:8px}
+  .evrow{display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto; gap:10px; align-items:center; padding:9px 0; border-top:1px solid var(--line)}
+  .evrow:first-of-type{border-top:none}
+  @media(max-width:560px){ .evrow{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} .evrow .res{grid-column:1 / -1} }
+  .evrow .en{font-weight:600; font-size:14px}
+  .res{font-size:12.5px; line-height:1.5}
+  .res.ok{color:var(--green)} .res.no{color:var(--red)} .res.neu{color:var(--muted)}
+  .live{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:12px 0}
+  @media(max-width:720px){ .live{grid-template-columns:minmax(0,1fr)} }
+  .radios{display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 10px}
+
+  /* ---------- GRASPS ---------- */
+  .stage1{border:1px solid var(--line2); border-radius:12px; padding:14px 16px; background:linear-gradient(180deg,#0d1c2b,#0b1624); margin-bottom:18px}
+  .stage1 .tag{font-family:var(--mono); font-size:10px; letter-spacing:.16em; color:var(--cyan); margin-bottom:8px}
+  .stage1 li{font-size:13.5px; line-height:1.65; color:#cdd8e6; margin-bottom:4px}
+  .stage1 ul{margin:0; padding-left:18px}
+  .bundles{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px}
+  @media(max-width:1080px){ .bundles{grid-template-columns:minmax(0,1fr)} }
+  .bundle{border:1px solid var(--line); border-radius:14px; padding:15px 16px; background:rgba(10,17,30,.55); cursor:pointer; display:flex; flex-direction:column; gap:9px; text-align:left; color:var(--txt); font-family:var(--sans)}
+  .bundle:hover{border-color:var(--line2)}
+  .bundle.sel{border-color:var(--amber); box-shadow:0 0 0 1px #6a5320 inset, 0 10px 34px -20px var(--amber)}
+  .bundle .prox{font-family:var(--mono); font-size:10px; letter-spacing:.12em; color:var(--amber)}
+  .bundle .logic{font-size:12.5px; color:#e6d9a6; line-height:1.55; border-left:2px solid #6a5320; padding-left:9px}
+  .bundle .ras{border:1px solid var(--line); border-radius:10px; padding:9px 11px; background:#0a1220}
+  .bundle .ras .rk{font-family:var(--mono); font-size:9.5px; color:var(--faint); letter-spacing:.1em}
+  .bundle .ras .rv{font-size:13px; line-height:1.5; margin-bottom:6px}
+  .bundle .ras .rv:last-child{margin-bottom:0}
+  .bundle .gp .rk{font-family:var(--mono); font-size:9.5px; color:var(--faint); letter-spacing:.1em}
+  .bundle .gp .rv{font-size:13px; line-height:1.5; color:#cdd8e6; margin-bottom:6px}
+  .bundle .std li{font-size:12.5px; line-height:1.5; color:#cdd8e6; margin-bottom:4px}
+  .bundle .std ul{margin:4px 0 0; padding-left:16px}
+  .bundle .std .src{font-family:var(--mono); font-size:10px; color:var(--cyan)}
+  .pick{font-family:var(--mono); font-size:11px; padding:6px 10px; border-radius:8px; border:1px solid var(--line2); color:var(--muted); align-self:flex-start}
+  .bundle.sel .pick{background:var(--amber); color:#2a1d00; border-color:var(--amber)}
+
+  /* ---------- AI ---------- */
+  .keybox{border:1px solid var(--line2); border-radius:14px; padding:16px 18px; margin:16px 0; background:linear-gradient(180deg,#130f24,#0e0b1c)}
+  .keybox .kh{font-family:var(--mono); font-size:11px; letter-spacing:.14em; color:var(--violet); margin-bottom:10px}
+  .keyrow{display:flex; gap:10px; flex-wrap:wrap}
+  .keyrow input{flex:1; min-width:180px; font-family:var(--mono); font-size:13px; padding:10px 12px; border-radius:9px; border:1px solid var(--line2); background:#0b1220; color:var(--txt)}
+  .keyrow input:focus{outline:none; border-color:var(--violet)}
+  .key-note{font-size:12px; color:var(--muted); margin-top:9px; line-height:1.55}
+  .ai-out{margin-top:12px; border:1px solid var(--line2); border-radius:11px; padding:14px 16px; background:rgba(169,139,255,.06); font-size:14px; line-height:1.7; white-space:pre-wrap; color:#e3ddf6}
+  .ai-out .ah{font-family:var(--mono); font-size:10px; letter-spacing:.14em; color:var(--violet); margin-bottom:8px}
+  .spin{display:inline-block; width:13px; height:13px; border:2px solid var(--violet); border-top-color:transparent; border-radius:50%; animation:sp .7s linear infinite; vertical-align:-2px; margin-right:7px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .cc{font-size:12px; color:var(--faint); font-family:var(--mono)}
+
+  /* ---------- reflect ---------- */
+  .kwl{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px}
+  @media(max-width:880px){ .kwl{grid-template-columns:minmax(0,1fr)} }
+  .kwl .col{border:1px solid var(--line); border-radius:12px; padding:13px; background:rgba(10,17,30,.5)}
+  .kwl .col .kh{font-family:var(--mono); font-size:11px; letter-spacing:.12em; color:var(--cyan); margin-bottom:8px}
+  .scale{display:flex; gap:6px; flex-wrap:wrap; margin:6px 0 14px}
+  .scale button{width:40px; height:36px; border-radius:9px; border:1px solid var(--line2); background:#0c1524; color:var(--muted); cursor:pointer; font-family:var(--mono)}
+  .scale button.on{background:#12545a; border-color:#1f8288; color:#dffbff}
+
+  /* ---------- report ---------- */
+  .rsec{border:1px solid var(--line); border-radius:13px; padding:16px 18px; margin-bottom:14px; background:rgba(10,17,30,.5)}
+  .rsec .rt{font-family:var(--mono); font-size:11px; letter-spacing:.14em; color:var(--cyan); margin-bottom:12px; display:flex; justify-content:space-between; gap:8px}
+  .rsec .rt .score{color:var(--amber)}
+  .idgrid{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px}
+  @media(max-width:640px){ .idgrid{grid-template-columns:repeat(2,minmax(0,1fr))} }
+  .idcell{border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:#0a1220; min-width:0}
+  .idcell .il{font-size:10px; color:var(--faint); font-family:var(--mono); margin-bottom:5px}
+  .idcell input{width:100%; background:transparent; border:none; color:var(--txt); font-size:17px; font-family:var(--mono); font-weight:600}
+  .idcell input:focus{outline:none}
+  .idcell .big{font-size:21px; font-family:var(--mono); font-weight:700}
+  .qline{margin-bottom:12px; font-size:14px; line-height:1.55; overflow-wrap:anywhere}
+  .qline .qq{color:#c6d2e2}
+  .qline .ans{display:block; margin-top:4px; white-space:pre-wrap}
+  .ans .lab{font-weight:700}
+  .ok{color:var(--green)} .no{color:var(--red)} .neu{color:var(--muted)}
+
+  .toast{position:fixed; left:50%; bottom:28px; transform:translateX(-50%) translateY(20px); opacity:0; max-width:calc(100vw - 32px);
+    background:#0e2733; border:1px solid var(--cyandim); color:#dffbff; padding:12px 20px; border-radius:11px;
+    font-size:14px; transition:.25s; z-index:60; box-shadow:0 20px 50px -20px #000; pointer-events:none}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+  .toast.err{background:#2a1216; border-color:#5a2530; color:#ffd7dc}
+
+  .modal{position:fixed; inset:0; background:rgba(4,7,12,.82); backdrop-filter:blur(5px); display:grid; place-items:center; z-index:80; padding:20px}
+  .modal .card{width:min(440px,100%); border:1px solid var(--line2); border-radius:18px; padding:28px; background:linear-gradient(180deg,#0f1930,#0a1120)}
+  .modal h2{margin:0 0 4px; font-size:22px}
+  .modal p{margin:0 0 20px; color:var(--muted); font-size:14px; line-height:1.6}
+  .modal .field{margin-bottom:14px}
+  .modal .field label{display:block; font-size:12px; color:var(--faint); font-family:var(--mono); letter-spacing:.1em; margin-bottom:6px}
+  .modal .field input{width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--line2); background:#0a1220; color:var(--txt); font-size:15px}
+  .modal .field input:focus{outline:none; border-color:var(--cyan)}
+
+  @media print{
+    body{background:#fff; color:#000}
+    header.top, nav.steps, .foot, .modal, .toast{display:none !important}
+    .wrap{display:block; max-width:none; padding:0}
+    .panel{border:none; box-shadow:none; background:#fff}
+    .rsec{border:1px solid #ccc; background:#fff; break-inside:avoid}
+    .rt, .eyebrow{color:#000 !important}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand"><b>ENSO</b> · 엘니뇨–남방진동 · WORKBOOK</div>
+  <div class="title">엘니뇨·라니냐 <span>탐구 워크북</span></div>
+  <div class="top-right">
+    <div class="who">학생 · <b id="whoName">—</b></div>
+    <a class="btn-exit" href="../index.html">교과서 홈</a>
+    <button class="btn-exit" id="btnReset">초기화</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="steps" id="nav" aria-label="활동 단계"></nav>
+  <main id="main"></main>
+</div>
+
+<div class="modal" id="intro">
+  <div class="card">
+    <h2>시작하기 전에</h2>
+    <p>이름과 학번을 입력해 주세요. 최종 보고서에 함께 기록됩니다.</p>
+    <div class="field"><label>이름</label><input id="inName" placeholder="홍길동" autocomplete="off"></div>
+    <div class="field"><label>학번</label><input id="inId" placeholder="10203" autocomplete="off"></div>
+    <div style="display:flex; justify-content:flex-end">
+      <button class="btn btn-next" id="introGo">워크북 시작 →</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/*ONI_SNAPSHOT_START*/
+const ONI_SNAPSHOT = null;
+/*ONI_SNAPSHOT_END*/
+</script>
+
+<script>
+"use strict";
+/* ============================================================
+   설정
+   ============================================================ */
+const CONFIG = {
+  submit: {
+    // "download"(기본, 설정 불필요) · "googleForm"(구글 폼, Apps Script 아님) · "endpoint"(임의 POST URL)
+    mode: "download",
+    googleForm: {
+      formId: "",   // https://docs.google.com/forms/d/e/<formId>/viewform 의 <formId>
+      entries: {    // 항목명 → entry.XXXXXXX (사용할 항목만. payload 하나만 써도 됨)
+        name:"", studentId:"", quizScore:"", bundle:"", product:"", reflection:"", payload:""
+      }
+    },
+    endpoint: ""
+  },
+  // 도입 영상 주소(선택). 비워 두면 표시하지 않습니다. 예: 기후 위기·기상 이변 영상 링크
+  introVideoUrl: ""
+};
+// GRASPS 산출물 AI 피드백에 쓰는 Claude API 모델(API 요청 파라미터). 필요하면 강사가 바꿀 수 있습니다.
+const AI_MODEL = "claude-opus-5";
+
+// 학생 정보·API 키는 같은 사이트의 효소 워크북과 공유합니다(한 번만 입력).
+const LS = { student:"mm_student", state:"enso_state", apiKey:"mm_anthropic_key" };
+const ONI_URL = "https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt";
+
+/* ============================================================
+   단계 · 상태
+   ============================================================ */
+const STEPS = [
+  {id:"predict", lbl:"PREDICT",   nm:"예측·진단"},
+  {id:"concept", lbl:"CONCEPT",   nm:"개념"},
+  {id:"sim",     lbl:"SIMULATOR", nm:"시뮬레이터"},
+  {id:"data",    lbl:"DATA",      nm:"실제 데이터"},
+  {id:"quiz",    lbl:"FORMATIVE", nm:"형성평가"},
+  {id:"grasps",  lbl:"GRASPS",    nm:"정책 제안"},
+  {id:"reflect", lbl:"REFLECT",   nm:"성찰 KWL"},
+  {id:"submit",  lbl:"REPORT",    nm:"보고서"},
+];
+const DEFAULT_STATE = () => ({
+  student:{name:"", id:""},
+  predict:{}, kw:{k:"", w:""},
+  sim:{ w:1.0, check:{}, note:"", presets:{} },
+  data:{ events:{}, strongest:"", common:"", live:null, judge:"", reason:"" },
+  quiz:{},
+  grasps:{ bundle:"", product:"", ai:"" },
+  reflect:{ l:"", wDone:"", self:{}, citizen:"" },
+  done:{}
+});
+let state = DEFAULT_STATE();
+let cur = 0;
+
+function save(){ try{ localStorage.setItem(LS.state, JSON.stringify(state)); }catch(e){} }
+function load(){
+  try{
+    const st = JSON.parse(localStorage.getItem(LS.state)||"null");
+    if(st && typeof st==="object"){
+      const d = DEFAULT_STATE();
+      Object.keys(d).forEach(k=>{
+        if(st[k]===undefined) return;
+        d[k] = (d[k] && typeof d[k]==="object" && !Array.isArray(d[k]) && st[k] && typeof st[k]==="object")
+          ? Object.assign(d[k], st[k]) : st[k];
+      });
+      state = d;
+    }
+    const stu = JSON.parse(localStorage.getItem(LS.student)||"null");
+    if(stu && typeof stu==="object") state.student = {name:stu.name||"", id:stu.id||""};
+  }catch(e){}
+}
+
+/* ============================================================
+   내용 데이터
+   ============================================================ */
+const PREDICT = [
+  {q:"적도 태평양에서 동쪽→서쪽으로 부는 무역풍이 약해지면, 동태평양(페루 앞바다) 표층 수온은 어떻게 될까요?",
+   opts:["높아진다","낮아진다","거의 변하지 않는다"]},
+  {q:"엘니뇨가 발생하면 인도네시아의 강수량은 어떻게 될까요?",
+   opts:["늘어난다","줄어든다","변화 없다"]},
+  {q:"엘니뇨는 얼마나 자주 나타날까요?",
+   opts:["매년 같은 시기에","2~7년 간격으로 불규칙하게","수십 년에 한 번"]},
+];
+
+const CONCEPT = [
+  {t:"적도 태평양의 평상시 모습", b:`<p>적도 부근에서는 동쪽에서 서쪽으로 <b>무역풍</b>이 붑니다. 바람에 밀린 따뜻한 표층 해수가 서쪽(인도네시아 부근)에 쌓여 <b>따뜻한 해수 웅덩이(웜풀)</b>를 이루고, 서태평양 해수면은 동태평양보다 약 0.5 m 높아집니다.</p>
+    <p>그래서 평상시에는 <b>서태평양이 따뜻하고, 동태평양은 상대적으로 차갑습니다.</b></p>`},
+  {t:"용승과 수온약층", b:`<p><b>수온약층</b>은 따뜻한 표층과 차가운 심층 사이에서 수온이 깊이에 따라 급격히 낮아지는 층입니다. 표층 해수가 서쪽으로 밀려가므로 수온약층은 <b>서쪽에서 깊고 동쪽에서 얕게</b> 기울어 있습니다.</p>
+    <p>동태평양에서는 빠져나간 표층 해수를 채우려고 차가운 심층수가 올라오는 <b>용승</b>이 일어납니다. 용승한 물에는 영양염이 풍부해 페루 앞바다는 좋은 어장이 됩니다.</p>`},
+  {t:"워커 순환 — 바다와 대기의 연결", b:`<p>따뜻한 서태평양에서는 공기가 데워져 <b>상승</b>하고 구름과 비가 많습니다. 차가운 동태평양에서는 공기가 <b>하강</b>해 건조합니다. 지표 부근에서는 동→서(무역풍), 상층에서는 서→동으로 공기가 돌아가는 이 순환을 <b>워커 순환</b>이라고 합니다.</p>
+    <p>무역풍이 강하면 해수 차이가 커지고, 해수 차이가 크면 다시 무역풍이 강해집니다. 바다와 대기가 서로를 밀고 당기는 <b>되먹임</b>입니다.</p>`},
+  {t:"엘니뇨", b:`<p>무역풍이 <b>약해지면</b> 서쪽에 쌓였던 따뜻한 해수가 동쪽으로 퍼집니다. 동태평양의 수온약층이 깊어져 <b>용승이 약해지고</b>, 동태평양 표층 수온이 평년보다 높아집니다.</p>
+    <p>따뜻한 바다를 따라 <b>상승 기류와 강수 중심도 중·동태평양으로 이동</b>합니다. 그 결과 인도네시아·호주 쪽은 건조해지고(가뭄·산불), 페루 쪽은 비가 늘어납니다(홍수). 이름은 크리스마스 무렵 페루 어민들이 '아기 예수(El Niño)'라고 부른 데서 왔습니다.</p>`},
+  {t:"라니냐", b:`<p>반대로 무역풍이 <b>평상시보다 강해지면</b> 따뜻한 해수가 서쪽에 더 많이 쌓이고, 동태평양 용승이 강해져 표층 수온이 평년보다 <b>낮아집니다</b>. 수온약층의 기울기는 더 커지고, 서태평양의 강수는 더 많아집니다.</p>`},
+  {t:"ENSO와 판정 기준 — ONI", b:`<p>엘니뇨·라니냐는 해양과 대기가 함께 움직이는 현상이라 <b>ENSO(엘니뇨–남방진동)</b>라고 부릅니다. 남방진동은 태평양 동·서의 기압이 시소처럼 반대로 변하는 대기 쪽 신호입니다.</p>
+    <p><b>ONI(해양 엘니뇨 지수)</b>는 <span class="kbd">Niño3.4 해역(5°S~5°N, 170°W~120°W)</span>의 해수면 온도 편차를 <b>3개월 이동평균</b>한 값입니다. 미국 NOAA는 ONI가 <b>+0.5 ℃ 이상인 상태가 연속 5개 계절(겹치는 3개월 평균) 이상</b> 이어지면 엘니뇨, <b>−0.5 ℃ 이하</b>가 그만큼 이어지면 라니냐로 판정합니다. 우리나라 기상청도 감시 구역의 3개월 이동평균 편차 ±0.5 ℃가 5개월 이상 지속되는지를 기준으로 삼습니다.</p>`},
+  {t:"지구온난화와 엘니뇨", b:`<p>성취기준은 온실효과 강화로 인한 <b>지구온난화의 메커니즘</b>과 함께 엘니뇨·사막화 같은 현상이 지구 환경과 인간 생활에 미치는 영향, 대처 방안을 다룹니다. 강한 엘니뇨 시기에는 적도 태평양이 넓게 따뜻해져 전 지구 평균 기온이 일시적으로 더 높아지는 경향이 있습니다.</p>
+    <p>온난화가 엘니뇨의 <b>빈도와 강도</b>를 어떻게 바꾸는지는 아직 연구가 진행 중입니다. 과학적 결론과 불확실성을 구분해서 말하는 연습을 이 활동에서 함께 합니다.</p>`},
+];
+
+const QUIZ = [
+  {q:"평상시 적도 동태평양의 표층 수온이 서태평양보다 낮은 주된 이유는?",
+   opts:["무역풍이 표층 해수를 서쪽으로 밀어내고, 동태평양에서 차가운 심층수가 용승하기 때문","동태평양이 적도에서 더 멀기 때문","동태평양 하늘에 구름이 많아 햇빛이 약하기 때문","편서풍이 따뜻한 해수를 동쪽으로 밀어내기 때문"], a:0,
+   e:"무역풍이 따뜻한 표층 해수를 서쪽으로 밀어내면 동쪽에서는 그 자리를 심층의 찬물이 채웁니다(용승). 그래서 동태평양이 상대적으로 차갑습니다."},
+  {q:"엘니뇨 시기에 나타나는 변화로 옳은 것은?",
+   opts:["무역풍 강화, 동태평양 용승 강화","무역풍 약화, 동태평양 수온약층이 깊어지고 용승 약화","서태평양 강수 증가, 동태평양 건조","수온약층의 동서 기울기가 더 커짐"], a:1,
+   e:"무역풍이 약해지면 따뜻한 해수가 동쪽으로 퍼지며 동태평양 수온약층이 깊어지고 용승이 약해집니다. 수온약층은 평평해지는 쪽으로 변하고, 강수 중심은 동쪽으로 이동합니다."},
+  {q:"최근 5개 계절의 ONI가 차례로 +0.7, +0.9, +1.1, +1.3, +1.4 였다면 NOAA 기준 판정은?",
+   opts:["라니냐","중립(평상시)","엘니뇨(기준 충족)","판단할 수 없다 — ONI는 한 달 값만 본다"], a:2,
+   e:"ONI는 Niño3.4 해역 수온 편차의 3개월 이동평균입니다. +0.5 ℃ 이상이 연속 5개 계절 이어졌으므로 엘니뇨 기준을 충족합니다."},
+  {q:"엘니뇨가 발생한 해 인도네시아·호주에서는 가뭄·산불이, 페루에서는 홍수가 잦아지는 까닭으로 가장 알맞은 것은?",
+   opts:["전 지구 해수면이 한꺼번에 상승하기 때문","따뜻한 해수와 상승 기류(강수 중심)가 중·동태평양으로 옮겨 가 서태평양은 하강 기류로 건조해지고 동태평양은 강수가 늘기 때문","오존층이 얇아져 자외선이 강해지기 때문","지구 자전 속도가 느려지기 때문"], a:1,
+   e:"워커 순환이 약해지고 강수 중심이 동쪽으로 이동하면서, 같은 엘니뇨가 지역에 따라 가뭄과 홍수라는 상반된 결과를 만듭니다."},
+];
+
+const REGIONS = [
+  {name:"인도네시아·호주 동부", el:"강수 감소 → 가뭄·산불 위험 증가", la:"강수 증가 → 홍수 위험 증가"},
+  {name:"페루·에콰도르 해안", el:"강수 증가 → 홍수, 용승 약화로 어획량 감소", la:"건조 경향, 용승 강화로 어장 풍부"},
+  {name:"중·동태평양 적도 섬", el:"강수 크게 증가", la:"강수 감소"},
+  {name:"인도", el:"여름 몬순 약화 경향(가뭄 위험)", la:"몬순 강수 증가 경향"},
+  {name:"아프리카 남부", el:"건조 경향", la:"습윤 경향"},
+  {name:"북아메리카 남부", el:"겨울 다습 경향", la:"겨울 건조 경향"},
+  {name:"한국", el:"겨울 기온이 높고 강수가 많은 경향이 보고됨(해마다 차이 큼)", la:"겨울 기온이 낮은 경향이 보고됨(해마다 차이 큼)"},
+];
+
+const EVENTS = [
+  {id:"e1997", label:"1997–98 엘니뇨", y:1997},
+  {id:"e2015", label:"2015–16 엘니뇨", y:2015},
+  {id:"e2023", label:"2023–24 엘니뇨", y:2023},
+];
+
+/* Stage 1 — 영속적 이해(GRASPS Standards 의 출처) */
+const STAGE1 = [
+  {id:"U1", t:"무역풍 세기의 변화는 해수(따뜻한 해수 분포·수온약층·용승)와 대기(워커 순환·강수 중심)를 연쇄적으로 바꾼다. 엘니뇨·라니냐는 이 대기–해양 상호작용의 결과이다."},
+  {id:"U2", t:"ENSO는 ONI 같은 관측 지표로 감시·판정되며, 데이터로 현재 상태를 판단하고 과거 사례와 비교할 수 있다."},
+  {id:"U3", t:"같은 엘니뇨라도 지역에 따라 가뭄과 홍수처럼 상반된 영향을 낳으므로, 대처 방안은 지역과 대상에 맞게 설계해야 한다."},
+];
+
+/* GRASPS — 슬롯별 독립 선택이 아니라 내적으로 정합한 완성 번들 3개.
+   각 번들: designLogic 을 먼저 정하고 → Role↔Audience↔Situation 을 한 단위로 → Goal·Product 파생 → Standards 마지막.
+   청중 근접성 축(classroom / school_community / expert_public)으로 분산. */
+const BUNDLES = [
+  { id:"classroom", proxLabel:"가까운 청중 · 교실",
+    designLogic:"원리를 처음 듣는 또래가 인과를 스스로 다시 말할 수 있어야 이해가 완성된다 — 그래서 청중은 같은 반 친구, 상황은 뉴스 속 궁금증, 산출물은 인과 사슬 설명이다.",
+    role:"과학 시간 '기후 해설자'를 맡은 학생",
+    audience:"엘니뇨를 처음 접하는 같은 반 친구들",
+    situation:"(가상) 겨울 이상기온 뉴스에 '엘니뇨 영향'이라는 말이 나오자 친구들이 \"태평양 바다가 왜 우리 날씨랑 상관있어?\"라고 묻는다. 다음 과학 시간에 5분 설명을 맡았다.",
+    goal:"무역풍 약화 → 따뜻한 해수 이동 → 용승·수온약층 변화 → 강수 중심 이동 → 지역별 기상 이변으로 이어지는 인과 사슬을 친구들이 스스로 설명할 수 있게 한다.",
+    product:"인과 사슬 설명문(5단계 이상) + 1분 발표 대본. 시뮬레이터 또는 ONI 데이터의 수치를 2개 이상 인용.",
+    scaffold:"① 한 문장 요약:\n② 인과 사슬 (1→2→3→4→5):\n③ 근거 수치 2개 (시뮬레이터/ONI, 출처 포함):\n④ 친구가 헷갈릴 만한 점과 쉬운 비유:\n⑤ 1분 발표 대본:",
+    standards:[
+      {t:"인과 사슬의 각 단계(무역풍–해수–용승/수온약층–대류·강수–지역 영향)가 빠짐없이 순서대로 연결된다.", src:"Stage 1 · U1"},
+      {t:"시뮬레이터 수치나 실제 ONI 값을 근거로 2개 이상 정확히 인용한다.", src:"성취기준 [10통과2-02-03] ‘분석’ · Stage 1 · U2"},
+      {t:"용어를 친구 눈높이로 풀어 쓰고, 오개념이 생길 만한 지점을 짚는다.", src:"청중(교실)의 요구"}
+    ]},
+  { id:"school_community", proxLabel:"중간 청중 · 학교 공동체",
+    designLogic:"기후 정보는 우리 공동체의 실제 결정과 이어질 때 실천이 된다 — 그래서 청중은 학교 운영 주체, 상황은 다음 학기 계획 수립, 산출물은 데이터에 근거한 실천 제안서다.",
+    role:"학생 자치회 환경부 '기후 대응 담당'",
+    audience:"교장·행정실·보건·급식 담당 선생님과 학생회",
+    situation:"(가상) 기상 당국이 엘니뇨 발달 가능성을 발표하며 폭염·집중호우 같은 기상 이변 대비를 당부했다. 학교는 다음 학기 운영 계획을 세우는 중이다.",
+    goal:"현재 ONI 데이터와 엘니뇨의 원격 영향 경향을 근거로, 학교가 실행할 수 있는 기후 적응·완화 실천안 3가지를 채택하도록 설득한다.",
+    product:"1쪽 실천 제안서: 근거 데이터 → 예상 영향(불확실성 포함) → 실천안 3가지 → 담당·시기·비용 → 기대 효과.",
+    scaffold:"① 현재 상태 (ONI 최신값·판정, 출처):\n② 우리 지역·학교에 예상되는 영향과 불확실성:\n③ 실천안 1 / 2 / 3:\n④ 담당·시기·비용:\n⑤ 기대 효과와 점검 방법:",
+    standards:[
+      {t:"ONI 최신값·판정을 출처와 함께 제시하고, 엘니뇨의 영향이 '확정 예보'가 아닌 '경향'임을 구분한다.", src:"Stage 1 · U2"},
+      {t:"각 실천안이 예상 영향과 인과적으로 연결된다(왜 이 대책인가).", src:"성취기준 [10통과2-02-03] ‘대처 방안’ · Stage 1 · U3"},
+      {t:"담당·시기·비용 등 실행 가능성을 구체적으로 제시한다.", src:"청중(학교 운영 주체)의 요구"}
+    ]},
+  { id:"expert_public", proxLabel:"먼 청중 · 전문가·국제 사회",
+    designLogic:"엘니뇨의 피해는 국경을 넘고 지역마다 반대로 나타난다 — 그래서 청중은 국제 정책 결정자, 상황은 국제 공동 대응 논의, 산출물은 과학적 근거를 갖춘 정책 브리프다.",
+    role:"국제 청소년 기후 포럼 한국 대표단의 과학 정책 자문",
+    audience:"태평양 연안국 정책 담당자와 기후 전문가 패널",
+    situation:"(가상) 강한 엘니뇨가 발달한 해, 서태평양(인도네시아·호주)에서는 가뭄·산불이, 남미 서해안(페루)에서는 홍수와 어획량 감소가 함께 보고되었다. 포럼은 공동 대응 선언문 초안을 준비한다.",
+    goal:"ONI 감시에 기반한 조기 경보와, 지역마다 다른 피해 유형에 맞춘 국제 협력 대응 정책을 선언문에 반영시킨다.",
+    product:"정책 브리프: 요약 → 과학적 근거(메커니즘 + 과거 강한 엘니뇨 데이터) → 지역별 대응 → 국제 협력 방안 → 한계와 불확실성.",
+    scaffold:"① 요약 (3문장):\n② 과학적 근거 — 메커니즘:\n③ 과학적 근거 — 과거 사례 데이터 (예: 1997–98, 2015–16, 2023–24 최고 ONI와 출처):\n④ 지역별 대응 (서태평양 / 남미 서해안 / 기타):\n⑤ 국제 협력 방안:\n⑥ 한계와 불확실성:",
+    standards:[
+      {t:"워커 순환 약화와 강수 중심 이동으로 지역별 상반된 피해(가뭄 vs 홍수)를 설명한다.", src:"Stage 1 · U1, U3"},
+      {t:"과거 강한 엘니뇨의 실제 ONI 자료를 근거로 인용하고 출처를 밝힌다.", src:"성취기준 [10통과2-02-03] · Stage 1 · U2"},
+      {t:"예측의 불확실성과 정책의 한계를 명시한다.", src:"과학적 태도 · 청중(전문가)의 요구"}
+    ]},
+];
+
+const SELF = [
+  {k:"cause", t:"무역풍 변화에서 지역별 기상 이변까지 인과 사슬로 설명할 수 있다"},
+  {k:"data",  t:"실제 데이터(ONI·수온)를 근거로 현재 상태를 판단할 수 있다"},
+  {k:"act",   t:"다른 나라와 지역의 피해를 고려해 대응 방안을 제안할 수 있다"},
+];
+
+/* ============================================================
+   공통 유틸
+   ============================================================ */
+const $ = s=>document.querySelector(s);
+const main = $("#main");
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function sgn(n,d){ if(n==null||isNaN(n)) return "—"; const v=Number(n).toFixed(d==null?1:d); return (n>0?"+":"")+v; }
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+const SEASONS = ["DJF","JFM","FMA","MAM","AMJ","MJJ","JJA","JAS","ASO","SON","OND","NDJ"];
+function lonLabel(lon){ lon=((lon%360)+360)%360; if(Math.abs(lon-180)<0.5) return "180°"; return lon<180? Math.round(lon)+"°E" : Math.round(360-lon)+"°W"; }
+function classify(a){ return a>=0.5-1e-9 ? "el" : (a<=-0.5+1e-9 ? "la" : "ne"); }
+const CLS_NAME = {el:"엘니뇨", la:"라니냐", ne:"평상시(중립)"};
+
+function fitCanvas(cv, cssH){
+  const w = Math.max(200, cv.getBoundingClientRect().width || cv.parentNode.clientWidth || 600);
+  const dpr = Math.min(2, window.devicePixelRatio||1);
+  cv.width = Math.round(w*dpr); cv.height = Math.round(cssH*dpr); cv.style.height = cssH+"px";
+  const ctx = cv.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx, w, h:cssH};
+}
+
+/* ============================================================
+   네비게이션
+   ============================================================ */
+function renderNav(){
+  const nav = $("#nav"); nav.innerHTML="";
+  STEPS.forEach((s,i)=>{
+    const b = document.createElement("button");
+    b.className = "step" + (i===cur?" active":"") + (state.done[s.id]?" done":"");
+    b.innerHTML = `<div class="num">${state.done[s.id]?"✓":(i+1)}</div>
+      <div><div class="lbl">${String(i+1).padStart(2,"0")} · ${s.lbl}</div><div class="nm">${s.nm}</div></div>`;
+    b.onclick = ()=>go(i);
+    nav.appendChild(b);
+  });
+}
+function footer(nextLabel, nextEnabled, note){
+  const dis = nextEnabled===false ? "disabled":"";
+  return `<div class="foot">
+    <div>${note?`<div class="note">${note}</div>`:""}</div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap">
+      ${cur>0?`<button class="btn btn-prev" onclick="go(${cur-1})">← 이전</button>`:""}
+      ${cur<STEPS.length-1?`<button class="btn btn-next" id="nextBtn" ${dis} onclick="advance()">${nextLabel||"다음 →"}</button>`:""}
+    </div></div>`;
+}
+window.go = i=>{ cur=i; renderAll(); window.scrollTo({top:0,behavior:"smooth"}); };
+window.advance = ()=>{ state.done[STEPS[cur].id]=true; save(); if(cur<STEPS.length-1) cur++; renderAll(); window.scrollTo({top:0,behavior:"smooth"}); };
+
+let onResize = null;
+function renderAll(){
+  stopSim(); onResize = null;
+  renderNav();
+  ({predict:rPredict, concept:rConcept, sim:rSim, data:rData, quiz:rQuiz, grasps:rGrasps, reflect:rReflect, submit:rSubmit}[STEPS[cur].id])();
+  try{ history.replaceState(null, "", "#"+STEPS[cur].id); }catch(e){}
+}
+let rsTimer=null;
+window.addEventListener("resize", ()=>{ clearTimeout(rsTimer); rsTimer=setTimeout(()=>{ if(onResize) onResize(); },120); });
+
+/* ---------- MCQ ---------- */
+function renderMCQ(bank, store, key, reveal){
+  return bank.map((it,qi)=>{
+    const sel = store[qi]; const answered = sel!==undefined;
+    const optsHtml = it.opts.map((o,oi)=>{
+      let cls="";
+      if(reveal && answered){ if(oi===it.a) cls=" correct"; else if(oi===sel) cls=" wrong"; }
+      else if(sel===oi) cls=" sel";
+      return `<button class="opt${cls}" onclick="pickMCQ('${key}',${qi},${oi})"><span class="k">${"ABCD"[oi]}</span><span>${o}</span></button>`;
+    }).join("");
+    const expl = (reveal && answered) ? `<div class="expl">${sel===it.a?"✅ 정답! ":"💡 "}${it.e}</div>` : "";
+    return `<div class="qcard"><div class="qh"><span class="qn">Q${qi+1}</span>${it.q}</div>${optsHtml}${expl}</div>`;
+  }).join("");
+}
+window.pickMCQ = (key,q,o)=>{
+  if(key==="predict"){ state.predict[q]=o; save(); rPredict(); }
+  else { state.quiz[q]=o; save(); rQuiz(); }
+};
+function score(bank, store){ let s=0; bank.forEach((it,i)=>{ if(store[i]===it.a)s++; }); return s; }
+
+/* ============================================================
+   STEP 1 · 예측·진단
+   ============================================================ */
+function rPredict(){
+  const cards = PREDICT.map((it,qi)=>{
+    const opts = it.opts.map((o,oi)=>`<button class="opt${state.predict[qi]===oi?" sel":""}" onclick="pickMCQ('predict',${qi},${oi})">
+        <span class="k">${"ABC"[oi]}</span><span>${o}</span></button>`).join("");
+    return `<div class="qcard"><div class="qh"><span class="qn">P${qi+1}</span>${it.q}</div>${opts}</div>`;
+  }).join("");
+  main.innerHTML = `<div class="panel">
+    <div class="eyebrow">STEP 01 · 예측·진단 PREDICT</div>
+    <h1 class="h">태평양 바다가 우리 날씨를 바꾼다고?</h1>
+    <p class="sub">엘니뇨 소식이 들리면 '올겨울 날씨', '산불', '물가' 같은 기사가 함께 나옵니다. 적도 태평양의 수온 변화가 어떻게 지구 반대편의 가뭄과 홍수로 이어질까요? 먼저 직관대로 예측해 보세요. <b>예측은 채점하지 않습니다.</b></p>
+    ${cards}
+    <div class="qcard">
+      <div class="qh"><span class="qn">K</span>엘니뇨·라니냐에 대해 이미 알고 있는 것 (Know)</div>
+      <textarea id="kwK" placeholder="들어 본 말, 뉴스에서 본 것, 짐작하는 것 무엇이든 좋아요." oninput="onKW('k')">${esc(state.kw.k)}</textarea>
+    </div>
+    <div class="qcard">
+      <div class="qh"><span class="qn">W</span>이 활동에서 알고 싶은 것 (Want to know)</div>
+      <textarea id="kwW" placeholder="예: 바다 온도가 왜 바뀌지? 우리나라에도 영향이 있을까?" oninput="onKW('w')">${esc(state.kw.w)}</textarea>
+    </div>
+    <p class="note">K·W는 마지막 성찰(STEP 07)에서 다시 꺼내 배운 것(L)과 비교합니다.</p>
+    ${footer("예측 저장하고 시작 →")}</div>`;
+}
+window.onKW = k=>{ state.kw[k] = $(k==="k"?"#kwK":"#kwW").value; save(); };
+
+/* ============================================================
+   STEP 2 · 개념
+   ============================================================ */
+function rConcept(){
+  const accs = CONCEPT.map((d,i)=>`
+    <div class="acc${i===0?" open":""}" id="acc${i}">
+      <div class="acc-h" onclick="toggleAcc(${i})"><div class="an">${i+1}</div><div class="at">${d.t}</div><div class="caret">▸</div></div>
+      <div class="acc-b">${d.b}</div>
+    </div>`).join("");
+  const video = CONFIG.introVideoUrl ? `<p style="margin:10px 0 0"><a class="btn btn-prev btn-sm" href="${esc(CONFIG.introVideoUrl)}" target="_blank" rel="noopener">▶ 도입 영상 보기 (새 창)</a></p>` : "";
+  main.innerHTML = `<div class="panel">
+    <div class="eyebrow">STEP 02 · 개념 CONCEPT</div>
+    <h1 class="h">무역풍 · 용승 · 수온약층 · 워커 순환</h1>
+    <p class="sub">엘니뇨를 이해하려면 먼저 '평상시' 적도 태평양이 어떻게 움직이는지 알아야 합니다. 각 항목을 펼쳐 읽고, 다음 단계의 시뮬레이터에서 직접 확인해 봅니다.</p>
+    <div class="call cyan"><div class="ct">맥락 · 성취기준 [10통과2-02-03]</div>
+      <p>온실효과 강화로 인한 지구온난화의 메커니즘을 이해하고, 엘니뇨·사막화 같은 현상이 지구 환경과 인간 생활에 미치는 영향과 대처 방안을 분석할 수 있다.</p>${video}</div>
+    ${accs}
+    ${footer("다음 → 시뮬레이터")}</div>`;
+}
+window.toggleAcc = i=>{ document.getElementById("acc"+i).classList.toggle("open"); };
+
+/* ============================================================
+   STEP 3 · 시뮬레이터 (개념 모델 — 정량 예측용이 아님)
+   w: 무역풍 세기(평상시 = 1.0)
+   ============================================================ */
+const W_MIN=0, W_MAX=1.75;
+const PRESETS = { la:{w:1.6, nm:"라니냐"}, ne:{w:1.0, nm:"평상시"}, el:{w:0.35, nm:"엘니뇨"} };
+function model(w){
+  const west = 29.6 + 0.4*(w-1);           // 서태평양 웜풀(150°E) 표층 수온
+  const nino = 27.0 - 2.1*(w-1);           // Niño3.4 해역 평균(중심 145°W)
+  const far  = nino - 0.5 - 1.2*w;         // 동태평양 연안 쪽(90°W)
+  const dW = clamp(80 + 70*w, 60, 210);    // 서쪽 수온약층 깊이(m)
+  const dE = clamp(110 - 60*w, 15, 110);   // 동쪽 수온약층 깊이(m)
+  const rainLon = w<1 ? 150 + 60*(1-w) : 150 - 28*(w-1);   // 강수(상승 기류) 중심 경도(°E, 0~360)
+  const oni = nino - 27.0;                 // 시뮬레이터의 Niño3.4 편차(평상시 기준)
+  return {w, west, nino, far, dW, dE, rainLon, oni, diff: west - nino, cls: classify(oni)};
+}
+function wFromDiff(diff){ return clamp(1 + (diff-2.6)/2.5, W_MIN, W_MAX); }   // 동–서 수온차 → 무역풍 세기(근사)
+function sstAt(lon, m){
+  const A = [[118,m.west+0.1],[150,m.west],[215,m.nino],[270,m.far],[284,m.far-0.2]];
+  if(lon<=A[0][0]) return A[0][1];
+  for(let i=0;i<A.length-1;i++){
+    const [x0,y0]=A[i],[x1,y1]=A[i+1];
+    if(lon<=x1){ const t=(lon-x0)/(x1-x0), s=(1-Math.cos(Math.PI*t))/2; return y0+(y1-y0)*s; }
+  }
+  return A[A.length-1][1];
+}
+function tcDepth(lon, m){ const t=clamp((lon-130)/(272-130),0,1); return m.dW+(m.dE-m.dW)*t; }
+function upwellText(w){ return w>=1.25?"강함":w>=0.75?"보통":w>=0.35?"약함":"거의 없음"; }
+const SST_STOPS=[[22,[31,78,140]],[24.5,[31,143,168]],[26.5,[63,191,159]],[27.5,[216,195,74]],[28.5,[240,154,62]],[29.5,[232,85,63]],[30.5,[184,38,74]]];
+function sstColor(t){
+  if(t<=SST_STOPS[0][0]) return `rgb(${SST_STOPS[0][1]})`;
+  for(let i=0;i<SST_STOPS.length-1;i++){
+    const [a,ca]=SST_STOPS[i],[b,cb]=SST_STOPS[i+1];
+    if(t<=b){ const k=(t-a)/(b-a); return `rgb(${ca.map((v,j)=>Math.round(v+(cb[j]-v)*k)).join(",")})`; }
+  }
+  return `rgb(${SST_STOPS[SST_STOPS.length-1][1]})`;
+}
+
+let simAnim=null, simPlaying=true, simT=0, particles=[];
+const reduceMotion = (()=>{ try{ return matchMedia("(prefers-reduced-motion: reduce)").matches; }catch(e){ return false; } })();
+function stopSim(){ if(simAnim){ cancelAnimationFrame(simAnim); simAnim=null; } }
+
+function rSim(){
+  const m = model(state.sim.w);
+  const pv = state.predict[0];
+  const pred = pv===undefined ? "" : `<div class="call amber"><div class="ct">내 예측 (P1)</div><p>무역풍이 약해지면 동태평양 표층 수온이 <b>${PREDICT[0].opts[pv]}</b>고 예측했습니다. 무역풍 슬라이더를 낮춰 확인해 보세요.</p></div>`;
+  main.innerHTML = `<div class="panel">
+    <div class="eyebrow">STEP 03 · 시뮬레이터 SIMULATOR</div>
+    <h1 class="h">적도 태평양 단면 시뮬레이터</h1>
+    <p class="sub">무역풍 세기를 바꾸며 따뜻한 해수의 위치, 수온약층의 기울기, 동태평양 용승, 대류·강수 위치가 어떻게 함께 움직이는지 관찰하세요. 이 시뮬레이터는 원리를 보여 주는 <b>개념 모델</b>이며, 수치는 실제 관측값이 아니라 경향을 나타냅니다.</p>
+    ${pred}
+    <div class="sim">
+      <div class="canvas-wrap">
+        <div class="canvas-cap"><span>적도(0°) 태평양 동서 단면 · 120°E → 80°W</span><span id="capState"></span></div>
+        <canvas id="simCv" role="img" aria-label="적도 태평양 단면: 해수면 온도, 수온약층, 용승, 무역풍, 워커 순환, 강수 위치"></canvas>
+      </div>
+      <div class="ctrl">
+        <div class="verdict" id="verdict"><div class="vk">시뮬레이터 상태 판정</div><div class="vv" id="verdictV">—</div></div>
+        <div class="ctrl-row">
+          <button class="csmall p-la" data-p="la" onclick="setPreset('la')">라니냐</button>
+          <button class="csmall" data-p="ne" onclick="setPreset('ne')">평상시</button>
+          <button class="csmall p-el" data-p="el" onclick="setPreset('el')">엘니뇨</button>
+        </div>
+        <div class="sld">
+          <label for="wSl"><span>무역풍 세기 (평상시 = 100%)</span><span class="v" id="wV"></span></label>
+          <input type="range" id="wSl" min="${W_MIN}" max="${W_MAX}" step="0.01" value="${state.sim.w}" oninput="setW(this.value)">
+          <div class="ticks"><span>0%</span><span>100%</span><span>175%</span></div>
+        </div>
+        <div class="ctrl-row"><button class="csmall" id="playBtn" onclick="togglePlay()"></button></div>
+        <div style="font-family:var(--mono); font-size:10px; letter-spacing:.12em; color:var(--faint); margin-top:4px">관찰 체크리스트</div>
+        <div id="checks"></div>
+      </div>
+    </div>
+    <div class="readouts" id="readouts"></div>
+    <h3 class="sh">원격 영향 — 지금 상태에서 나타나기 쉬운 경향</h3>
+    <p class="note" style="margin-top:-4px">통계적 경향입니다. 모든 엘니뇨·라니냐에서 똑같이 나타나지 않으며, 지역의 다른 요인과 함께 작용합니다.</p>
+    <div class="impacts" id="impacts"></div>
+    <div class="qcard" style="margin-top:18px">
+      <div class="qh"><span class="qn">관찰</span>무역풍이 약해질 때 일어나는 변화를 순서대로(인과 사슬로) 적어 보세요.</div>
+      <textarea id="simNote" placeholder="무역풍 약화 → ... → ... → ..." oninput="state.sim.note=this.value; save()">${esc(state.sim.note)}</textarea>
+    </div>
+    ${footer("다음 → 실제 데이터")}</div>`;
+  if(!particles.length) particles = Array.from({length:70},()=>({lon:120+Math.random()*162, d:4+Math.random()*34, s:0.6+Math.random()*0.8}));
+  simPlaying = !reduceMotion;
+  updateSimUI();
+  onResize = ()=>drawSim(false);
+  if(simPlaying) loopSim(); else drawSim(false);
+}
+window.setW = v=>{ state.sim.w = clamp(parseFloat(v),W_MIN,W_MAX); updateSimUI(); if(!simPlaying) drawSim(false); };
+window.setPreset = p=>{ state.sim.w = PRESETS[p].w; state.sim.presets[p]=true; const sl=$("#wSl"); if(sl) sl.value=state.sim.w; updateSimUI(); if(!simPlaying) drawSim(false); };
+window.togglePlay = ()=>{ simPlaying=!simPlaying; updateSimUI(); if(simPlaying) loopSim(); else { stopSim(); drawSim(false); } };
+
+function updateSimUI(){
+  const m = model(state.sim.w), c = state.sim.check;
+  if(state.sim.presets.ne || Math.abs(m.w-1)<0.05) c.normal = true;
+  if(m.oni >= 0.5) c.elnino = true;
+  if(m.oni <= -0.5) c.lanina = true;
+  if(Math.abs(m.dW-m.dE) < 25) c.flat = true;
+  if(m.rainLon > 180) c.dateline = true;
+  save();
+  $("#wV").textContent = Math.round(m.w*100)+"%";
+  const vd=$("#verdict"); vd.className="verdict "+m.cls;
+  $("#verdictV").textContent = CLS_NAME[m.cls]+"형 · 편차 "+sgn(m.oni)+" ℃";
+  $("#capState").textContent = "무역풍 "+Math.round(m.w*100)+"%";
+  document.querySelectorAll(".csmall[data-p]").forEach(b=>b.classList.toggle("on", Math.abs(PRESETS[b.dataset.p].w-m.w)<0.005));
+  $("#playBtn").textContent = simPlaying ? "⏸ 애니메이션 멈춤" : "▶ 애니메이션 재생";
+  const items = [["normal","평상시 상태를 관찰했다"],["elnino","엘니뇨 상태(편차 ≥ +0.5 ℃)를 만들었다"],["lanina","라니냐 상태(편차 ≤ −0.5 ℃)를 만들었다"],
+                 ["flat","수온약층이 거의 평평해지는 무역풍 세기를 찾았다"],["dateline","강수 중심이 날짜변경선(180°) 동쪽으로 옮겨 가는 것을 보았다"]];
+  $("#checks").innerHTML = items.map(([k,t])=>`<div class="chk${c[k]?" on":""}"><span class="box">✓</span><span>${t}</span></div>`).join("");
+  const ro = [
+    ["무역풍 세기", Math.round(m.w*100), "%"],
+    ["서태평양 수온 (150°E)", m.west.toFixed(1), "℃"],
+    ["Niño3.4 수온", m.nino.toFixed(1), "℃"],
+    ["Niño3.4 편차", sgn(m.oni), "℃"],
+    ["동–서 수온차", m.diff.toFixed(1), "℃"],
+    ["수온약층 서 / 동", Math.round(m.dW)+" / "+Math.round(m.dE), "m"],
+    ["동태평양 용승", upwellText(m.w), ""],
+    ["강수 중심", lonLabel(m.rainLon), ""],
+  ];
+  $("#readouts").innerHTML = ro.map(([k,v,u])=>`<div class="ro"><div class="rk">${k}</div><div class="rv">${v}<span class="ru">${u}</span></div></div>`).join("");
+  $("#impacts").innerHTML = REGIONS.map(r=>{
+    const txt = m.cls==="el" ? r.el : m.cls==="la" ? r.la : "뚜렷한 ENSO 신호 없음 — 다른 요인이 더 크게 작용";
+    return `<div class="imp ${m.cls}"><div class="in">${r.name}</div><div class="it">${txt}</div></div>`;
+  }).join("");
+}
+
+function loopSim(){ stopSim(); const step=()=>{ drawSim(true); simAnim=requestAnimationFrame(step); }; simAnim=requestAnimationFrame(step); }
+
+function drawSim(advance){
+  const cv = $("#simCv"); if(!cv) return;
+  const W0 = cv.getBoundingClientRect().width || 600;
+  const H = clamp(Math.round(W0*0.54), 250, 440);
+  if(cv._w!==Math.round(W0) || cv._h!==H){ fitCanvas(cv, H); cv._w=Math.round(W0); cv._h=H; }
+  const ctx = cv.getContext("2d"), W = W0;
+  const m = model(state.sim.w);
+  if(advance) simT += 1;
+  const padL=36, padR=10, seaY=Math.round(H*0.46), botY=H-22;
+  // 배경 상자가 있는 라벨(선과 겹쳐도 읽히게)
+  function tag(text, x, y, color, align, bold){
+    ctx.font=(bold?"bold ":"")+"10.5px system-ui,sans-serif";
+    const tw=ctx.measureText(text).width, x0 = align==="right" ? x-tw : align==="center" ? x-tw/2 : x;
+    const bx=clamp(x0-4, 1, W-tw-9);
+    ctx.fillStyle="rgba(8,15,27,.82)"; ctx.fillRect(bx, y-11, tw+8, 15);
+    ctx.fillStyle=color; ctx.fillText(text, bx+4, y);
+  }
+  const X = lon=>padL+(lon-118)/(284-118)*(W-padL-padR);
+  const Lon = x=>118+(x-padL)/(W-padL-padR)*(284-118);
+  const D = d=>seaY+d/250*(botY-seaY);
+
+  // 하늘
+  const sky=ctx.createLinearGradient(0,0,0,seaY); sky.addColorStop(0,"#070d18"); sky.addColorStop(1,"#0e1a2d");
+  ctx.fillStyle=sky; ctx.fillRect(0,0,W,seaY);
+  // 바다: 표층(수온 색) + 수온약층 아래 심층
+  const deep=ctx.createLinearGradient(0,seaY,0,botY); deep.addColorStop(0,"#0d2f55"); deep.addColorStop(1,"#061426");
+  ctx.fillStyle=deep; ctx.fillRect(padL,seaY,W-padL-padR,botY-seaY);
+  for(let x=padL; x<W-padR; x+=2){
+    const lon=Lon(x), y=D(tcDepth(lon,m));
+    ctx.fillStyle=sstColor(sstAt(lon,m)); ctx.fillRect(x,seaY,2.2,y-seaY);
+    const g=ctx.createLinearGradient(0,y-6,0,y+10); g.addColorStop(0,"rgba(0,0,0,0)"); g.addColorStop(1,"rgba(6,20,38,.9)");
+    ctx.fillStyle=g; ctx.fillRect(x,y-6,2.2,16);
+  }
+  // 수온약층 선
+  ctx.save(); ctx.strokeStyle="rgba(242,193,78,.9)"; ctx.lineWidth=1.6; ctx.setLineDash([6,4]); ctx.beginPath();
+  for(let x=padL; x<=W-padR; x+=4){ const y=D(tcDepth(Lon(x),m)); x===padL?ctx.moveTo(x,y):ctx.lineTo(x,y); }
+  ctx.stroke(); ctx.restore();
+  const labels=[];   // [text, x, y, color, align, bold] — 마지막에 한꺼번에 그림
+  labels.push(["수온약층", X(163), D(tcDepth(163,m))+16, "#f7dfa0"]);
+  labels.push(["따뜻한 표층 해수", X(131), seaY+16, "#e6edf6"]);
+  labels.push(["차가운 심층수", X(214), botY-8, "#a9c3e3"]);
+
+  // 표층 해류 입자(무역풍 방향으로 이동)
+  const v = (m.w-0.18)*0.35;
+  ctx.fillStyle="rgba(255,255,255,.55)";
+  particles.forEach(p=>{
+    if(advance){ p.lon -= v*p.s; if(p.lon<119) p.lon=283; if(p.lon>283) p.lon=119; }
+    const lim = Math.min(p.d, tcDepth(p.lon,m)-4); if(lim<2) return;
+    ctx.fillRect(X(p.lon), D(lim), 2, 2);
+  });
+  // 용승 화살표(동태평양)
+  if(m.w>=0.3){
+    ctx.save(); ctx.strokeStyle=`rgba(99,230,234,${clamp(0.25+0.5*(m.w-0.3),0.25,0.95)})`; ctx.lineWidth=1.8;
+    ctx.setLineDash([5,5]); ctx.lineDashOffset = -simT*0.6*m.w;
+    [246,258,270].forEach(lon=>{
+      const x=X(lon), y0=D(Math.min(235,tcDepth(lon,m)+60)), y1=seaY+8;
+      ctx.beginPath(); ctx.moveTo(x,y0); ctx.lineTo(x,y1); ctx.stroke();
+      ctx.setLineDash([]); ctx.beginPath(); ctx.moveTo(x-4,y1+6); ctx.lineTo(x,y1); ctx.lineTo(x+4,y1+6); ctx.stroke(); ctx.setLineDash([5,5]);
+    });
+    ctx.restore();
+    labels.push(["용승 "+upwellText(m.w), X(258), D(Math.min(232,tcDepth(250,m)+72)), "#63e6ea", "center"]);
+  }
+  // Niño3.4 해역 표시(해수면 바로 아래 괄호)
+  ctx.save(); ctx.strokeStyle="rgba(169,139,255,.95)"; ctx.lineWidth=1.4;
+  ctx.beginPath(); ctx.moveTo(X(190),seaY+7); ctx.lineTo(X(190),seaY+1); ctx.lineTo(X(240),seaY+1); ctx.lineTo(X(240),seaY+7); ctx.stroke(); ctx.restore();
+  labels.push(["Niño3.4 해역", X(215), seaY+19, "#cbb8ff", "center"]);
+
+  // 육지
+  ctx.fillStyle="#1f2a1c";
+  ctx.beginPath(); ctx.moveTo(padL,seaY-16); ctx.lineTo(X(123),seaY-10); ctx.lineTo(X(126),seaY); ctx.lineTo(X(124),botY); ctx.lineTo(padL,botY); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(W-padR,seaY-58); ctx.lineTo(X(280),seaY-30); ctx.lineTo(X(278),seaY); ctx.lineTo(X(281),botY); ctx.lineTo(W-padR,botY); ctx.closePath(); ctx.fill();
+  labels.push(["인도네시아", padL+2, seaY-22, "#b5c9ae"]);
+  labels.push(["남미(페루)", W-padR-2, seaY-66, "#b5c9ae", "right"]);
+
+  // 무역풍 화살표(해수면 위)
+  const wy=seaY-14;
+  ctx.save(); ctx.strokeStyle="rgba(230,237,246,.85)"; ctx.fillStyle="rgba(230,237,246,.85)"; ctx.lineWidth=1.6;
+  [150,185,220,255].forEach((lon,i)=>{
+    const x=X(lon), ph=((simT*0.8+i*17)%30)/30;
+    if(m.w>=0.15){
+      const len=10+34*m.w, xs=x+len/2-ph*6, xe=xs-len;
+      ctx.beginPath(); ctx.moveTo(xs,wy); ctx.lineTo(xe,wy); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(xe,wy); ctx.lineTo(xe+6,wy-4); ctx.lineTo(xe+6,wy+4); ctx.closePath(); ctx.fill();
+    } else {
+      const xs=x-8+ph*4, xe=xs+16;
+      ctx.beginPath(); ctx.moveTo(xs,wy); ctx.lineTo(xe,wy); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(xe,wy); ctx.lineTo(xe-6,wy-4); ctx.lineTo(xe-6,wy+4); ctx.closePath(); ctx.fill();
+    }
+  });
+  ctx.restore();
+  labels.push([m.w>=0.15?"← 무역풍":"서풍 이상 →", X(203), wy+4, "#e6edf6", "center"]);
+
+  // 워커 순환(주 순환: 강수 중심에서 상승 → 상층 동쪽 → 동태평양 하강 → 지표 서쪽)
+  const topY=30, lowY=seaY-32;
+  const sinkLon = m.rainLon<236 ? 262 : 274;
+  const walkA = clamp(0.25+0.55*m.w,0.2,0.95);
+  function loopPath(x0,x1,dir){
+    ctx.beginPath();
+    if(dir>0){ ctx.moveTo(x0,lowY); ctx.lineTo(x0,topY); ctx.lineTo(x1,topY); ctx.lineTo(x1,lowY); ctx.lineTo(x0,lowY); }
+    else     { ctx.moveTo(x1,lowY); ctx.lineTo(x1,topY); ctx.lineTo(x0,topY); ctx.lineTo(x0,lowY); ctx.lineTo(x1,lowY); }
+  }
+  ctx.save(); ctx.lineWidth=clamp(1+2.2*m.w,1,4.4); ctx.strokeStyle=`rgba(169,139,255,${walkA})`;
+  ctx.setLineDash([10,8]); ctx.lineDashOffset = -simT*(0.4+0.8*m.w);
+  loopPath(X(m.rainLon), X(sinkLon), 1); ctx.stroke();
+  if(m.w<0.75){  // 엘니뇨 때: 서쪽으로 갈라진 두 번째 순환(인도네시아 쪽 하강)
+    ctx.strokeStyle=`rgba(169,139,255,${clamp((0.75-m.w)/0.75,0.15,0.8)})`; ctx.lineWidth=1.6;
+    loopPath(X(134), X(m.rainLon), -1); ctx.stroke();
+  }
+  ctx.restore();
+  labels.push(["워커 순환", X((m.rainLon+sinkLon)/2+8), topY+4, "#cbb8ff", "center"]);
+  labels.push(["하강·건조", X(sinkLon), lowY-8, "#cbb8ff", "center"]);
+
+  // 구름·강수(강수 중심)
+  const rx=X(m.rainLon), inten=clamp((sstAt(m.rainLon,m)-26.5)/3,0.25,1.2);
+  ctx.fillStyle="rgba(210,225,240,.92)";
+  [[-16,52,15],[0,46,19],[17,53,14],[-6,59,13],[10,61,12]].forEach(([dx,dy,r])=>{ ctx.beginPath(); ctx.arc(rx+dx,dy,r,0,Math.PI*2); ctx.fill(); });
+  ctx.strokeStyle="rgba(99,170,255,.85)"; ctx.lineWidth=1.2;
+  const n=Math.round(10*inten);
+  for(let i=0;i<n;i++){
+    const dx=-22+(i*47/n), yy=70+((simT*3+i*23)%Math.max(20,(seaY-82)));
+    ctx.beginPath(); ctx.moveTo(rx+dx,yy); ctx.lineTo(rx+dx-2,yy+8); ctx.stroke();
+  }
+  labels.push(["상승·강수 중심 "+lonLabel(m.rainLon), rx, 14, "#bfe0ff", "center"]);
+
+  // 영향 꼬리표(육지 위) — 좁은 화면에서는 아래 '원격 영향' 카드로 대신함
+  if(W<480){ for(let i=labels.length-1;i>=0;i--) if(labels[i][0]==="하강·건조") labels.splice(i,1); }
+  else if(m.cls==="el"){ labels.push(["건조·가뭄·산불↑", padL+2, seaY-40, "#ffb27a", "left", true]); labels.push(["강수↑·홍수, 어획량↓", W-padR-2, seaY-84, "#ffb27a", "right", true]); }
+  else if(m.cls==="la"){ labels.push(["강수↑·홍수 위험", padL+2, seaY-40, "#9cc9ff", "left", true]); labels.push(["건조·어장 풍부", W-padR-2, seaY-84, "#9cc9ff", "right", true]); }
+  labels.forEach(l=>tag(l[0], l[1], l[2], l[3], l[4], l[5]));
+
+  // 축
+  ctx.fillStyle="#586479"; ctx.font="10px ui-monospace,monospace";
+  [[120,"120°E"],[150,"150°E"],[180,"180°"],[210,"150°W"],[240,"120°W"],[270,"90°W"]].forEach(([lon,t])=>{ const x=X(lon); ctx.fillText(t, x-14, H-6); ctx.fillRect(x,botY,1,4); });
+  [0,100,200].forEach(d=>{ ctx.fillText(d+"m", 2, D(d)+4); });
+}
+
+/* ============================================================
+   ONI 데이터 — 불러오기 · 분석
+   ============================================================ */
+let ONI = { series:null, source:"", meta:null, state:"loading", error:"" };
+
+function parseOniText(text){
+  const out=[]; const re=/^\s*([A-Z]{3})\s+(\d{4})\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s*$/;
+  String(text).split(/\r?\n/).forEach(line=>{ const mm=line.match(re); if(!mm) return; const s=SEASONS.indexOf(mm[1]); if(s<0) return; out.push([+mm[2], s, +mm[4]]); });
+  return out;
+}
+function validSeries(arr){
+  if(!Array.isArray(arr) || arr.length<120) return false;
+  return arr.every(r=>Array.isArray(r) && r.length>=3 && r[0]>=1950 && r[0]<=2100 && r[1]>=0 && r[1]<12 && r[2]>-5 && r[2]<5);
+}
+function setONI(doc, source){
+  if(!doc || !validSeries(doc.series)){ ONI={series:null, source:"", meta:null, state:"none", error:""}; return false; }
+  const series = doc.series.map(([y,s,a])=>({y, s, a, t:y+s/12+1/24}));
+  ONI = { series, source, meta:{fetchedAt:doc.fetchedAt||"", url:doc.url||ONI_URL, first:doc.first||"", last:doc.last||""}, state:"ok", error:"" };
+  return true;
+}
+async function loadONI(){
+  if(location.protocol!=="file:"){
+    try{
+      const r = await fetch("../data/oni.json", {cache:"no-cache"});
+      if(r.ok){ const j = await r.json(); if(setONI(j, "data/oni.json (같은 사이트)")) return; }
+    }catch(e){}
+  }
+  if(typeof ONI_SNAPSHOT!=="undefined" && ONI_SNAPSHOT && setONI(ONI_SNAPSHOT, "내장 스냅샷")) return;
+  ONI = {series:null, source:"", meta:null, state:"none", error:""};
+}
+function episodes(series){
+  const out=[]; let run=null;
+  const flush=()=>{ if(run && run.n>=5) out.push(run); run=null; };
+  series.forEach((p,i)=>{
+    const k = classify(p.a);
+    if(k!=="ne" && run && run.k===k){ run.n++; run.end=i; }
+    else { flush(); run = k!=="ne" ? {k, start:i, end:i, n:1} : null; }
+  });
+  flush(); return out;
+}
+function currentStatus(series){
+  const last = series[series.length-1]; const k = classify(last.a);
+  let n=0; for(let i=series.length-1;i>=0 && classify(series[i].a)===k;i--) n++;
+  return {last, k, n};
+}
+function eventPeak(series, y){
+  const win = series.filter(p=>(p.y===y && p.s>=4) || (p.y===y+1 && p.s<=5));
+  if(win.length<6) return null;
+  let best=win[0]; win.forEach(p=>{ if(p.a>best.a) best=p; });
+  return {a:best.a, label:SEASONS[best.s]+" "+best.y};
+}
+function seasonLabel(p){ return SEASONS[p.s]+" "+p.y; }
+
+/* ============================================================
+   STEP 4 · 실제 데이터
+   ============================================================ */
+let chartRange="all", chartSel=null;
+function rData(){
+  const ok = ONI.state==="ok";
+  let statusHtml="", srcHtml="";
+  if(ok){
+    const st = currentStatus(ONI.series);
+    const official = st.k!=="ne" && st.n>=5;
+    const judge = st.k==="ne" ? "중립(평상시) 범위" : (official ? CLS_NAME[st.k]+" 진행 중 (NOAA 기준 충족)" : CLS_NAME[st.k]+" 조건 "+st.n+"/5 계절");
+    const pill = st.k==="el"?"r":st.k==="la"?"g":"a";
+    const fetched = ONI.meta.fetchedAt ? new Date(ONI.meta.fetchedAt).toLocaleString("ko-KR") : "—";
+    srcHtml = `<div class="srcbar"><span class="pill g">실제 관측</span><span>출처 <b>NOAA CPC · ONI</b> · 불러온 곳 <b>${esc(ONI.source)}</b> · 자료 범위 <b>${esc(seasonLabel(ONI.series[0]))} ~ ${esc(seasonLabel(st.last))}</b> · 수집 시각 ${esc(fetched)}</span>
+      <a href="${esc(ONI.meta.url)}" target="_blank" rel="noopener">원본</a></div>`;
+    statusHtml = `<div class="status">
+      <div class="ro"><div class="rk">최신 ONI (${esc(seasonLabel(st.last))})</div><div class="rv">${sgn(st.last.a)}<span class="ru">℃</span></div></div>
+      <div class="ro"><div class="rk">자동 판정</div><div class="rv" style="font-size:15px; white-space:normal"><span class="pill ${pill}">${esc(judge)}</span></div></div>
+      <div class="ro"><div class="rk">기준</div><div class="rv" style="font-size:12.5px; white-space:normal; font-family:var(--sans); color:var(--muted)">±0.5 ℃ 이상이 연속 5개 계절</div></div>
+    </div>`;
+  } else {
+    srcHtml = `<div class="srcbar"><span class="pill a">데이터 없음</span><span>실제 ONI 자료를 불러오지 못했습니다. 배포된 사이트에서는 빌드 때 NOAA 자료가 자동으로 들어갑니다. 지금은 NOAA의 <a href="${ONI_URL}" target="_blank" rel="noopener">oni.ascii.txt</a> 파일을 받아 직접 불러올 수 있습니다.</span></div>`;
+  }
+  main.innerHTML = `<div class="panel">
+    <div class="eyebrow">STEP 04 · 실제 데이터 DATA</div>
+    <h1 class="h">실제 바다는 지금 어떤 상태일까?</h1>
+    <p class="sub">시뮬레이터에서 본 원리를 실제 관측 자료로 확인합니다. ONI 그래프에서 엘니뇨(빨강)·라니냐(파랑) 시기를 찾아보고, 실시간 해수면 온도로 오늘의 태평양을 시뮬레이터와 비교하세요.</p>
+    ${srcHtml}
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin:-4px 0 14px">
+      <label class="btn btn-prev btn-sm" style="cursor:pointer">📂 ONI 파일 직접 불러오기<input type="file" id="oniFile" accept=".txt,.json,.ascii,text/plain,application/json" style="display:none" onchange="loadOniFile(this)"></label>
+    </div>
+    ${statusHtml}
+    <div class="canvas-wrap">
+      <div class="canvas-cap"><span>ONI · Niño3.4 해역 3개월 이동평균 수온 편차(℃)</span>
+        <span class="rangebar">${[["all","전체"],["30","최근 30년"],["10","최근 10년"]].map(([k,t])=>`<button class="csmall${chartRange===k?" on":""}" style="flex:none; padding:5px 9px" onclick="setRange('${k}')">${t}</button>`).join("")}</span></div>
+      <canvas id="oniCv" role="img" aria-label="ONI 시계열 그래프"></canvas>
+      <div class="chart-read" id="chartRead">${ok?"그래프를 누르거나 마우스를 올리면 값이 표시됩니다.":"데이터를 불러오면 그래프가 표시됩니다."}</div>
+    </div>
+
+    <h3 class="sh">과제 1 · 강한 엘니뇨의 최고점 찾기</h3>
+    <div class="task">
+      <div class="tt">그래프에서 각 사건의 가장 높은 ONI 값을 찾아 입력하세요 (±0.1 허용)</div>
+      ${EVENTS.map(ev=>eventRow(ev)).join("")}
+      <div style="margin-top:12px">
+        <label class="fl">세 사건 중 가장 강했던 엘니뇨는?</label>
+        <select class="inp" id="strongest" onchange="pickStrongest(this.value)" ${ok?"":"disabled"}>
+          <option value="">선택하세요</option>
+          ${EVENTS.map(ev=>`<option value="${ev.id}" ${state.data.strongest===ev.id?"selected":""}>${ev.label}</option>`).join("")}
+        </select>
+        <div class="res" id="strongRes" style="margin-top:6px"></div>
+      </div>
+      <div style="margin-top:12px">
+        <label class="fl">세 사건의 공통점 — 최고점은 1년 중 언제쯤 나타났나요? 왜 그럴까요?</label>
+        <textarea id="commonTxt" style="min-height:70px" oninput="state.data.common=this.value; save()">${esc(state.data.common)}</textarea>
+      </div>
+    </div>
+
+    <h3 class="sh">과제 2 · 지금 실제 바다는 시뮬레이터의 어느 상태와 비슷할까?</h3>
+    <div class="task">
+      <div class="tt">실시간 해수면 온도 · Open-Meteo Marine API</div>
+      <p class="note" style="margin:0 0 8px">서태평양 웜풀(0°, 150°E)과 Niño3.4 해역 중심(0°, 145°W)의 현재 수온을 불러와 동–서 수온차를 계산합니다. 평상시에는 서쪽이 약 2~3 ℃ 더 따뜻합니다.</p>
+      <button class="btn btn-prev btn-sm" id="liveBtn" onclick="fetchLive()">🌊 실시간 수온 불러오기</button>
+      <div id="liveBox"></div>
+      <label class="fl" style="margin-top:12px">내 판단: 지금 태평양은</label>
+      <div class="radios">${["ne","el","la"].map(k=>`<button class="csmall${state.data.judge===k?" on":""}" style="flex:none" onclick="pickJudge('${k}')">${CLS_NAME[k]}에 가깝다</button>`).join("")}</div>
+      <textarea id="judgeReason" style="min-height:70px" placeholder="근거: 동–서 수온차, 최신 ONI, 시뮬레이터에서 본 상태를 연결해 적어 보세요." oninput="state.data.reason=this.value; save()">${esc(state.data.reason)}</textarea>
+      <div id="judgeFb"></div>
+    </div>
+
+    <div class="call" style="margin-top:4px"><div class="ct">더 살펴보기 · 영향 데이터</div>
+      <p>엘니뇨가 있던 해의 자연재해 피해를 연도별로 비교해 보세요. <a href="https://ourworldindata.org/natural-disasters" target="_blank" rel="noopener">Our World in Data — 자연재해 데이터 (새 창)</a></p></div>
+    ${footer("다음 → 형성평가")}</div>`;
+  renderEventResults(); renderLive(); renderJudgeFb();
+  onResize = drawChart;
+  drawChart(); bindChart();
+}
+function eventRow(ev){
+  const v = state.data.events[ev.id] && state.data.events[ev.id].v;
+  return `<div class="evrow"><div class="en">${ev.label}</div>
+    <input class="inp" type="number" step="0.1" min="-3" max="4" id="ev_${ev.id}" placeholder="최고 ONI" value="${v!=null?esc(v):""}" ${ONI.state==="ok"?"":"disabled"}>
+    <button class="btn btn-prev btn-sm" onclick="checkEvent('${ev.id}')" ${ONI.state==="ok"?"":"disabled"}>확인</button>
+    <div class="res neu" id="res_${ev.id}" style="grid-column:1 / -1"></div></div>`;
+}
+window.checkEvent = id=>{
+  const ev = EVENTS.find(e=>e.id===id); const inp=$("#ev_"+id); const v=parseFloat(inp.value);
+  if(isNaN(v)){ toast("값을 입력하세요.",true); return; }
+  const pk = eventPeak(ONI.series, ev.y);
+  state.data.events[id] = {v, ok: pk ? Math.abs(v-pk.a)<=0.1+1e-9 : null, peak: pk?pk.a:null, peakAt: pk?pk.label:null};
+  save(); renderEventResults(); drawChart();
+};
+function renderEventResults(){
+  EVENTS.forEach(ev=>{
+    const el=$("#res_"+ev.id); if(!el) return; const r=state.data.events[ev.id];
+    if(ONI.state!=="ok"){ el.className="res neu"; el.textContent="데이터를 불러오면 확인할 수 있습니다."; return; }
+    const pk=eventPeak(ONI.series, ev.y);
+    if(!pk){ el.className="res neu"; el.textContent="불러온 자료에 이 기간이 충분히 들어 있지 않습니다."; return; }
+    if(!r){ el.className="res neu"; el.textContent=""; return; }
+    el.className="res "+(r.ok?"ok":"no");
+    el.textContent = r.ok ? `✓ 정확합니다. 최고점은 ${pk.label}의 ${sgn(pk.a)} ℃입니다.` : `✗ 다시 찾아보세요. 힌트: 이 사건의 최고점은 ${sgn(pk.a)}에서 0.1 이내가 아닙니다. 범위 버튼으로 확대해 보세요.`;
+  });
+  const sr=$("#strongRes"); if(!sr) return;
+  if(ONI.state!=="ok" || !state.data.strongest){ sr.textContent=""; return; }
+  const peaks = EVENTS.map(ev=>({ev, pk:eventPeak(ONI.series, ev.y)})).filter(x=>x.pk);
+  if(!peaks.length){ sr.textContent=""; return; }
+  const max = Math.max(...peaks.map(x=>x.pk.a));
+  const chosen = peaks.find(x=>x.ev.id===state.data.strongest);
+  const right = chosen && Math.abs(chosen.pk.a-max)<1e-9;
+  sr.className="res "+(right?"ok":"no");
+  sr.textContent = right ? "✓ 자료에 따르면 가장 높은 ONI를 기록한 사건입니다." : "✗ 세 사건의 최고점을 서로 비교해 보세요.";
+}
+window.pickStrongest = v=>{ state.data.strongest=v; save(); renderEventResults(); };
+window.setRange = k=>{ chartRange=k; chartSel=null; rData(); };
+
+function chartView(){
+  const s = ONI.series; const tMax = s[s.length-1].t + 0.1;
+  const tMin = chartRange==="10" ? tMax-10.1 : chartRange==="30" ? tMax-30.1 : s[0].t-0.3;
+  return {tMin, tMax, pts: s.filter(p=>p.t>=tMin && p.t<=tMax)};
+}
+function drawChart(){
+  const cv=$("#oniCv"); if(!cv) return;
+  const W0 = cv.getBoundingClientRect().width || 600;
+  const H = W0<520 ? 230 : 290;
+  const {ctx, w:W} = fitCanvas(cv, H);
+  ctx.fillStyle="#080f1b"; ctx.fillRect(0,0,W,H);
+  const padL=34, padR=8, padT=10, padB=22;
+  const Y = a=>padT+(3-a)/6*(H-padT-padB);
+  ctx.font="10px ui-monospace,monospace";
+  // 격자·기준선
+  [-2,-1,0,1,2].forEach(a=>{ ctx.fillStyle="#1a2638"; ctx.fillRect(padL,Y(a),W-padL-padR,1); ctx.fillStyle="#586479"; ctx.fillText((a>0?"+":"")+a, 4, Y(a)+3); });
+  if(ONI.state!=="ok"){ ctx.fillStyle="#586479"; ctx.font="13px system-ui,sans-serif"; ctx.fillText("실제 ONI 자료가 아직 없습니다", padL+12, H/2); return; }
+  const {tMin,tMax,pts} = chartView();
+  const X = t=>padL+(t-tMin)/(tMax-tMin)*(W-padL-padR);
+  // 공식 에피소드 음영
+  episodes(ONI.series).forEach(ep=>{
+    const a=ONI.series[ep.start].t-1/24, b=ONI.series[ep.end].t+1/24; if(b<tMin||a>tMax) return;
+    ctx.fillStyle = ep.k==="el" ? "rgba(240,135,62,.13)" : "rgba(90,169,255,.13)";
+    ctx.fillRect(X(Math.max(a,tMin)), padT, X(Math.min(b,tMax))-X(Math.max(a,tMin)), H-padT-padB);
+  });
+  // ±0.5 기준선
+  ctx.save(); ctx.setLineDash([5,4]);
+  ctx.strokeStyle="rgba(240,135,62,.8)"; ctx.beginPath(); ctx.moveTo(padL,Y(0.5)); ctx.lineTo(W-padR,Y(0.5)); ctx.stroke();
+  ctx.strokeStyle="rgba(90,169,255,.8)"; ctx.beginPath(); ctx.moveTo(padL,Y(-0.5)); ctx.lineTo(W-padR,Y(-0.5)); ctx.stroke();
+  ctx.restore();
+  ctx.fillStyle="#ffb27a"; ctx.fillText("+0.5 엘니뇨 기준", W-padR-96, Y(0.5)-4);
+  ctx.fillStyle="#9cc9ff"; ctx.fillText("−0.5 라니냐 기준", W-padR-96, Y(-0.5)+12);
+  // 면 채우기(양: 주황, 음: 파랑)
+  if(pts.length>1){
+    [["rgba(240,135,62,.55)",0,Y(0)],["rgba(90,169,255,.55)",Y(0),H]].forEach(([col,y0,y1])=>{
+      ctx.save(); ctx.beginPath(); ctx.rect(padL,y0,W-padL-padR,y1-y0); ctx.clip();
+      ctx.beginPath(); ctx.moveTo(X(pts[0].t),Y(0)); pts.forEach(p=>ctx.lineTo(X(p.t),Y(p.a))); ctx.lineTo(X(pts[pts.length-1].t),Y(0)); ctx.closePath();
+      ctx.fillStyle=col; ctx.fill(); ctx.restore();
+    });
+    ctx.strokeStyle="#e6edf6"; ctx.lineWidth=1.1; ctx.beginPath();
+    pts.forEach((p,i)=>i?ctx.lineTo(X(p.t),Y(p.a)):ctx.moveTo(X(p.t),Y(p.a))); ctx.stroke();
+  }
+  // x 눈금
+  const span=tMax-tMin, stepY = span>40?10:span>15?5:span>6?2:1;
+  ctx.fillStyle="#586479";
+  for(let y=Math.ceil(tMin/stepY)*stepY; y<=tMax; y+=stepY){ const x=X(y); ctx.fillRect(x,H-padB,1,4); ctx.fillText(String(y), x-12, H-6); }
+  // 확인된 사건 최고점 표시
+  EVENTS.forEach(ev=>{
+    const r=state.data.events[ev.id]; if(!r||!r.ok) return; const pk=eventPeak(ONI.series, ev.y); if(!pk) return;
+    const p = ONI.series.find(q=>seasonLabel(q)===pk.label); if(!p||p.t<tMin||p.t>tMax) return;
+    ctx.fillStyle="#f2c14e"; ctx.beginPath(); ctx.arc(X(p.t),Y(p.a),4,0,Math.PI*2); ctx.fill();
+    ctx.fillText(ev.label.slice(0,7), X(p.t)-20, Y(p.a)-8);
+  });
+  // 선택점
+  if(chartSel){ const x=X(chartSel.t), y=Y(chartSel.a);
+    ctx.strokeStyle="rgba(99,230,234,.7)"; ctx.beginPath(); ctx.moveTo(x,padT); ctx.lineTo(x,H-padB); ctx.stroke();
+    ctx.fillStyle="#63e6ea"; ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2); ctx.fill(); }
+}
+function bindChart(){
+  const cv=$("#oniCv"); if(!cv || ONI.state!=="ok") return;
+  const pick = ev=>{
+    const r=cv.getBoundingClientRect(); const {tMin,tMax,pts}=chartView(); if(!pts.length) return;
+    const t = tMin+(ev.clientX-r.left-34)/(r.width-34-8)*(tMax-tMin);
+    let best=pts[0]; pts.forEach(p=>{ if(Math.abs(p.t-t)<Math.abs(best.t-t)) best=p; });
+    chartSel=best; drawChart();
+    const k=classify(best.a);
+    $("#chartRead").textContent = `${seasonLabel(best)} · ONI ${sgn(best.a)} ℃ · ${k==="ne"?"기준 범위 안(중립)":CLS_NAME[k]+" 기준 쪽"}`;
+  };
+  cv.addEventListener("pointermove", pick);
+  cv.addEventListener("pointerdown", pick);
+}
+window.loadOniFile = inp=>{
+  const f = inp.files && inp.files[0]; if(!f) return;
+  const rd = new FileReader();
+  rd.onload = ()=>{
+    let doc=null; const txt=String(rd.result||"");
+    try{ const j=JSON.parse(txt); if(j && Array.isArray(j.series)) doc=j; }catch(e){}
+    if(!doc){ const s=parseOniText(txt); doc={series:s, url:ONI_URL, fetchedAt:new Date(f.lastModified||Date.now()).toISOString()}; }
+    if(setONI(doc, "직접 불러온 파일 ("+f.name+")")){ toast("ONI 자료를 불러왔습니다."); chartSel=null; rData(); }
+    else toast("ONI 형식을 읽지 못했습니다. NOAA의 oni.ascii.txt 파일인지 확인하세요.", true);
+  };
+  rd.readAsText(f);
+};
+
+/* ---------- 실시간 해수면 온도 (Open-Meteo Marine) ---------- */
+const LIVE_POINTS = [
+  {k:"west", lat:0, lon:150,  name:"서태평양 웜풀 (0°, 150°E)"},
+  {k:"east", lat:0, lon:-145, name:"Niño3.4 중심 (0°, 145°W)"},
+];
+async function fetchPointSST(p){
+  const url = "https://marine-api.open-meteo.com/v1/marine?latitude="+p.lat+"&longitude="+p.lon+
+              "&hourly=sea_surface_temperature&past_days=1&forecast_days=1&timezone=GMT";
+  const r = await fetch(url); const j = await r.json().catch(()=>null);
+  if(!r.ok || !j || j.error) throw new Error((j && j.reason) || ("HTTP "+r.status));
+  const times=(j.hourly&&j.hourly.time)||[], vals=(j.hourly&&j.hourly.sea_surface_temperature)||[];
+  const now=Date.now(); let best=null, first=null;
+  for(let i=0;i<times.length;i++){
+    const v=vals[i], t=Date.parse(times[i]+"Z"); if(v==null || isNaN(t)) continue;
+    if(!first) first={t,v};
+    if(t<=now) best={t,v};
+  }
+  const pick = best||first; if(!pick) throw new Error("해당 지점의 수온 값이 없습니다");
+  return {v:pick.v, time:new Date(pick.t).toISOString()};
+}
+window.fetchLive = async ()=>{
+  const btn=$("#liveBtn"); btn.disabled=true; btn.textContent="불러오는 중...";
+  try{
+    const [w,e] = await Promise.all(LIVE_POINTS.map(fetchPointSST));
+    state.data.live = {west:w.v, east:e.v, diff:+(w.v-e.v).toFixed(2), time:e.time, fetchedAt:new Date().toISOString(), source:"Open-Meteo Marine API"};
+    save(); toast("실시간 해수면 온도를 불러왔습니다.");
+  }catch(err){
+    state.data.live = {error:String(err.message||err), fetchedAt:new Date().toISOString()}; save();
+  }finally{ btn.disabled=false; btn.textContent="🌊 실시간 수온 다시 불러오기"; renderLive(); renderJudgeFb(); }
+};
+function renderLive(){
+  const box=$("#liveBox"); if(!box) return; const L=state.data.live;
+  if(!L){ box.innerHTML=""; return; }
+  if(L.error){ box.innerHTML=`<p class="res no" style="margin:10px 0 0">실시간 수온을 불러오지 못했습니다 (${esc(L.error)}). 네트워크가 막혀 있을 수 있어요. 최신 ONI 값으로 판단해 보세요.</p>`; return; }
+  const wEst = wFromDiff(L.diff), mEst = model(wEst);
+  box.innerHTML = `<div class="live">
+      <div class="ro"><div class="rk">${LIVE_POINTS[0].name}</div><div class="rv">${(+L.west).toFixed(1)}<span class="ru">℃</span></div></div>
+      <div class="ro"><div class="rk">${LIVE_POINTS[1].name}</div><div class="rv">${(+L.east).toFixed(1)}<span class="ru">℃</span></div></div>
+      <div class="ro"><div class="rk">동–서 수온차 (서 − 동)</div><div class="rv">${(+L.diff).toFixed(1)}<span class="ru">℃</span></div></div>
+    </div>
+    <div class="call cyan" style="margin:0"><div class="ct">시뮬레이터와 연결 (근사)</div>
+      <p>이 수온차는 시뮬레이터에서 무역풍 약 <b>${Math.round(wEst*100)}%</b>, 즉 <b>${CLS_NAME[mEst.cls]}형</b>과 비슷합니다. 두 지점의 순간값이라 3개월 평균인 ONI와 다를 수 있어요.
+      <button class="btn btn-prev btn-sm" style="margin-left:6px" onclick="applyLive()">시뮬레이터에 적용해 보기 →</button></p></div>
+    <p class="note" style="margin:6px 0 0">출처: ${esc(L.source)} · 기준 시각 ${esc(new Date(L.time).toLocaleString("ko-KR"))}</p>`;
+}
+window.applyLive = ()=>{ const L=state.data.live; if(!L||L.error) return; state.sim.w=wFromDiff(L.diff); save(); go(STEPS.findIndex(s=>s.id==="sim")); };
+window.pickJudge = k=>{ state.data.judge=k; save(); document.querySelectorAll(".radios .csmall").forEach((b,i)=>b.classList.toggle("on", ["ne","el","la"][i]===k)); renderJudgeFb(); };
+function renderJudgeFb(){
+  const box=$("#judgeFb"); if(!box) return; const j=state.data.judge; if(!j){ box.innerHTML=""; return; }
+  const refs=[];
+  if(ONI.state==="ok"){ const st=currentStatus(ONI.series); refs.push(["최신 ONI("+seasonLabel(st.last)+")", st.k]); }
+  const L=state.data.live; if(L && !L.error) refs.push(["실시간 동–서 수온차", model(wFromDiff(L.diff)).cls]);
+  if(!refs.length){ box.innerHTML=`<p class="note" style="margin-top:8px">비교할 자료가 아직 없습니다. 실시간 수온이나 ONI 자료를 불러오면 판단을 점검할 수 있어요.</p>`; return; }
+  const agree = refs.filter(r=>r[1]===j).length;
+  box.innerHTML = `<div class="call ${agree===refs.length?"cyan":"amber"}" style="margin-top:10px"><div class="ct">판단 점검</div>
+    <p>${refs.map(r=>`${r[0]} → <b>${CLS_NAME[r[1]]}</b>`).join(" · ")}<br>
+    ${agree===refs.length ? "자료와 판단이 일치합니다. 근거를 인과 사슬로 설명했는지 확인해 보세요."
+      : "자료와 판단이 다르거나 자료끼리도 다를 수 있어요. 순간값(실시간)과 3개월 평균(ONI)의 차이, 계절 변화를 근거에 함께 적어 보세요."}</p></div>`;
+}
+
+/* ============================================================
+   STEP 5 · 형성평가
+   ============================================================ */
+function rQuiz(){
+  const graded = Object.keys(state.quiz).length===QUIZ.length;
+  main.innerHTML = `<div class="panel">
+    <div class="eyebrow">STEP 05 · 형성평가 FORMATIVE</div>
+    <h1 class="h">형성평가</h1>
+    <p class="sub">원리·판정 기준·원격 영향을 점검합니다. 답을 고르면 바로 채점과 해설이 나옵니다.</p>
+    ${renderMCQ(QUIZ, state.quiz, "quiz", true)}
+    <p class="note">점수: <b style="color:var(--amber)">${score(QUIZ,state.quiz)} / ${QUIZ.length}</b></p>
+    ${footer("다음 → GRASPS 정책 제안", graded, graded?null:"모든 문항에 답하면 다음으로 진행할 수 있습니다.")}</div>`;
+}
+
+/* ============================================================
+   STEP 6 · GRASPS
+   ============================================================ */
+function rGrasps(){
+  const b = BUNDLES.find(x=>x.id===state.grasps.bundle);
+  const hasKey = (()=>{ try{ return !!localStorage.getItem(LS.apiKey); }catch(e){ return false; } })();
+  const cards = BUNDLES.map(x=>`
+    <div class="bundle${x.id===state.grasps.bundle?" sel":""}" role="button" tabindex="0" onclick="pickBundle('${x.id}')" onkeydown="if(event.key==='Enter')pickBundle('${x.id}')">
+      <div class="prox">${x.proxLabel}</div>
+      <div class="logic">${esc(x.designLogic)}</div>
+      <div class="ras">
+        <div class="rk">ROLE · 역할</div><div class="rv">${esc(x.role)}</div>
+        <div class="rk">AUDIENCE · 청중</div><div class="rv">${esc(x.audience)}</div>
+        <div class="rk">SITUATION · 상황</div><div class="rv">${esc(x.situation)}</div>
+      </div>
+      <div class="gp"><div class="rk">GOAL · 목표</div><div class="rv">${esc(x.goal)}</div>
+        <div class="rk">PRODUCT · 산출물</div><div class="rv">${esc(x.product)}</div></div>
+      <div class="std"><div class="rk" style="font-family:var(--mono); font-size:9.5px; color:var(--faint); letter-spacing:.1em">STANDARDS · 평가 기준</div>
+        <ul>${x.standards.map(s=>`<li>${esc(s.t)} <span class="src">[${esc(s.src)}]</span></li>`).join("")}</ul></div>
+      <span class="pick">${x.id===state.grasps.bundle?"✓ 선택됨":"이 과제 선택"}</span>
+    </div>`).join("");
+  const work = !b ? `<p class="note" style="margin-top:14px">위 세 과제 중 하나를 카드째로 고르면 산출물 작성 칸이 열립니다. 역할·청중·상황은 한 세트로 설계되어 있으니 따로 바꾸지 않습니다.</p>` : `
+    <h3 class="sh">내 산출물 — ${esc(b.product.split(":")[0])}</h3>
+    <textarea id="product" style="min-height:260px" oninput="onProduct()" placeholder="${esc(b.scaffold)}">${esc(state.grasps.product)}</textarea>
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-top:8px">
+      <button class="btn btn-prev btn-sm" onclick="useScaffold()">작성 틀 넣기</button>
+      <span class="cc" id="pcc">${state.grasps.product.length} 자</span>
+    </div>
+    <div class="keybox">
+      <div class="kh">✦ AI 피드백 (선택) · CLAUDE API</div>
+      <div class="keyrow">
+        <input id="apiKey" type="password" placeholder="sk-ant-... (선생님께 받은 키)" value="${esc((()=>{ try{ return localStorage.getItem(LS.apiKey)||""; }catch(e){ return ""; } })())}">
+        <button class="btn btn-violet btn-sm" onclick="saveKey()">저장</button>
+        <button class="btn btn-violet btn-sm" onclick="aiFeedback()">✦ 평가 기준으로 피드백 받기</button>
+      </div>
+      <div class="key-note" id="keyState">${hasKey?"🔓 키가 저장되어 있습니다(효소 워크북과 공유).":"키가 없어도 활동은 모두 할 수 있습니다. AI 피드백을 쓰려면 선생님께 받은 키를 입력하세요."}</div>
+      <div class="key-note">🔒 키는 이 브라우저(localStorage)에만 저장되고 Anthropic API로 직접 전송됩니다. AI 피드백은 <b>초안</b>이며, 최종 평가는 선생님이 검토합니다. <a href="#" onclick="clearKey();return false;">키 삭제</a></div>
+      <div class="ai-out${state.grasps.ai?"":" hidden"}" id="aiOut">${state.grasps.ai?`<div class="ah">AI 피드백 (초안)</div>${esc(state.grasps.ai)}`:""}</div>
+    </div>`;
+  main.innerHTML = `<div class="panel">
+    <div class="eyebrow">STEP 06 · GRASPS 수행과제</div>
+    <h1 class="h">기후 위기 대응 정책 제안</h1>
+    <p class="sub">청중과의 거리가 다른 세 가지 수행과제 중 하나를 고르세요. 각 과제는 <b>설계 논리 → 역할·청중·상황 → 목표·산출물 → 평가 기준</b> 순서로 하나의 세트로 만들어졌습니다.</p>
+    <div class="stage1"><div class="tag">STAGE 1 · 영속적 이해 (평가 기준의 출처)</div>
+      <ul>${STAGE1.map(u=>`<li><b style="color:var(--cyan2)">${u.id}</b> ${esc(u.t)}</li>`).join("")}</ul></div>
+    <div class="bundles">${cards}</div>
+    ${work}
+    ${footer("다음 → 성찰")}</div>`;
+}
+window.pickBundle = id=>{
+  if(state.grasps.bundle && state.grasps.bundle!==id && state.grasps.product.trim().length>20 &&
+     !confirm("과제를 바꾸면 작성한 산출물은 그대로 남지만 평가 기준이 달라집니다. 바꿀까요?")) return;
+  state.grasps.bundle=id; state.grasps.ai=""; save(); rGrasps();
+};
+window.onProduct = ()=>{ const t=$("#product"); state.grasps.product=t.value; $("#pcc").textContent=t.value.length+" 자"; save(); };
+window.useScaffold = ()=>{ const b=BUNDLES.find(x=>x.id===state.grasps.bundle); const t=$("#product"); if(!b||!t) return;
+  if(t.value.trim() && !confirm("작성 틀을 현재 내용 뒤에 붙일까요?")) return;
+  t.value = (t.value.trim()? t.value+"\n\n" : "") + b.scaffold; onProduct(); t.focus(); };
+window.saveKey = ()=>{ const v=$("#apiKey").value.trim(); if(!v){ toast("키를 입력하세요.",true); return; }
+  try{ localStorage.setItem(LS.apiKey,v); }catch(e){} $("#keyState").textContent="🔓 키가 저장되었습니다."; toast("API 키가 이 브라우저에 저장되었습니다."); };
+window.clearKey = ()=>{ try{ localStorage.removeItem(LS.apiKey); }catch(e){} const el=$("#apiKey"); if(el) el.value=""; const ks=$("#keyState"); if(ks) ks.textContent="키가 삭제되었습니다."; toast("API 키를 삭제했습니다."); };
+
+async function callClaude(system, userText){
+  let key=""; try{ key = localStorage.getItem(LS.apiKey)||""; }catch(e){}
+  if(!key) throw new Error("API 키가 없습니다. 위에 키를 먼저 입력하세요.");
+  const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    method:"POST",
+    headers:{
+      "content-type":"application/json",
+      "x-api-key":key,
+      "anthropic-version":"2023-06-01",
+      "anthropic-dangerous-direct-browser-access":"true",
+      "anthropic-beta":"server-side-fallback-2026-07-01"
+    },
+    body: JSON.stringify({
+      model: AI_MODEL, fallbacks: "default", max_tokens: 16000,
+      output_config: {effort: "medium"},
+      system, messages:[{role:"user", content:userText}]
+    })
+  });
+  const data = await resp.json().catch(()=>({}));
+  if(!resp.ok) throw new Error((data && data.error && data.error.message) || ("요청 실패 (HTTP "+resp.status+")"));
+  if(data.stop_reason==="refusal") throw new Error("AI가 이 요청에 답하지 않았습니다. 내용을 다듬어 다시 시도하거나 선생님께 문의하세요.");
+  const text = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
+  if(!text) throw new Error("피드백이 비어 있습니다. 잠시 후 다시 시도하세요.");
+  return text;
+}
+window.aiFeedback = async ()=>{
+  const b = BUNDLES.find(x=>x.id===state.grasps.bundle); const out=$("#aiOut");
+  const product = (state.grasps.product||"").trim();
+  if(!b) return;
+  if(product.length<80){ toast("산출물을 조금 더 작성한 뒤 피드백을 받아 보세요(80자 이상).",true); return; }
+  out.classList.remove("hidden"); out.innerHTML = `<div class="ah">AI 피드백 (초안)</div><span class="spin"></span>평가 기준에 따라 읽는 중...`;
+  const system = "당신은 고등학교 통합과학 교사를 돕는 피드백 조수입니다. 학생이 엘니뇨(ENSO) 단원의 GRASPS 수행과제 산출물을 제출했습니다. "
+    + "성취기준 [10통과2-02-03]과 주어진 평가 기준에 비추어, 학생을 격려하는 어조의 한국어로 피드백 초안을 작성하세요. 정답 문장을 대신 써 주지 말고 스스로 고칠 수 있게 안내하세요. "
+    + "형식: 1) 평가 기준별로 '충족 / 부분 충족 / 보완 필요' 중 하나와 근거 한 문장, 2) 가장 먼저 고칠 점 두 가지, 3) 한 단계 더 생각해 볼 질문 하나. "
+    + "과학적으로 틀린 내용이 있으면 분명히 짚되, 엘니뇨의 원격 영향은 '경향'이라는 점을 존중하세요. 이 피드백은 교사가 최종 검토한다는 점을 전제로 합니다.";
+  const userText = "[과제 설계 논리]\n"+b.designLogic
+    + "\n\n[역할] "+b.role+"\n[청중] "+b.audience+"\n[상황] "+b.situation+"\n[목표] "+b.goal+"\n[산출물] "+b.product
+    + "\n\n[평가 기준]\n"+b.standards.map((s,i)=>(i+1)+". "+s.t+" (출처: "+s.src+")").join("\n")
+    + "\n\n[학생 산출물]\n"+product;
+  try{
+    const fb = await callClaude(system, userText);
+    state.grasps.ai = fb; save();
+    out.innerHTML = `<div class="ah">AI 피드백 (초안)</div>${esc(fb)}`;
+  }catch(err){
+    out.innerHTML = `<div class="ah" style="color:var(--red)">피드백 오류</div>${esc(err.message||err)}`;
+  }
+};
+
+/* ============================================================
+   STEP 7 · 성찰 (KWL)
+   ============================================================ */
+function rReflect(){
+  const scales = SELF.map(it=>`<div style="font-size:13.5px; margin-top:6px">${it.t}</div>
+    <div class="scale">${[1,2,3,4,5].map(n=>`<button class="${state.reflect.self[it.k]===n?"on":""}" onclick="pickSelf('${it.k}',${n})">${n}</button>`).join("")}</div>`).join("");
+  main.innerHTML = `<div class="panel">
+    <div class="eyebrow">STEP 07 · 성찰 REFLECT</div>
+    <h1 class="h">KWL 성찰</h1>
+    <p class="sub">처음에 적은 K(알던 것)·W(알고 싶던 것)를 보고, 이번 활동에서 배운 것(L)을 정리합니다.</p>
+    <div class="kwl">
+      <div class="col"><div class="kh">K · 알던 것</div><textarea id="rK" oninput="state.kw.k=this.value; save()">${esc(state.kw.k)}</textarea></div>
+      <div class="col"><div class="kh">W · 알고 싶던 것</div><textarea id="rW" oninput="state.kw.w=this.value; save()">${esc(state.kw.w)}</textarea>
+        <select class="inp" style="margin-top:8px" onchange="state.reflect.wDone=this.value; save()">
+          ${[["","W는 해결됐나요?"],["yes","해결됐다"],["part","일부 해결됐다"],["no","아직 궁금하다"]].map(([v,t])=>`<option value="${v}" ${state.reflect.wDone===v?"selected":""}>${t}</option>`).join("")}
+        </select></div>
+      <div class="col"><div class="kh">L · 배운 것</div><textarea id="rL" placeholder="처음 예측과 비교해 무엇이 달라졌나요?" oninput="state.reflect.l=this.value; save()">${esc(state.reflect.l)}</textarea></div>
+    </div>
+    <h3 class="sh">자기 평가 (1 = 아직 어렵다 · 5 = 자신 있다)</h3>
+    ${scales}
+    <h3 class="sh">세계 시민으로서</h3>
+    <textarea id="rC" placeholder="엘니뇨로 가뭄이나 홍수를 겪는 다른 나라 사람들의 입장에서, 우리가 할 수 있는 일은 무엇일까요?" oninput="state.reflect.citizen=this.value; save()">${esc(state.reflect.citizen)}</textarea>
+    ${footer("다음 → 보고서")}</div>`;
+}
+window.pickSelf = (k,n)=>{ state.reflect.self[k]=n; save(); rReflect(); };
+
+/* ============================================================
+   STEP 8 · 보고서
+   ============================================================ */
+function eventScore(){ return EVENTS.filter(ev=>state.data.events[ev.id] && state.data.events[ev.id].ok).length; }
+function line(q, a, cls){ return `<div class="qline"><span class="qq">${q}</span><span class="ans"><span class="lab">→ </span><span class="${cls||""}">${a}</span></span></div>`; }
+function txt(s){ const t=(s||"").trim(); return t ? esc(t) : "<span class='neu'>—</span>"; }
+function rSubmit(){
+  const qScore=score(QUIZ,state.quiz), m=model(state.sim.w), b=BUNDLES.find(x=>x.id===state.grasps.bundle);
+  const mode=submitMode();
+  const subDesc = mode==="googleForm" ? "제출하면 구글 폼으로 전송되어 연결된 스프레드시트에 기록됩니다."
+    : mode==="endpoint" ? "제출하면 설정된 주소로 전송됩니다." : "제출하면 보고서가 파일(JSON)로 저장됩니다. 이 파일을 구글 클래스룸/이메일로 제출하세요.";
+  const ck=state.sim.check, ckN=["normal","elnino","lanina","flat","dateline"].filter(k=>ck[k]).length;
+  const st = ONI.state==="ok" ? currentStatus(ONI.series) : null;
+  const L = state.data.live;
+  main.innerHTML = `<div class="panel">
+    <div class="eyebrow">STEP 08 · 보고서 REPORT</div>
+    <h1 class="h">최종 보고서</h1>
+    <p class="sub">${subDesc} 인쇄(PDF 저장)도 할 수 있습니다.</p>
+    <div class="rsec"><div class="rt">학생 정보</div>
+      <div class="idgrid">
+        <div class="idcell"><div class="il">이름</div><input id="rName" value="${esc(state.student.name)}" oninput="onId()"></div>
+        <div class="idcell"><div class="il">학번</div><input id="rId" value="${esc(state.student.id)}" oninput="onId()"></div>
+        <div class="idcell"><div class="il">형성평가</div><div class="big" style="color:var(--amber)">${qScore}/${QUIZ.length}</div></div>
+        <div class="idcell"><div class="il">데이터 과제</div><div class="big" style="color:var(--amber)">${eventScore()}/${EVENTS.length}</div></div>
+      </div></div>
+    <div class="rsec"><div class="rt">예측·진단 (STEP 01)</div>
+      ${PREDICT.map((it,i)=>line("P"+(i+1)+". "+it.q, state.predict[i]===undefined?"—":"ABC"[state.predict[i]]+". "+it.opts[state.predict[i]])).join("")}
+      ${line("K · 알던 것", txt(state.kw.k))}${line("W · 알고 싶던 것", txt(state.kw.w))}</div>
+    <div class="rsec"><div class="rt"><span>시뮬레이터 (STEP 03)</span><span class="score">체크리스트 ${ckN}/5</span></div>
+      ${line("마지막 설정", "무역풍 "+Math.round(m.w*100)+"% → "+CLS_NAME[m.cls]+"형 · 편차 "+sgn(m.oni)+" ℃ · 수온약층 서/동 "+Math.round(m.dW)+"/"+Math.round(m.dE)+" m · 강수 중심 "+lonLabel(m.rainLon))}
+      ${line("관찰(인과 사슬)", txt(state.sim.note))}</div>
+    <div class="rsec"><div class="rt"><span>실제 데이터 (STEP 04)</span><span class="score">${eventScore()}/${EVENTS.length}</span></div>
+      ${line("자료", ONI.state==="ok" ? "NOAA CPC ONI · "+esc(ONI.source)+" · 최신 "+esc(seasonLabel(st.last))+" "+sgn(st.last.a)+" ℃" : "ONI 자료 없음")}
+      ${EVENTS.map(ev=>{ const r=state.data.events[ev.id]; return line(ev.label+" 최고 ONI", r? (esc(r.v)+" "+(r.ok===true?"✓":r.ok===false?"✗":"")) : "—", r&&r.ok?"ok":r&&r.ok===false?"no":""); }).join("")}
+      ${line("가장 강했던 사건", state.data.strongest ? esc((EVENTS.find(e=>e.id===state.data.strongest)||{}).label||"") : "—")}
+      ${line("공통점", txt(state.data.common))}
+      ${line("실시간 수온", L && !L.error ? "서 "+(+L.west).toFixed(1)+" ℃ / 동 "+(+L.east).toFixed(1)+" ℃ · 차 "+(+L.diff).toFixed(1)+" ℃ ("+esc(L.source)+")" : "—")}
+      ${line("내 판단", state.data.judge ? CLS_NAME[state.data.judge]+"에 가깝다" : "—")}
+      ${line("근거", txt(state.data.reason))}</div>
+    <div class="rsec"><div class="rt"><span>형성평가 (STEP 05)</span><span class="score">${qScore}/${QUIZ.length}</span></div>
+      ${QUIZ.map((it,i)=>{ const s=state.quiz[i]; return line("Q"+(i+1)+". "+it.q, s===undefined?"(미응답)":"ABCD"[s]+". "+it.opts[s]+" "+(s===it.a?"✓":"✗"), s===undefined?"neu":s===it.a?"ok":"no"); }).join("")}</div>
+    <div class="rsec"><div class="rt">GRASPS 수행과제 (STEP 06)</div>
+      ${line("선택한 과제", b ? esc(b.proxLabel)+" — "+esc(b.role)+" → "+esc(b.audience) : "—")}
+      ${line("산출물", txt(state.grasps.product))}
+      ${state.grasps.ai ? line("AI 피드백 초안 (교사 검토 전)", txt(state.grasps.ai)) : ""}</div>
+    <div class="rsec"><div class="rt">성찰 (STEP 07)</div>
+      ${line("L · 배운 것", txt(state.reflect.l))}
+      ${line("W 해결", {yes:"해결됐다",part:"일부 해결",no:"아직 궁금하다"}[state.reflect.wDone]||"—")}
+      ${SELF.map(it=>line(it.t, state.reflect.self[it.k]?state.reflect.self[it.k]+" / 5":"—")).join("")}
+      ${line("세계 시민으로서", txt(state.reflect.citizen))}</div>
+    <div class="foot">
+      <div style="display:flex; gap:10px; flex-wrap:wrap">
+        <button class="btn btn-prev" onclick="go(${cur-1})">← 이전</button>
+        <button class="btn btn-prev" onclick="window.print()">🖨 인쇄 / PDF</button>
+        <button class="btn btn-prev" onclick="downloadReport()">⭳ 다운로드</button>
+      </div>
+      <button class="btn btn-next" id="submitBtn" onclick="submitReport()">${mode==="download"?"보고서 저장 →":"제출하기 →"}</button>
+    </div></div>`;
+}
+window.onId = ()=>{ state.student.name=$("#rName").value; state.student.id=$("#rId").value;
+  try{ localStorage.setItem(LS.student, JSON.stringify(state.student)); }catch(e){} $("#whoName").textContent=state.student.name||"—"; save(); };
+
+function buildPayload(){
+  const m=model(state.sim.w), st = ONI.state==="ok" ? currentStatus(ONI.series) : null;
+  const b=BUNDLES.find(x=>x.id===state.grasps.bundle);
+  return {
+    activityId:"enso", activityVersion:1, topic:"enso",
+    unit:"통합과학2 Ⅴ-2 기후 변화와 지구 환경", standard:"[10통과2-02-03]",
+    timestamp:new Date().toISOString(),
+    name:state.student.name, studentId:state.student.id,
+    predict:state.predict, kwl:{k:state.kw.k, w:state.kw.w, l:state.reflect.l, wDone:state.reflect.wDone},
+    sim:{ tradeWind:+m.w.toFixed(2), state:m.cls, anomaly:+m.oni.toFixed(2), checklist:state.sim.check, note:state.sim.note },
+    data:{
+      oniSource: ONI.state==="ok" ? ONI.source : null,
+      oniLatest: st ? {season:seasonLabel(st.last), value:st.last.a, state:st.k, run:st.n} : null,
+      events:state.data.events, eventScore:eventScore(), eventMax:EVENTS.length,
+      strongest:state.data.strongest, common:state.data.common,
+      live:state.data.live, judge:state.data.judge, reason:state.data.reason
+    },
+    quiz:state.quiz, quizScore:score(QUIZ,state.quiz), quizMax:QUIZ.length,
+    grasps:{ bundle:state.grasps.bundle, proximity: b?b.id:null, product:state.grasps.product, aiFeedbackDraft:state.grasps.ai },
+    reflect:{ self:state.reflect.self, citizen:state.reflect.citizen }
+  };
+}
+function submitMode(){
+  const s = CONFIG.submit||{}; const m = s.mode;
+  if(m==="googleForm" && s.googleForm && s.googleForm.formId) return "googleForm";
+  if(m==="endpoint" && s.endpoint) return "endpoint";
+  return "download";
+}
+window.downloadReport = ()=>{
+  const blob=new Blob([JSON.stringify(buildPayload(),null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download=`엘니뇨_보고서_${state.student.name||"학생"}.json`; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+};
+function submitViaGoogleForm(payload){
+  return new Promise(resolve=>{
+    const gf = CONFIG.submit.googleForm;
+    let sink = document.getElementById("gform_sink");
+    if(!sink){ sink=document.createElement("iframe"); sink.id="gform_sink"; sink.name="gform_sink"; sink.style.display="none"; document.body.appendChild(sink); }
+    const form=document.createElement("form"); form.style.display="none";
+    form.action="https://docs.google.com/forms/d/e/"+gf.formId+"/formResponse"; form.method="POST"; form.target="gform_sink";
+    const vals={ name:payload.name, studentId:payload.studentId, quizScore:payload.quizScore+"/"+payload.quizMax,
+      bundle:payload.grasps.bundle||"", product:payload.grasps.product||"",
+      reflection:(payload.kwl.l||"")+(payload.reflect.citizen?"\n[세계 시민] "+payload.reflect.citizen:""),
+      payload:JSON.stringify(payload) };
+    const map=gf.entries||{};
+    Object.keys(map).forEach(k=>{ if(map[k]){ const inp=document.createElement("input"); inp.type="hidden"; inp.name=map[k]; inp.value=(vals[k]!=null?vals[k]:""); form.appendChild(inp); } });
+    let done=false; const finish=()=>{ if(done)return; done=true; resolve(); };
+    sink.addEventListener("load", finish, {once:true});
+    document.body.appendChild(form); form.submit();
+    setTimeout(finish, 2500); setTimeout(()=>{ try{form.remove();}catch(e){} }, 3200);
+  });
+}
+window.submitReport = async ()=>{
+  if(!state.student.name){ toast("이름을 입력해 주세요.",true); return; }
+  const btn=$("#submitBtn"); const orig=btn.textContent; btn.disabled=true; btn.textContent="제출 중...";
+  const payload=buildPayload(); const mode=submitMode();
+  try{
+    if(mode==="googleForm"){ await submitViaGoogleForm(payload); toast("제출되었습니다. 수고했어요!"); }
+    else if(mode==="endpoint"){
+      const r=await fetch(CONFIG.submit.endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+      if(!r.ok) throw new Error("HTTP "+r.status); toast("제출되었습니다. 수고했어요!");
+    } else { window.downloadReport(); toast("보고서를 파일로 저장했습니다. 이 파일을 제출하세요."); }
+    state.done.submit=true; save(); renderNav();
+  }catch(err){ toast("제출 실패: "+(err.message||err),true); }
+  finally{ btn.disabled=false; btn.textContent=orig; }
+};
+
+/* ---------- toast ---------- */
+let toTimer=null;
+function toast(msg, err){ const t=$("#toast"); t.textContent=msg; t.className="toast show"+(err?" err":""); clearTimeout(toTimer); toTimer=setTimeout(()=>t.className="toast",3200); }
+
+/* ============================================================
+   부팅
+   ============================================================ */
+async function boot(){
+  load();
+  $("#whoName").textContent = state.student.name||"—";
+  if(state.student.name) $("#intro").classList.add("hidden");
+  $("#introGo").onclick=()=>{
+    const n=$("#inName").value.trim(), id=$("#inId").value.trim();
+    if(!n){ $("#inName").focus(); return; }
+    state.student={name:n,id:id}; try{ localStorage.setItem(LS.student,JSON.stringify(state.student)); }catch(e){} save();
+    $("#whoName").textContent=n; $("#intro").classList.add("hidden");
+  };
+  $("#inName").addEventListener("keydown",e=>{ if(e.key==="Enter")$("#inId").focus(); });
+  $("#inId").addEventListener("keydown",e=>{ if(e.key==="Enter")$("#introGo").click(); });
+  $("#btnReset").onclick=()=>{
+    if(confirm("이 활동의 답안과 진행 상황을 초기화할까요? (이름·API 키는 유지됩니다)")){
+      try{ localStorage.removeItem(LS.state); }catch(e){} location.hash=""; location.reload();
+    }
+  };
+  const h=(location.hash||"").replace("#","");
+  const hi=STEPS.findIndex(s=>s.id===h); if(hi>=0) cur=hi;
+  renderAll();
+  await loadONI();
+  if(STEPS[cur].id==="data") rData();
+}
+boot();
+</script>
+</body>
+</html>

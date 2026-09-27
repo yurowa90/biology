@@ -196,9 +196,18 @@ function normalize(r){
   n.predict=n.predict||{}; n.check=n.check||{}; n.quiz=n.quiz||{}; n.essay=n.essay||{};
   return n;
 }
+// 이 대시보드는 효소 워크북 전용 — 다른 활동(activityId/topic)의 기록은 오집계하지 않도록 건너뜀
+let lastSkipped=0;
+function isEnzymeRecord(r){
+  if(r.activityId!=null && r.activityId!=="") return r.activityId==="enzyme" || r.activityId==="enzyme-kinetics";
+  if(r.topic!=null && r.topic!=="") return r.topic==="michaelis-menten";
+  return true;
+}
+function skipNote(){ return lastSkipped ? " · 효소 워크북이 아닌 활동 기록 "+lastSkipped+"건은 건너뜀(다활동 대시보드는 다음 단계)" : ""; }
 function addRecords(list){
-  const seen=new Set(records.map(keyOf)); let added=0;
-  list.filter(Boolean).map(normalize).forEach(r=>{ const k=keyOf(r); if(!seen.has(k)){ seen.add(k); records.push(r); added++; } });
+  const seen=new Set(records.map(keyOf)); let added=0; lastSkipped=0;
+  list.filter(Boolean).filter(r=>{ if(isEnzymeRecord(r)) return true; lastSkipped++; return false; })
+    .map(normalize).forEach(r=>{ const k=keyOf(r); if(!seen.has(k)){ seen.add(k); records.push(r); added++; } });
   persist(); render(); return added;
 }
 
@@ -217,9 +226,9 @@ function handleFiles(files){
     rd.onload=()=>{
       try{ const j=JSON.parse(rd.result); Array.isArray(j)?batch.push(...j):batch.push(j); }
       catch(e){ toast("JSON 파싱 실패: "+f.name, true); }
-      if(--pending===0){ const n=addRecords(batch); toast(n+"명 추가됨 (중복 제외)"); }
+      if(--pending===0){ const n=addRecords(batch); toast(n+"명 추가됨 (중복 제외)"+skipNote()); }
     };
-    rd.onerror=()=>{ if(--pending===0){ const n=addRecords(batch); toast(n+"명 추가됨"); } };
+    rd.onerror=()=>{ if(--pending===0){ const n=addRecords(batch); toast(n+"명 추가됨"+skipNote()); } };
     rd.readAsText(f);
   });
 }
@@ -231,7 +240,7 @@ $("#csvLoad").onclick=async ()=>{
     const r=await fetch(url); if(!r.ok) throw new Error("HTTP "+r.status);
     const text=await r.text(); const recs=recordsFromCSV(text);
     if(!recs.length){ toast("행을 찾지 못했습니다. 게시 형식을 확인하세요.",true); return; }
-    const n=addRecords(recs); toast(n+"명 추가됨 (중복 제외)");
+    const n=addRecords(recs); toast(n+"명 추가됨 (중복 제외)"+skipNote());
   }catch(err){ toast("불러오기 실패: "+(err.message||err),true); }
 };
 function parseCSV(text){
