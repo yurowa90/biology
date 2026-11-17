@@ -40,6 +40,7 @@ python3 checks4_gg.py          #    커피·라떼 이름, 봄나물 사전의 �
 python3 diag_outliers.py       #    특이값 진단: 3대 영양소로 다시 계산한 열량과 기록 열량 비교, 영양소별 로그 MAD
 python3 diag2_outliers.py      #    급식이 아닌 기록, 낮은 열량 끼니, 미량 영양소 극단값 사례
 python3 chart_rows_gg.py       # 5. PRD 차트용 행 → out/chart_*.json
+python3 build_web_data.py      # 6. 수업용 웹앱 데이터 → ../activities/meal-lab-data.js (10% 표본, 정제 미션 원본 표본, 전수 집계표)
 ```
 
 - 인증키 없이는 요청 한 번에 5행만 받고 다음 쪽으로 넘어가지 않습니다. 그래서 주 단위로 나누어 모두 약 7만 1천 번 요청합니다.
