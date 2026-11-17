@@ -1,5 +1,6 @@
 """추가 검증: 2024년 3~4월 영양소 급변, 같은 달끼리 비교한 유행 추세, 학교 확산, 과일 분산 분해(분석 스크립트와 같은 사전)."""
 import re, collections as C, statistics as st
+FORCE_RAW = True  # 진단은 특이값 처리 전 원본으로 한다
 src = open("analyze_gg.py").read()
 exec(src.split("N = len(meals)")[0])
 def has(meal, pat):

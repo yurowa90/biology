@@ -3,3 +3,4 @@ data/meals/
 school_list_std.json
 schools504.json
 __pycache__/
+out_raw/

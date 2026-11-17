@@ -1,4 +1,5 @@
 import re, collections as C, statistics as st
+FORCE_RAW = True  # 진단은 특이값 처리 전 원본으로 한다
 src = open("analyze_gg.py").read()
 exec(src.split("N = len(meals)")[0])
 def has(meal, pat):

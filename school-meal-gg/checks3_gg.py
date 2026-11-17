@@ -1,5 +1,6 @@
 """8절 서술용 수치: 표기 다양성, 해안 시군 생선 비교, 3개 학년도 모두 기록 있는 학교 수."""
 import re, collections as C, statistics as st, random
+FORCE_RAW = True  # 진단은 특이값 처리 전 원본으로 한다
 src = open("analyze_gg.py").read()
 exec(src.split("N = len(meals)")[0])
 def has(meal, pat):

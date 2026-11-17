@@ -1,5 +1,6 @@
 """PRD 차트용 행: 제철 재료 4가지의 월별 등장 끼니, 칼슘 월별 중앙값."""
 import re, json, collections as C, statistics as st
+FORCE_RAW = True  # PRD 차트는 처리 전 원본으로 그렸다(칼슘 차트는 오류 자체를 보여 준다)
 src = open("analyze_gg.py").read()
 exec(src.split("N = len(meals)")[0])
 def has(meal, pat):

@@ -1,5 +1,6 @@
 """전수 분석 결과 검증: 빠진 학교, 특징 메뉴의 학교 수, 열량·칼슘 이상값의 쏠림, 시군 차이 vs 학교 차이."""
 import json, re, glob, collections as C, statistics as st
+FORCE_RAW = True  # 진단은 특이값 처리 전 원본으로 한다
 exec(open("analyze_gg.py").read().split("N = len(meals)")[0])  # 불러오기·정제 부분만 재사용
 N = len(meals)
 def has(meal, pat):

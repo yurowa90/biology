@@ -1,6 +1,6 @@
 """경기도 고등학교 전수 급식 분석(2024학년도~2026학년도 점심). 교육자료(에듀넷) 주제별로 데이터 질문 하나씩.
-출력: 화면 요약 + out/*.csv (수업 도구에 실을 집계표)."""
-import json, re, csv, os, collections as C, statistics as st
+출력: 화면 요약 + out/*.csv (수업 도구에 실을 집계표, 특이값 처리 후). --raw로 실행하면 처리 전 집계를 out_raw/에 쓴다."""
+import json, re, csv, os, sys, collections as C, statistics as st
 
 import glob
 SCH = {v["code"]: v for v in json.load(open("data/schools_neis.json")).values() if v.get("match") == "ok"}
@@ -13,7 +13,6 @@ for f in glob.glob("data/meals/*.json"):
         if sc:
             r["stratum"] = sc["sigun"]; r["hs_type"] = sc["hs_type"]; rows.append(r)
 sample = SCH
-os.makedirs("out", exist_ok=True)
 ORDER = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2]
 MLAB = {m: f"{m}월" for m in ORDER}
 
@@ -40,6 +39,15 @@ for r in rows:
         "kcal": float(r["CAL_INFO"].split()[0]) if r.get("CAL_INFO") else None,
         "ntr": {k: float(v) for k, v in re.findall(r"([^<>:]+?)\s*:\s*([\d\.]+)", r.get("NTR_INFO") or "")},
     })
+# 의미 없는 특이값(오류) 처리. --raw로 실행하거나 FORCE_RAW=True로 불러 쓰면 원본 그대로 본다.
+RAW = "--raw" in sys.argv or globals().get("FORCE_RAW", False)
+OUT = "out_raw" if RAW else "out"
+os.makedirs(OUT, exist_ok=True)
+if not RAW:
+    from outliers_gg import clean_meals, NUTRIENTS
+    import copy, math as _m
+    raw_meals = copy.deepcopy(meals)
+    meals, OUTLOG, OUTSUM, OUTB = clean_meals(meals)
 N = len(meals)
 mc = C.Counter(x["m"] for x in meals)
 print(f"끼니 {N}, 학교 {len({x['code'] for x in meals})}, 요리 {sum(len(x['dishes']) for x in meals)}")
@@ -53,7 +61,7 @@ def monthly_rate(pat):
     return [round(100 * hit[m] / mc[m], 1) if mc[m] else None for m in ORDER]
 
 def write(name, header, data):
-    with open(f"out/{name}.csv", "w", newline="", encoding="utf-8-sig") as f:
+    with open(f"{OUT}/{name}.csv", "w", newline="", encoding="utf-8-sig") as f:
         w = csv.writer(f); w.writerow(header); w.writerows(data)
 
 # 1. 월별 특징 메뉴 (그 달 비중 / 연중 비중)
@@ -155,7 +163,7 @@ for k in keys:
 kc = sorted(x["kcal"] for x in meals if x["kcal"])
 print("열량", len(kc), st.median(kc), kc[0], kc[-1], ">1500:", sum(a > 1500 for a in kc), "<300:", sum(a < 300 for a in kc))
 nrow.append(["열량(kcal)", len(kc), st.median(kc), round(kc[int(.05 * len(kc))], 1), round(kc[int(.95 * len(kc))], 1), sum(a > 1500 for a in kc)])
-write("nutrients_per_meal", ["영양소", "끼니", "중앙값", "5백분위", "95백분위", "이상값 후보"], nrow)
+write("nutrients_per_meal", ["영양소", "끼니", "중앙값", "5백분위", "95백분위", "큰 값(중앙값의 4배 초과, 열량은 1,500kcal 초과)"], nrow)
 
 # 학교별 중앙값 (우리 학교 대 전국 비교용)
 srow = []
@@ -203,7 +211,23 @@ for t in sorted({x["hs_type"] for x in meals}):
     ms = [x for x in meals if x["hs_type"] == t]
     k2 = [x["kcal"] for x in ms if x["kcal"]]
     vals = [round(100 * sum(has(x, GROUP[g]) for x in ms) / len(ms), 1) for g in ["생선·해산물", "고기", "과일", "우유·유제품"]]
-    print(t, len({x["code"] for x in ms}), len(ms), st.median(k2), vals)
-    hrow.append([t, len({x["code"] for x in ms}), len(ms), st.median(k2)] + vals)
+    print(t, len({x["code"] for x in ms}), len(ms), round(st.median(k2), 1), vals)
+    hrow.append([t, len({x["code"] for x in ms}), len(ms), round(st.median(k2), 1)] + vals)
 write("hs_type_summary", ["고교 유형", "학교", "끼니", "열량 중앙값", "생선·해산물 %", "고기 %", "과일 %", "우유·유제품 %"], hrow)
-print("\n집계표:", sorted(os.listdir("out")))
+# 12. 특이값 처리 기록과 처리 전후 비교 (자료: 정제 미션 F-06)
+if not RAW:
+    write("outlier_log", ["학교 코드", "날짜", "변수", "원래 값", "규칙"], OUTLOG)
+    write("outlier_summary", ["규칙", "건수"], OUTSUM)
+    print("\n[특이값 처리]", f"끼니 {len(raw_meals)} → {len(meals)}")
+    for r in OUTSUM: print("  ", r[1], r[0])
+    crow = []
+    def _vals(ms, k):
+        return [x["kcal"] for x in ms if x["kcal"]] if k == "열량(kcal)" else [x["ntr"][k] for x in ms if k in x["ntr"]]
+    for k in ["열량(kcal)"] + NUTRIENTS:
+        a, b = _vals(raw_meals, k), _vals(meals, k)
+        crow.append([k, len(a), round(st.mean(a), 1), round(st.median(a), 1), round(max(a), 1),
+                     len(b), round(st.mean(b), 1), round(st.median(b), 1), round(max(b), 1)])
+        print("  ", k.ljust(12), "평균", crow[-1][2], "→", crow[-1][6], "| 중앙값", crow[-1][3], "→", crow[-1][7], "| 최댓값", crow[-1][4], "→", crow[-1][8])
+    write("clean_vs_raw", ["변수", "처리 전 끼니", "처리 전 평균", "처리 전 중앙값", "처리 전 최댓값",
+                           "처리 후 끼니", "처리 후 평균", "처리 후 중앙값", "처리 후 최댓값"], crow)
+print("\n집계표:", sorted(os.listdir(OUT)))
