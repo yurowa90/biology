@@ -20,6 +20,7 @@
 | `teacher.html` | 교사 대시보드 — 반별 결과 누적·집계 (현재 효소 워크북 전용, 다른 활동 기록은 건너뜀) |
 | `data/oni.json` | NOAA ONI 데이터(배포 때 자동 갱신, 저장소에는 오프라인용 스냅샷) |
 | `scripts/fetch-oni.mjs` | NOAA ONI → `data/oni.json` 변환·검증, 활동 HTML 내장 스냅샷 교체 (외부 의존성 없음) |
+| `school-meal-gg/` | 경기도 고등학교 504곳 급식 데이터(2024.3~2026.11 점심 24만 끼) 수집·분석 스크립트와 수업용 집계표 — 「식탁 문제 해결단」 PBL 데이터 준비 |
 | `.github/workflows/deploy-pages.yml` | GitHub Pages 자동 배포(루트 경로) + 배포 시 ONI 수집 + 매주 재배포 |
 | `.github/workflows/refresh-oni-snapshot.yml` | (수동 실행) 저장소 스냅샷을 NOAA 최신값으로 커밋 |
 

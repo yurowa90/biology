@@ -1,0 +1,5 @@
+# 원본(학교별 JSON 504개, 347MB)과 내려받은 전국 학교 목록은 저장소에 넣지 않는다. README의 순서로 다시 받는다.
+data/meals/
+school_list_std.json
+schools504.json
+__pycache__/
