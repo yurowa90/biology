@@ -99,6 +99,7 @@
   <div class="title">식탁 문제 해결단 <span>· 경기도 급식 데이터 탐구</span></div>
   <div class="top-right">
     <div class="who">탐구자 <b id="whoName">—</b> · 모둠 <b id="whoTeam">—</b></div>
+    <a class="btn-exit" href="meal-lab-teacher.html">교사용 안내</a>
     <a class="btn-exit" href="../index.html">← 교과서 홈</a>
   </div>
 </header>
@@ -462,6 +463,7 @@ function renderKcal() {
     <span class="stat"><b>${fmt(mean(b), 1)}</b><span>처리 전 평균</span></span><span class="stat"><b>${fmt(mean(a), 1)}</b><span>처리 후 평균</span></span>
     <span class="stat"><b>${fmt(median(b), 1)}</b><span>처리 전 중앙값</span></span><span class="stat"><b>${fmt(median(a), 1)}</b><span>처리 후 중앙값</span></span>
     <p class="muted small">평균과 중앙값 가운데 어느 쪽이 이상값에 더 크게 흔들리는지 비교해 보세요. 열량 순으로 정렬되어 있으니, 비슷한 끼니끼리 묶어 판단해도 됩니다.</p>
+    <p class="muted small">이 기준은 원본 표본 ${fmt(RAW.length)}끼에서 계산했습니다. 같은 방법으로 전수 24만 끼에서 계산하면 374~2,009kcal입니다. 기준이 데이터에서 나오므로, 표본이 바뀌면 기준도 조금 바뀝니다.</p>
     <div class="row" style="align-items:end"><div><label for="kBulkA">한꺼번에: 처리</label><select id="kBulkA"><option value="del">삭제</option><option value="keep">유지</option></select></div>
       <div><label for="kBulkMin">열량 범위(kcal)</label><div style="display:flex;gap:6px"><input type="number" id="kBulkMin" placeholder="부터"><input type="number" id="kBulkMax" placeholder="까지"></div></div>
       <div><label for="kBulkR">이유</label><input type="text" id="kBulkR" placeholder="예: 0kcal은 기록이 없는 것"></div>
@@ -545,6 +547,12 @@ $("#dictTable").addEventListener("change", e => { const nm = e.target.dataset.ou
   renderDict(true); });
 
 /* ============================== 그래프 그리기 ============================== */
+function fullMonthly(k) { // 처음 규칙 그대로인 재료군만 전수 집계표와 비교할 수 있다
+  const r = state.dict[k], d = DEFAULT_DICT[k]; if (!r || !d) return null;
+  if (r.inc !== d.inc || r.exc !== d.exc || (r.out || []).length) return { modified: true };
+  const row = D.full.groups.find(x => x[0] === k) || D.full.season.find(x => x[0] === k);
+  return row ? { vals: row.slice(2).map(Number) } : null;
+}
 function monthRate(mk) {
   const n = {}, k = {}; for (const m of MEALS) { n[m.m] = (n[m.m] || 0) + 1; if (hit(m, mk)) k[m.m] = (k[m.m] || 0) + 1; }
   return MONTHS.map(m => ({ lab: m + "월", n: n[m] || 0, k: k[m] || 0, faint: FEW(m) }));
@@ -553,7 +561,8 @@ function monthBars(rows, o) {
   const W = 760, H = 300, L = 52, R = 744, T = 40, B = 250, bw = (R - L) / rows.length;
   const val = r => o.measure === "count" ? r.k : (r.n ? 100 * r.k / r.n : 0);
   const ci = rows.map(r => wilson(r.k, r.n).map(v => 100 * v));
-  const ymax = Math.max(1, ...rows.map((r, i) => o.measure === "count" ? r.k : (r.faint ? 100 * r.k / Math.max(1, r.n) : ci[i][1]))) * 1.12;
+  const full = o.measure !== "count" && o.full ? o.full : null;
+  const ymax = Math.max(1, ...rows.map((r, i) => o.measure === "count" ? r.k : (r.faint ? 100 * r.k / Math.max(1, r.n) : ci[i][1])), ...(full ? full : [])) * 1.12;
   const y = v => B - Math.min(v, ymax) / ymax * (B - T), best = rows.reduce((b, r, i) => (!r.faint && val(r) > val(rows[b]) ? i : b), rows.findIndex(r => !r.faint));
   let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.title)}"><text x="${L}" y="20" font-size="14" font-weight="600" fill="#e6edf6">${esc(o.title)}</text>`;
   s += `<line x1="${L}" x2="${R}" y1="${B}" y2="${B}" stroke="#26374f"/>`;
@@ -561,7 +570,9 @@ function monthBars(rows, o) {
     s += `<rect x="${x}" y="${y(v)}" width="${w}" height="${B - y(v)}" fill="${hi ? "#f2c14e" : "#45d3d8"}" fill-opacity="${r.faint ? .3 : hi ? 1 : .55}"><title>${r.lab}: ${fmt(r.n)}끼 중 ${fmt(r.k)}끼 (${fmt(r.n ? 100 * r.k / r.n : 0, 1)}%)</title></rect>`;
     if (o.measure !== "count" && r.n) s += `<line x1="${x + w / 2}" x2="${x + w / 2}" y1="${y(ci[i][0])}" y2="${Math.max(T - 8, y(ci[i][1]))}" stroke="#8a99ad"/>`;
     s += `<text x="${x + w / 2}" y="${B + 16}" font-size="11.5" fill="#8a99ad" text-anchor="middle">${r.lab}</text>`;
-    if (hi) s += `<text x="${x + w / 2}" y="${y(v) - 6}" font-size="12" font-weight="600" fill="#f2c14e" text-anchor="middle">${o.measure === "count" ? fmt(v) : fmt(v, 1) + "%"}</text>`; });
+    if (hi) s += `<text x="${x + w / 2}" y="${y(v) - 6}" font-size="12" font-weight="600" fill="#f2c14e" text-anchor="middle">${o.measure === "count" ? fmt(v) : fmt(v, 1) + "%"}</text>`;
+    if (full) { const fy = y(full[i]), cx = x + w / 2; s += `<path d="M${cx} ${fy - 6}L${cx + 6} ${fy}L${cx} ${fy + 6}L${cx - 6} ${fy}Z" fill="#a98bff" stroke="#070b14" stroke-width="1.5"><title>${r.lab} 전수: ${fmt(full[i], 1)}%</title></path>`; } });
+  if (full) s += `<path d="M${R - 168} 14L${R - 162} 20L${R - 168} 26L${R - 174} 20Z" fill="#a98bff"/><text x="${R - 156}" y="24" font-size="12" fill="#a98bff">전수(24만 끼) 값</text>`;
   s += `<text x="${L}" y="${H - 6}" font-size="11" fill="#5f6c82">${o.measure === "count" ? "끼니 수(표본)" : "그 달 끼니 중 비율(%) · 회색 선은 95% 신뢰구간"} · 연한 막대는 방학 달(끼니 적음) · 노란 막대는 학기 중 최고</text>`;
   return s + "</svg>";
 }
@@ -632,7 +643,15 @@ function drawChart() {
     if (c.view === "month") {
       const rows = monthRate(mk), ok = rows.filter(r => !r.faint), rt = r => r.n ? 100 * r.k / r.n : 0;
       const mx = ok.reduce((a, b) => rt(b) > rt(a) ? b : a), mn = ok.reduce((a, b) => rt(b) < rt(a) ? b : a);
-      html = monthBars(rows, { title: `${label} — 월별 ${c.measure === "count" ? "등장 끼니 수" : "등장률"}`, measure: c.measure });
+      const fm = c.word ? null : fullMonthly(c.target);
+      html = monthBars(rows, { title: `${label} — 월별 ${c.measure === "count" ? "등장 끼니 수" : "등장률"}`, measure: c.measure, full: fm && fm.vals });
+      if (fm && fm.vals && c.measure !== "count") {
+        const inside = rows.filter((r, i) => { const [a, b] = wilson(r.k, r.n); return fm.vals[i] >= 100 * a && fm.vals[i] <= 100 * b; }).length;
+        const diffs = rows.map((r, i) => Math.abs(rt(r) - fm.vals[i])), dmax = Math.max(...diffs), dm = rows[diffs.indexOf(dmax)].lab;
+        html += `<div class="note"><b>표본과 전수 견주기</b> — 보라색 마름모는 24만 끼 전체(전수)의 값입니다. 12개 달 중 <b>${inside}개 달</b>에서 전수 값이 표본의 95% 신뢰구간(회색 선) 안에 있습니다.
+          표본과 전수의 차이는 가장 큰 달(${dm})이 ${fmt(dmax, 1)}%p입니다. 방학 달은 표본 끼니가 적어 구간이 넓습니다.</div>`;
+      } else if (fm && fm.modified) html += `<p class="muted small">재료 분류 사전에서 규칙을 바꿔서 전수 값(처음 규칙 기준)과는 직접 비교할 수 없습니다.</p>`;
+      else if (c.word) html += `<p class="muted small">낱말 검색은 10% 표본에서만 계산합니다. 전수 값과 비교하려면 재료군(처음 규칙)을 고르세요.</p>`;
       sum = `[월별 등장률] ${label} · 표본 ${fmt(MEALS.length)}끼 · 학기 중 최고 ${mx.lab} ${fmt(rt(mx), 1)}%(${fmt(mx.k)}/${fmt(mx.n)}끼), 최저 ${mn.lab} ${fmt(rt(mn), 1)}%`;
     } else if (c.view === "sigun") {
       const agg = SIG.map(() => ({ k: 0, n: 0 })); for (const m of MEALS) { const g = agg[SCH[m.si][1]]; g.n++; if (hit(m, mk)) g.k++; }
@@ -738,7 +757,7 @@ $("#sDown").addEventListener("click", () => {
     카드: state.story.order.map(i => state.cards[i]), 제안: state.story.prop, 정제기록: { 규칙: state.clean.rules, 묶기: state.clean.merged, 묶기메모: state.clean.mergeNote,
     열량처리: state.clean.decisions, 칼슘판단: state.clean.caAns }, 재료사전: state.dict };
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 2)], { type: "application/json" }));
-  a.download = `식탁문제해결단_${state.team || "모둠"}_${state.name || "이름"}.json`; a.click(); URL.revokeObjectURL(a.href);
+  a.download = `siktak-lab_${new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "")}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 });
 $("#sReset").addEventListener("click", () => { if (confirm("모든 진행 상황을 지우고 처음부터 시작할까요?")) { try { localStorage.removeItem(LS); } catch (e) {} location.reload(); } });
 
