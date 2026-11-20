@@ -1,0 +1,257 @@
+<!--
+  식탁 문제 해결단 · 도입 미션(F-01, 약 20분) — 영양표시를 숫자로 읽고, AI 추천을 근거로 판정하기
+  단일 파일 정적 페이지(외부 라이브러리 없음). 답은 이 브라우저(localStorage "meallab_intro_v1")에만 저장하고, 급식 탐구 앱(meal-lab.html)의 결과 파일에 함께 담긴다.
+  기준값 출처(검수표: school-meal-gg/VERIFICATION.md)
+   · 1일 영양성분 기준치: 「식품 등의 표시·광고에 관한 법률 시행규칙」[별표 5], 식품의약품안전처 「한눈에 보는 영양표시 가이드라인(민원인 안내서)」(2024.12) 참고 2
+   · 비율 계산법(함량 ÷ 기준치 × 100, 반올림해 정수): 같은 안내서
+   · 15~18세 칼슘 권장섭취량(남 900 mg, 여 800 mg): 「식품등의 표시기준」[표 2] 한국인 영양섭취기준(한국영양학회 2020)
+   · 어린이·청소년 카페인 최대 일일섭취권고량 체중 1 kg당 2.5 mg 이하: 식품의약품안전처
+  제품 A~E는 수업용 가상 제품이다. 실제 상품의 값이 아니다. 학생의 몸무게·키·체형은 묻지 않는다(카페인 계산은 예시 체중 55 kg으로만 한다).
+-->
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>식탁 문제 해결단 · 도입 미션</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230e1626'/%3E%3Ccircle cx='16' cy='17' r='8' fill='none' stroke='%23f2c14e' stroke-width='3'/%3E%3Cpath d='M9 8v6M23 8v6' stroke='%2345d3d8' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#070b14; --panel:#0e1626; --line:#1d2b41; --line2:#26374f;
+    --txt:#e6edf6; --muted:#8a99ad; --faint:#5f6c82;
+    --cyan:#45d3d8; --cyandim:#1c5a5e; --green:#33d17f; --amber:#f2c14e; --red:#ff6b7d; --violet:#a98bff;
+    --mono:ui-monospace,SFMono-Regular,Menlo,"Cascadia Mono",monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{font-family:var(--sans);color:var(--txt);min-height:100vh;-webkit-font-smoothing:antialiased;
+    background:radial-gradient(1200px 700px at 78% -8%,#122036 0,transparent 55%),linear-gradient(180deg,#070b14,#060910 60%)}
+  a{color:var(--cyan)} .mono{font-family:var(--mono)} .hidden{display:none !important}
+  header.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 26px;border-bottom:1px solid var(--line);
+    background:rgba(8,13,22,.78);backdrop-filter:blur(6px);position:sticky;top:0;z-index:20}
+  .brand{font-family:var(--mono);font-size:11.5px;letter-spacing:.2em;color:var(--faint);white-space:nowrap}
+  .brand b{color:var(--amber)} .title{font-size:18px;font-weight:700} .title span{color:var(--amber)}
+  .top-right{margin-left:auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .btn-exit{font-family:var(--mono);font-size:11px;letter-spacing:.12em;padding:7px 13px;text-decoration:none;border:1px solid var(--line2);border-radius:8px;color:var(--muted)}
+  .wrap{max-width:980px;margin:0 auto;padding:24px 18px 70px}
+  @media(max-width:700px){ header.top{padding:12px 14px} .wrap{padding:16px 14px 60px} }
+  .card{background:linear-gradient(180deg,var(--panel),#0c1422);border:1px solid var(--line);border-radius:16px;padding:20px 22px;margin-bottom:18px}
+  .card h2{margin:0 0 6px;font-size:21px} .card h3{margin:18px 0 8px;font-size:16px;color:var(--amber)}
+  .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--cyan);margin-bottom:6px}
+  p,li{line-height:1.65;font-size:14.5px} .muted{color:var(--muted)} .small{font-size:12.5px}
+  .note{border-left:3px solid var(--amber);background:rgba(242,193,78,.06);padding:10px 14px;border-radius:0 10px 10px 0;font-size:13.5px;line-height:1.6;margin:12px 0}
+  .warn{border-left-color:var(--red);background:rgba(255,107,125,.07)} .ok{border-left-color:var(--green);background:rgba(51,209,127,.07)}
+  table{border-collapse:collapse;width:100%;font-size:13.5px} th,td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left;vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12.5px} td.num,th.num{text-align:right;font-family:var(--mono)}
+  .tablewrap{overflow-x:auto}
+  label{font-size:13.5px;color:var(--muted)}
+  input[type=text],input[type=number],textarea{font:inherit;color:var(--txt);background:#0a1220;border:1px solid var(--line2);border-radius:9px;padding:8px 10px;width:100%}
+  textarea{min-height:64px;resize:vertical;line-height:1.55}
+  input:focus,textarea:focus{outline:2px solid var(--cyandim);border-color:var(--cyan)}
+  .btn{font:inherit;font-size:13.5px;font-weight:600;white-space:nowrap;padding:9px 15px;border-radius:10px;border:1px solid var(--line2);background:#13203a;color:var(--txt);cursor:pointer;text-decoration:none;display:inline-block}
+  .btn:hover{border-color:var(--cyan)} .btn.pri{background:var(--amber);color:#141414;border-color:var(--amber)} .btn.sm{font-size:12px;padding:6px 10px} .btn.ghost{background:transparent}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
+  .labels{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;margin:12px 0}
+  .label{background:#fbfbf7;color:#111;border-radius:10px;padding:12px 14px;font-size:13px;border:2px solid #111}
+  .label .nm{font-weight:800;font-size:15px;margin-bottom:2px} .label .tag{font-size:11px;color:#555;margin-bottom:8px}
+  .label table{font-size:12.5px} .label td:first-child{white-space:nowrap} .label td,.label th{border-bottom:1px solid #bbb;color:#111;padding:4px 4px} .label th{font-weight:700}
+  .label .hd{background:#111;color:#fff;font-weight:700;padding:5px 7px;border-radius:4px;display:flex;justify-content:space-between;font-size:12.5px}
+  .q{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:10px 0;background:#0b1424}
+  .q .qt{font-weight:600;margin-bottom:8px;line-height:1.55}
+  .ans{display:flex;gap:8px;align-items:center;flex-wrap:wrap} .ans input{max-width:140px}
+  .fb{margin-top:8px;font-size:13.5px;line-height:1.6}
+  .fb.good{color:var(--green)} .fb.bad{color:var(--red)}
+  .picks{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+  .pick{font:inherit;font-size:13px;padding:6px 12px;border-radius:999px;border:1px solid var(--line2);background:#0b1424;color:var(--muted);cursor:pointer}
+  .pick.on{border-color:var(--amber);color:var(--txt);background:rgba(242,193,78,.12)}
+  .ai{display:flex;gap:10px;align-items:flex-start} .ai .bot{flex:none;width:30px;height:30px;border-radius:9px;background:#1c2e4a;display:grid;place-items:center;font-family:var(--mono);font-size:11px;color:var(--cyan)}
+  .score{font-family:var(--mono);font-size:22px;color:var(--amber)}
+  .pill{display:inline-block;font-family:var(--mono);font-size:11px;padding:2px 7px;border-radius:6px;border:1px solid var(--line2);color:var(--muted)}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">통합과학2 · <b>Ⅵ 과학과 미래 사회</b></div>
+  <div class="title">식탁 문제 해결단 <span>· 도입 미션</span></div>
+  <div class="top-right">
+    <a class="btn-exit" href="meal-lab.html">급식 데이터 탐구 →</a>
+    <a class="btn-exit" href="meal-lab-teacher.html">교사용 안내</a>
+    <a class="btn-exit" href="../index.html">← 교과서 홈</a>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="card">
+    <div class="kicker">도입 미션 · F-01 · 약 20분</div>
+    <h2>숫자 하나에 속지 않기</h2>
+    <p>급식 데이터를 열기 전에, 식품 라벨과 'AI 식단 도우미'의 말을 숫자로 따져 봅니다. 세 가지를 연습합니다.</p>
+    <ol>
+      <li><b>기준을 확인한다</b> — "몇 %"는 무엇에 대한 비율인가?</li>
+      <li><b>단위를 맞춘다</b> — 100 mL당 값인가, 한 병 전체 값인가?</li>
+      <li><b>출처로 판정한다</b> — 그럴듯한 추천도 데이터와 기준 문서로 확인한다.</li>
+    </ol>
+    <div class="note">제품 A~E는 <b>수업용 가상 제품</b>입니다. 실제 상품의 값이 아닙니다. 이 미션은 키·몸무게·체형을 묻지 않습니다. 답은 이 기기의 브라우저에만 저장되고, 급식 탐구 앱의 결과 파일에 함께 담깁니다.</div>
+  </div>
+
+  <!-- 미션 1 -->
+  <div class="card">
+    <div class="kicker">미션 1 · 영양표시 읽기</div>
+    <h2>"몇 %"는 무엇에 대한 비율인가</h2>
+    <p>영양성분표의 %는 <b>1일 영양성분 기준치</b>에 대한 비율입니다. 식품의약품안전처 안내서의 계산법은 다음과 같습니다.</p>
+    <div class="note"><b>1일 영양성분 기준치에 대한 비율(%) = 표시 함량 ÷ 그 영양성분의 1일 기준치 × 100</b> (반올림해 정수로 씀)</div>
+    <div class="tablewrap"><table>
+      <tr><th>영양성분</th><th class="num">1일 기준치</th><th>영양성분</th><th class="num">1일 기준치</th></tr>
+      <tr><td>탄수화물</td><td class="num">324 g</td><td>나트륨</td><td class="num">2,000 mg</td></tr>
+      <tr><td>당류</td><td class="num">100 g</td><td>칼슘</td><td class="num">700 mg</td></tr>
+      <tr><td>단백질</td><td class="num">55 g</td><td>식이섬유</td><td class="num">25 g</td></tr>
+      <tr><td>지방</td><td class="num">54 g</td><td>포화지방</td><td class="num">15 g</td></tr>
+    </table></div>
+    <p class="muted small">출처: 「식품 등의 표시·광고에 관한 법률 시행규칙」[별표 5] 1일 영양성분 기준치 — 식품의약품안전처 「한눈에 보는 영양표시 가이드라인(민원인 안내서)」(2024.12) 참고 2에서 확인.</p>
+
+    <div class="labels">
+      <div class="label"><div class="nm">컵라면 A</div><div class="tag">가상 제품 · 총 내용량 110 g</div>
+        <div class="hd"><span>영양정보</span><span>총 내용량 110 g · 500 kcal</span></div>
+        <table><tr><th>총 내용량당</th><th style="text-align:right">1일 영양성분 기준치에 대한 비율</th></tr>
+          <tr><td>나트륨 1,800 mg</td><td style="text-align:right">?</td></tr><tr><td>탄수화물 75 g</td><td style="text-align:right">23%</td></tr>
+          <tr><td>당류 4 g</td><td style="text-align:right">4%</td></tr><tr><td>지방 17 g</td><td style="text-align:right">31%</td></tr><tr><td>단백질 10 g</td><td style="text-align:right">18%</td></tr></table></div>
+      <div class="label"><div class="nm">탄산음료 B</div><div class="tag">가상 제품 · 총 내용량 500 mL</div>
+        <div class="hd"><span>영양정보</span><span>100 mL당 45 kcal</span></div>
+        <table><tr><th>100 mL당</th><th style="text-align:right">1일 영양성분 기준치에 대한 비율</th></tr>
+          <tr><td>나트륨 10 mg</td><td style="text-align:right">1%</td></tr><tr><td>탄수화물 11 g</td><td style="text-align:right">3%</td></tr>
+          <tr><td>당류 11 g</td><td style="text-align:right">11%</td></tr><tr><td>지방 0 g</td><td style="text-align:right">0%</td></tr><tr><td>단백질 0 g</td><td style="text-align:right">0%</td></tr></table></div>
+      <div class="label"><div class="nm">가공우유 C</div><div class="tag">가상 제품 · 총 내용량 240 mL</div>
+        <div class="hd"><span>영양정보</span><span>총 내용량 240 mL · 200 kcal</span></div>
+        <table><tr><th>총 내용량당</th><th style="text-align:right">1일 영양성분 기준치에 대한 비율</th></tr>
+          <tr><td>나트륨 120 mg</td><td style="text-align:right">6%</td></tr><tr><td>당류 27 g</td><td style="text-align:right">27%</td></tr>
+          <tr><td>지방 6 g</td><td style="text-align:right">11%</td></tr><tr><td>단백질 7 g</td><td style="text-align:right">13%</td></tr><tr><td>칼슘 230 mg</td><td style="text-align:right">?</td></tr></table></div>
+    </div>
+    <div id="m1"></div>
+    <label for="reflect">기준치(칼슘 700 mg)와 15~18세 권장섭취량(남 900 mg, 여 800 mg)은 왜 다를까요? 추측해 쓰세요.</label>
+    <textarea id="reflect" placeholder="예: 기준치는 모든 사람에게 같은 하나의 값이고, 권장섭취량은 나이와 성별에 따라 다르게 정해서"></textarea>
+    <div class="btns"><button class="btn sm ghost" id="reflectShow">설명 보기</button></div>
+    <div id="reflectOut"></div>
+  </div>
+
+  <!-- 미션 2 -->
+  <div class="card">
+    <div class="kicker">미션 2 · 단위 맞추기</div>
+    <h2>카페인 — 하루 권고량과 견주기</h2>
+    <p>식품의약품안전처는 어린이·청소년의 카페인 최대 일일섭취권고량을 <b>체중 1 kg당 2.5 mg 이하</b>로 안내합니다. 아래 계산은 <b>예시 체중 55 kg</b>으로만 합니다. 자기 체중을 입력하지 않습니다.</p>
+    <div class="labels">
+      <div class="label"><div class="nm">에너지음료 D</div><div class="tag">가상 제품 · 250 mL</div><div class="hd"><span>카페인</span><span>80 mg</span></div></div>
+      <div class="label"><div class="nm">커피우유 E</div><div class="tag">가상 제품 · 200 mL</div><div class="hd"><span>카페인</span><span>95 mg</span></div></div>
+    </div>
+    <div id="m2"></div>
+    <p class="muted small">권고량 이내라도 사람마다 민감도가 달라, 가슴 두근거림·두통·잠들기 어려움이 생기면 줄이도록 안내합니다(식품의약품안전처). 커피·차·초콜릿에도 카페인이 있습니다.</p>
+  </div>
+
+  <!-- 미션 3 -->
+  <div class="card">
+    <div class="kicker">미션 3 · AI 추천 판정</div>
+    <h2>AI 식단 도우미의 말, 믿어도 될까?</h2>
+    <p>가상의 'AI 식단 도우미'가 말한 여섯 문장입니다. 각각 <b>수용</b>(맞다) · <b>수정</b>(일부만 맞거나 범위를 줄여야 한다) · <b>거부</b>(틀렸다) 중 하나를 고르고, <b>무엇으로 확인했는지</b> 적은 뒤 확인을 누르세요.</p>
+    <div id="m3"></div>
+    <div id="m3sum"></div>
+  </div>
+
+  <div class="card">
+    <div class="kicker">마무리</div>
+    <h2>이제 24만 끼의 급식 데이터로</h2>
+    <div id="wrapUp"></div>
+    <p>방금 한 세 가지(기준 확인, 단위 맞추기, 출처로 판정)는 급식 데이터 탐구에서도 그대로 씁니다. 특히 미션 3의 다섯째 문장처럼, <b>데이터에 없는 변수로는 답할 수 없다</b>는 점을 질문 보드에서 다시 만납니다.</p>
+    <div class="btns"><a class="btn pri" href="meal-lab.html">급식 데이터 탐구 시작 →</a><button class="btn ghost sm" id="reset">도입 미션 답 지우기</button></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const LS = "meallab_intro_v1";
+let st = { num: {}, tries: {}, ai: {}, reflect: "", at: "" };
+try { const s = JSON.parse(localStorage.getItem(LS) || "null"); if (s) st = Object.assign(st, s); } catch (e) {}
+function save() { st.at = new Date().toISOString(); try { localStorage.setItem(LS, JSON.stringify(st)); } catch (e) {} }
+
+/* 수치 문제: lo~hi 안이면 정답. 두 번 틀리면 풀이를 보여 준다. */
+const NUM = {
+  m1: [
+    { id: "n1", q: "컵라면 A 한 개의 나트륨(1,800 mg)은 1일 기준치의 몇 %인가?", unit: "%", lo: 89.5, hi: 90.5,
+      sol: "1,800 ÷ 2,000 × 100 = 90%. 한 개로 하루 기준치의 10분의 9입니다." },
+    { id: "n2", q: "탄산음료 B를 한 병(500 mL) 다 마시면 당류는 몇 g인가? (라벨은 100 mL당 값)", unit: "g", lo: 54.5, hi: 55.5,
+      sol: "100 mL당 11 g × (500 ÷ 100) = 55 g. 라벨의 '11%'는 100 mL만 마셨을 때의 값입니다." },
+    { id: "n3", q: "그 55 g은 당류 1일 기준치의 몇 %인가?", unit: "%", lo: 54.5, hi: 55.5,
+      sol: "55 ÷ 100 × 100 = 55%. 라벨에 적힌 11%의 다섯 배입니다." },
+    { id: "n4", q: "가공우유 C의 칼슘(230 mg)은 칼슘 1일 기준치의 몇 %인가? (정수로 반올림)", unit: "%", lo: 32.5, hi: 33.5,
+      sol: "230 ÷ 700 × 100 = 32.9 → 33%." },
+    { id: "n5", q: "같은 230 mg은 15~18세 여자 칼슘 권장섭취량(800 mg)의 몇 %인가? (정수로 반올림)", unit: "%", lo: 28.5, hi: 29.5,
+      sol: "230 ÷ 800 × 100 = 28.75 → 29%. 같은 우유라도 무엇을 기준으로 삼느냐에 따라 33%도, 29%도 됩니다(남자 900 mg 기준이면 26%)." }],
+  m2: [
+    { id: "n6", q: "예시 체중 55 kg인 청소년의 카페인 최대 일일섭취권고량은 몇 mg인가?", unit: "mg", lo: 137, hi: 138,
+      sol: "2.5 mg × 55 = 137.5 mg." },
+    { id: "n7", q: "에너지음료 D 한 캔과 커피우유 E 하나를 같은 날 마시면, 카페인은 그 권고량의 몇 %인가? (정수로 반올림)", unit: "%", lo: 126.5, hi: 127.5,
+      sol: "(80 + 95) ÷ 137.5 × 100 = 127.3 → 127%. 두 제품 모두 '한 개'만으로는 권고량 안이지만, 합치면 넘습니다." }]
+};
+function renderNum(box, list) {
+  $(box).innerHTML = list.map((it, k) => {
+    const v = st.num[it.id], t = st.tries[it.id] || 0, ok = v != null && v >= it.lo && v <= it.hi;
+    const fb = v == null ? "" : ok ? `<div class="fb good">✓ 맞습니다. ${esc(it.sol)}</div>`
+      : t >= 2 ? `<div class="fb bad">아직 다릅니다. 풀이: ${esc(it.sol)}</div>` : `<div class="fb bad">다시 계산해 보세요. 기준치 표와 라벨의 단위(총 내용량당·100 mL당)를 확인하세요.</div>`;
+    return `<div class="q"><div class="qt">${k + 1}. ${esc(it.q)}</div><div class="ans"><input type="number" step="any" data-num="${it.id}" value="${v == null ? "" : v}" aria-label="답">
+      <span class="muted">${it.unit}</span><button class="btn sm" data-chk="${it.id}">확인</button></div>${fb}</div>`; }).join("");
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-chk]"); if (!b) return;
+  const id = b.dataset.chk, inp = document.querySelector(`[data-num="${id}"]`), v = parseFloat(inp.value);
+  if (isNaN(v)) return; st.num[id] = v; st.tries[id] = (st.tries[id] || 0) + 1; save(); renderAll();
+});
+
+/* AI 판정: 수용 2 · 수정 2 · 거부 2 (가중치 없음, 일치 개수만 센다) */
+const AI = [
+  { s: "탄산음료 B 한 병의 당류는 55 g으로, 당류 1일 기준치(100 g)의 절반이 넘습니다.", a: "수용",
+    why: "라벨(100 mL당 11 g)과 총 내용량(500 mL), 기준치(100 g)로 계산하면 55 g, 55%입니다. 계산과 기준이 모두 맞습니다." },
+  { s: "가공우유 C 하나면 15~18세에게 필요한 하루 칼슘을 다 채울 수 있습니다.", a: "거부",
+    why: "230 mg은 15~18세 칼슘 권장섭취량(남 900 mg, 여 800 mg)의 26~29%입니다. 하루 필요량의 3분의 1에도 못 미칩니다." },
+  { s: "어린이·청소년은 카페인을 하루에 체중 1 kg당 2.5 mg 이하로 먹도록 권고됩니다.", a: "수용",
+    why: "식품의약품안전처의 어린이·청소년 카페인 최대 일일섭취권고량과 같습니다. 출처를 확인할 수 있는 문장입니다." },
+  { s: "컵라면 A는 나트륨이 기준치의 90%지만, 국물을 남기면 나트륨이 0이 됩니다.", a: "수정",
+    why: "국물을 남기면 나트륨을 덜 먹는다는 방향은 맞습니다. 하지만 '0'은 틀렸고, 얼마나 줄어드는지는 이 라벨만으로 알 수 없습니다. 주장의 크기를 줄여야 합니다." },
+  { s: "경기도 고등학교 급식 데이터에 나트륨이 있으니, 나트륨이 적은 학교 순위를 매겨 드릴게요.", a: "거부",
+    why: "나이스 급식 정보의 영양 값은 열량과 탄수화물·단백질·지방·비타민A·티아민·리보플라빈·비타민C·칼슘·철 9종이고, 나트륨은 없습니다. 데이터에 없는 변수로는 순위를 낼 수 없습니다(데이터 카드에서 확인)." },
+  { s: "여름 급식에 수박이 자주 나오는 것은 학생들이 수박을 가장 좋아하기 때문입니다.", a: "수정",
+    why: "'여름에 수박이 자주 나온다'는 급식 데이터로 확인할 수 있습니다. 하지만 '좋아해서'라는 원인은 데이터에 없습니다(선호 조사가 없음). 제철, 가격 같은 다른 설명도 가능하므로 원인 부분은 빼거나 다른 근거가 필요합니다." }];
+function renderAI() {
+  $("#m3").innerHTML = AI.map((it, i) => { const r = st.ai[i] || {};
+    const fb = r.checked ? (r.pick === it.a ? `<div class="fb good">✓ ${it.a}. ${esc(it.why)}</div>` : `<div class="fb bad">제안 답은 <b>${it.a}</b>입니다. ${esc(it.why)}</div>`) : "";
+    return `<div class="q"><div class="ai"><div class="bot">AI</div><div class="qt">${i + 1}. "${esc(it.s)}"</div></div>
+      <div class="picks">${["수용", "수정", "거부"].map(p => `<button class="pick ${r.pick === p ? "on" : ""}" data-ai="${i}" data-p="${p}">${p}</button>`).join("")}</div>
+      <input type="text" data-why="${i}" value="${esc(r.why || "")}" placeholder="무엇으로 확인했나? (예: 라벨의 100 mL당 값과 총 내용량)">
+      <div class="btns"><button class="btn sm" data-aichk="${i}" ${r.pick ? "" : "disabled"}>확인</button></div>${fb}</div>`; }).join("");
+  const done = AI.filter((_, i) => st.ai[i] && st.ai[i].checked), same = done.filter((it, i) => st.ai[AI.indexOf(it)].pick === it.a).length;
+  $("#m3sum").innerHTML = done.length ? `<div class="note ${done.length === AI.length ? "ok" : ""}">판정을 확인한 문장 <b>${done.length}/6</b> · 제안 답과 같은 판정 <b>${same}</b>개.
+    판정이 달라도 이유가 타당하면 토의할 거리입니다. 점수보다 <b>무엇으로 확인했는지</b>가 중요합니다.</div>` : "";
+}
+document.addEventListener("click", e => {
+  const p = e.target.closest("[data-ai]"); if (p) { const i = +p.dataset.ai; st.ai[i] = Object.assign(st.ai[i] || {}, { pick: p.dataset.p, checked: false }); save(); renderAll(); return; }
+  const c = e.target.closest("[data-aichk]"); if (c) { const i = +c.dataset.aichk; st.ai[i] = Object.assign(st.ai[i] || {}, { checked: true }); save(); renderAll(); }
+});
+document.addEventListener("input", e => { const w = e.target.closest("[data-why]"); if (w) { const i = +w.dataset.why; st.ai[i] = Object.assign(st.ai[i] || {}, { why: w.value }); save(); } });
+
+$("#reflect").addEventListener("input", e => { st.reflect = e.target.value; save(); });
+$("#reflectShow").addEventListener("click", () => {
+  $("#reflectOut").innerHTML = `<div class="note ok"><b>1일 영양성분 기준치</b>는 제품끼리 견주어 볼 수 있도록 법으로 정한 <b>하나의 표시 기준값</b>입니다.
+    <b>권장섭취량</b>은 성별·연령 집단마다 따로 정한 값으로, 그 집단 사람들의 약 97~98%가 필요량을 채우는 섭취 수준입니다(한국인 영양소 섭취기준 2020).
+    그래서 라벨의 %는 '나에게 필요한 양의 %'와 다를 수 있습니다.</div>`; });
+$("#reset").addEventListener("click", () => { if (confirm("도입 미션의 답을 모두 지울까요?")) { try { localStorage.removeItem(LS); } catch (e) {} location.reload(); } });
+
+function renderAll() {
+  renderNum("#m1", NUM.m1); renderNum("#m2", NUM.m2); renderAI();
+  const all = [...NUM.m1, ...NUM.m2], ok = all.filter(it => st.num[it.id] != null && st.num[it.id] >= it.lo && st.num[it.id] <= it.hi).length;
+  const aiDone = AI.filter((_, i) => st.ai[i] && st.ai[i].checked).length;
+  $("#wrapUp").innerHTML = `<p><span class="score">${ok}/${all.length}</span> <span class="muted">계산 문제</span> &nbsp; <span class="score">${aiDone}/6</span> <span class="muted">AI 문장 판정</span></p>`;
+}
+$("#reflect").value = st.reflect || "";
+renderAll();
+</script>
+</body>
+</html>

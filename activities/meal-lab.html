@@ -1,0 +1,1080 @@
+<!--
+  식탁 문제 해결단 · 경기도 고등학교 급식 데이터 탐구 (v1.0) — 통합과학2 Ⅵ [10통과2-03-02] · 과학탐구실험2 [10과탐2-01-02]
+  단일 파일 정적 웹앱(외부 라이브러리 없음). 진행 상황은 이 브라우저(localStorage)에만 저장됩니다. API 키·비밀값을 쓰지 않습니다.
+
+  데이터: 같은 폴더의 meal-lab-data.js (school-meal-gg/build_web_data.py가 만든다)
+   · 표본: 경기도 고등학교 503곳의 2024.3~2026.11 점심 244,815끼(특이값 처리 후) 중 10% 단순 무작위 표본
+   · 원본 표본: 정제 미션용, 특이값 처리 전 문자열 그대로 1,260끼(오류로 판정된 끼니 일부 포함)
+   · 전수 집계표: 제철 재료, 월별 특징 메뉴, 학년도 추이, 칼슘 월별, 처리 전후 비교
+  PRD 「식탁 문제 해결단」 7절의 핵심 기능: F-03 데이터 카드 · F-02 질문 보드 · F-06 정제 미션 · F-22 재료 분류 사전
+   · F-07 차트 빌더 · F-08 주장 카드 · F-09 데이터 이야기 · F-10 진행 상태 보존 · F-23 우리 학교 대 경기도
+   · F-05 또래 통계(청소년건강행태조사) · F-13 모둠원 카드 합치기 · F-15 추천 규칙 실험 · F-16 그래프 함정 찾기
+   · F-17 나이스 실시간 조회(최근 4주, 인증키 없이 주 단위 5행) · F-20 사전·사후 자기 평가
+  도입 미션(F-01)은 meal-intro.html. 쓰인 기준값과 출처의 검수 상태는 school-meal-gg/VERIFICATION.md(F-11).
+-->
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>식탁 문제 해결단 · 급식 데이터 탐구</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230e1626'/%3E%3Ccircle cx='16' cy='17' r='8' fill='none' stroke='%23f2c14e' stroke-width='3'/%3E%3Cpath d='M9 8v6M23 8v6' stroke='%2345d3d8' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#070b14; --panel:#0e1626; --panel2:#111d31; --line:#1d2b41; --line2:#26374f;
+    --txt:#e6edf6; --muted:#8a99ad; --faint:#5f6c82;
+    --cyan:#45d3d8; --cyandim:#1c5a5e; --green:#33d17f; --amber:#f2c14e; --red:#ff6b7d; --blue:#5aa9ff; --violet:#a98bff;
+    --mono:ui-monospace,SFMono-Regular,Menlo,"Cascadia Mono",monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{font-family:var(--sans);color:var(--txt);min-height:100vh;-webkit-font-smoothing:antialiased;
+    background:radial-gradient(1200px 700px at 78% -8%,#122036 0,transparent 55%),linear-gradient(180deg,#070b14,#060910 60%)}
+  a{color:var(--cyan)} .mono{font-family:var(--mono)} .hidden{display:none !important}
+  header.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 26px;border-bottom:1px solid var(--line);
+    background:rgba(8,13,22,.78);backdrop-filter:blur(6px);position:sticky;top:0;z-index:20}
+  .brand{font-family:var(--mono);font-size:11.5px;letter-spacing:.2em;color:var(--faint);white-space:nowrap}
+  .brand b{color:var(--amber)} .title{font-size:18px;font-weight:700} .title span{color:var(--amber)}
+  .top-right{margin-left:auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .who{font-size:13px;color:var(--muted)} .who b{color:var(--txt)}
+  .btn-exit{font-family:var(--mono);font-size:11px;letter-spacing:.12em;padding:7px 13px;text-decoration:none;border:1px solid var(--line2);
+    border-radius:8px;background:transparent;color:var(--muted);cursor:pointer}
+  .wrap{display:grid;grid-template-columns:230px minmax(0,1fr);gap:24px;max-width:1260px;margin:0 auto;padding:24px 22px 70px}
+  nav.steps{position:sticky;top:78px;align-self:start;display:flex;flex-direction:column;gap:8px}
+  .step{display:flex;align-items:center;gap:11px;text-align:left;padding:11px 13px;border:1px solid var(--line);border-radius:12px;
+    background:linear-gradient(180deg,#0d1626,#0b1320);color:var(--muted);cursor:pointer;width:100%;font:inherit}
+  .step .no{font-family:var(--mono);font-size:11px;width:24px;height:24px;border-radius:7px;display:grid;place-items:center;border:1px solid var(--line2);flex:none}
+  .step .nm{font-size:13.5px;font-weight:600;color:var(--txt)} .step .lbl{font-size:11.5px;color:var(--faint);margin-top:2px}
+  .step.on{border-color:var(--amber);box-shadow:0 0 0 1px rgba(242,193,78,.25) inset} .step.on .no{background:var(--amber);color:#111;border-color:var(--amber)}
+  .step.done .no{background:var(--cyandim);color:var(--txt);border-color:var(--cyandim)}
+  @media(max-width:880px){
+    .wrap{grid-template-columns:minmax(0,1fr);padding:16px 14px 60px}
+    nav.steps{position:static;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+    .step{padding:8px 6px;flex-direction:column;gap:4px;text-align:center} .step .lbl{display:none} .step .nm{font-size:11.5px}
+    header.top{padding:12px 14px}
+  }
+  main section{display:none} main section.on{display:block}
+  .card{background:linear-gradient(180deg,var(--panel),#0c1422);border:1px solid var(--line);border-radius:16px;padding:20px 22px;margin-bottom:18px}
+  .card h2{margin:0 0 6px;font-size:21px} .card h3{margin:18px 0 8px;font-size:16px;color:var(--amber)}
+  .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--cyan);margin-bottom:6px}
+  p,li{line-height:1.65;font-size:14.5px} .muted{color:var(--muted)} .small{font-size:12.5px}
+  .note{border-left:3px solid var(--amber);background:rgba(242,193,78,.06);padding:10px 14px;border-radius:0 10px 10px 0;font-size:13.5px;line-height:1.6;margin:12px 0}
+  .warn{border-left-color:var(--red);background:rgba(255,107,125,.07)}
+  .ok{border-left-color:var(--green);background:rgba(51,209,127,.07)}
+  table{border-collapse:collapse;width:100%;font-size:13.5px} th,td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left;vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12.5px} td.num,th.num{text-align:right;font-family:var(--mono)}
+  .tablewrap{overflow-x:auto}
+  label{font-size:13.5px;color:var(--muted)}
+  input[type=text],input[type=number],textarea,select{font:inherit;color:var(--txt);background:#0a1220;border:1px solid var(--line2);border-radius:9px;padding:8px 10px;width:100%}
+  textarea{min-height:70px;resize:vertical;line-height:1.55}
+  input:focus,textarea:focus,select:focus{outline:2px solid var(--cyandim);border-color:var(--cyan)}
+  .row{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin:10px 0}
+  .btn{font:inherit;font-size:13.5px;font-weight:600;white-space:nowrap;padding:9px 15px;border-radius:10px;border:1px solid var(--line2);background:#13203a;color:var(--txt);cursor:pointer}
+  .btn:hover{border-color:var(--cyan)} .btn.pri{background:var(--amber);color:#141414;border-color:var(--amber)} .btn.pri:disabled{opacity:.45;cursor:not-allowed}
+  .btn.ghost{background:transparent} .btn.sm{font-size:12px;padding:6px 10px}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
+  .chips{display:flex;gap:6px;flex-wrap:wrap} .chip{font-size:12.5px;padding:5px 10px;border-radius:999px;border:1px solid var(--line2);background:#0b1424;color:var(--muted);cursor:pointer}
+  .chip.on{border-color:var(--amber);color:var(--txt);background:rgba(242,193,78,.12)}
+  .qitem{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:8px 0;cursor:pointer;background:#0b1424}
+  .qitem.on{border-color:var(--amber);background:rgba(242,193,78,.08)} .qitem b{color:var(--txt)} .qitem span{color:var(--muted);font-size:13px}
+  .stat{display:inline-block;margin:4px 14px 4px 0} .stat b{font-family:var(--mono);font-size:18px;color:var(--amber)} .stat span{display:block;font-size:12px;color:var(--muted)}
+  .pill{display:inline-block;font-family:var(--mono);font-size:11px;padding:2px 7px;border-radius:6px;border:1px solid var(--line2);color:var(--muted)}
+  .pill.red{color:var(--red);border-color:rgba(255,107,125,.4)} .pill.green{color:var(--green);border-color:rgba(51,209,127,.4)}
+  svg text{font-family:var(--sans)}
+  .chart{width:100%;height:auto;display:block;margin-top:8px}
+  .claim{border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:10px 0;background:#0b1424}
+  .claim h4{margin:0 0 6px;font-size:15px} .claim dl{margin:0;display:grid;grid-template-columns:90px 1fr;gap:4px 10px;font-size:13.5px}
+  .claim dt{color:var(--muted)} .claim dd{margin:0;line-height:1.55}
+  .dish{font-family:var(--mono);font-size:12.5px} .raw{color:var(--faint)}
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+  .done-badge{color:var(--green);font-size:13px;font-weight:600}
+  @media print{
+    header.top,nav.steps,.noprint{display:none !important} body{background:#fff;color:#000} .wrap{display:block;padding:0}
+    main section{display:none !important} main section#s6{display:block !important} .card{border:none;background:#fff;color:#000}
+    .claim{background:#fff;border-color:#999} .claim dt{color:#444} .muted{color:#444}
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">통합과학2 · <b>Ⅵ 과학과 미래 사회</b></div>
+  <div class="title">식탁 문제 해결단 <span>· 경기도 급식 데이터 탐구</span></div>
+  <div class="top-right">
+    <div class="who">탐구자 <b id="whoName">—</b> · 모둠 <b id="whoTeam">—</b></div>
+    <a class="btn-exit" href="meal-intro.html">도입 미션</a>
+    <a class="btn-exit" href="meal-lab-teacher.html">교사용 안내</a>
+    <a class="btn-exit" href="../index.html">← 교과서 홈</a>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="steps" id="steps" aria-label="탐구 단계"></nav>
+  <main id="main">
+
+<!-- 0. 시작·데이터 카드 -->
+<section id="s0">
+  <div class="card">
+    <div class="kicker">STEP 0 · 문제</div>
+    <h2>우리 급식은 경기도 안에서 어디쯤일까?</h2>
+    <p>경기도 고등학교 503곳의 점심 기록 24만 끼가 여러분 앞에 있습니다. 사람이 손으로 훑을 수 없는 크기입니다.
+      이 데이터에서 패턴을 찾고, 우리 학교 급식과 견주고, <b>실제로 들을 사람</b>(영양교사, 학생회 등)에게 데이터로 뒷받침한 제안을 합니다.</p>
+    <div class="note"><b>추진 질문</b> — 경기도 고등학교 급식 데이터에는 어떤 계절과 재료의 패턴이 있고, 우리 학교 급식은 그 안에서 어디에 있으며, 우리는 누구에게 무엇을 제안할 것인가?</div>
+    <div class="row">
+      <div><label for="inName">이름</label><input type="text" id="inName" placeholder="예: 김하늘" autocomplete="off"></div>
+      <div><label for="inTeam">모둠</label><input type="text" id="inTeam" placeholder="예: 3모둠" autocomplete="off"></div>
+    </div>
+    <p class="muted small">입력한 내용과 진행 상황은 이 기기의 브라우저에만 저장됩니다. 서버로 보내지 않습니다.</p>
+    <div id="introNote"></div>
+  </div>
+  <div class="card">
+    <div class="kicker">시작 전 자기 평가 · F-20</div>
+    <h2>지금 나는 얼마나 할 수 있을까?</h2>
+    <p class="muted small">정답이 없습니다. 지금의 나를 솔직하게 고르세요. 마지막 단계에서 같은 문항에 다시 답하고 비교합니다. 성적에 들어가지 않습니다.</p>
+    <div id="surveyPre"></div>
+  </div>
+  <div class="card">
+    <div class="kicker">데이터 카드 · F-03</div>
+    <h2>데이터를 쓰기 전에 읽는 설명서</h2>
+    <div class="tablewrap"><table id="dataCard"></table></div>
+    <div class="note warn"><b>먼저 알아 둘 한계</b> — 재료 목록이 없어서 재료는 <b>요리 이름</b>으로 추정합니다("딸기우유"도 딸기로 잡힐 수 있음).
+      나트륨·당류·잔반량은 없습니다. 경기도 결과를 전국으로 일반화할 수 없습니다. 원본에는 입력 오류가 섞여 있습니다(정제 미션에서 직접 찾습니다).</div>
+    <div class="btns"><button class="btn pri" data-go="1">질문 정하러 가기 →</button></div>
+  </div>
+</section>
+
+<!-- 1. 질문 보드 -->
+<section id="s1">
+  <div class="card">
+    <div class="kicker">STEP 1 · 질문 보드 · F-02</div>
+    <h2>데이터로 답할 수 있는 질문 고르기</h2>
+    <p>질문 은행에서 고르거나 직접 씁니다. <b>어느 데이터의 어느 변수로 답하는지</b>를 채워야 다음으로 넘어갈 수 있습니다.</p>
+    <div id="qbank"></div>
+    <h3>우리 모둠의 하위 질문</h3>
+    <textarea id="qText" placeholder="예: 바다에 접한 시군의 학교는 생선·해산물이 더 자주 나올까?"></textarea>
+    <div id="qWarn"></div>
+    <div class="row">
+      <div><label>쓸 데이터</label><div class="chips" id="qData"></div></div>
+      <div><label>쓸 변수</label><div class="chips" id="qVars"></div></div>
+    </div>
+    <label for="qGuess">예상(가설)과 그렇게 생각한 이유</label>
+    <textarea id="qGuess" placeholder="예: 바다와 가까우면 해산물 구하기가 쉬워서 더 자주 나올 것 같다"></textarea>
+    <div class="btns"><button class="btn pri" id="qNext" data-go="2" disabled>질문 확정 → 정제 미션</button><span class="muted small" id="qHint"></span></div>
+  </div>
+</section>
+
+<!-- 2. 정제 미션 -->
+<section id="s2">
+  <div class="card">
+    <div class="kicker">STEP 2 · 정제 미션 · F-06</div>
+    <h2>원본은 지저분하다 — 직접 고쳐 보기</h2>
+    <p>아래는 나이스에서 받은 <b>처리 전 원본</b>에서 뽑은 <span id="rawN"></span>끼입니다. 같은 메뉴가 여러 이름으로 적혀 있고, 알레르기 번호가 붙어 있고, 말이 안 되는 열량도 있습니다.
+      네 가지 미션을 끝내면 차트 빌더가 쓰는 데이터가 어떻게 만들어졌는지 알게 됩니다.</p>
+  </div>
+  <div class="card">
+    <h3>미션 A · 알레르기 번호와 기호 떼기</h3>
+    <p class="muted small">규칙을 하나씩 켜면서 서로 다른 요리 이름의 수가 어떻게 줄어드는지 보세요.</p>
+    <div class="chips" id="cleanRules"></div>
+    <div id="cleanStat" style="margin-top:10px"></div>
+    <div class="tablewrap"><table id="cleanEx"></table></div>
+  </div>
+  <div class="card">
+    <h3>미션 B · 같은 메뉴의 다른 표기 묶기</h3>
+    <p class="muted small">A의 규칙을 적용한 뒤에도 남는 표기들입니다. 같은 음식으로 볼 것만 고르세요. 애매한 것(예: "배추김치또는파김치")은 고르지 않은 이유를 적어 둡니다.</p>
+    <div class="chips" id="mergeTarget"></div>
+    <div class="tablewrap" style="max-height:320px;overflow:auto;margin-top:10px"><table id="mergeTable"></table></div>
+    <div id="mergeStat"></div>
+    <label for="mergeNote">애매해서 묶지 않은 표기와 이유</label><textarea id="mergeNote"></textarea>
+  </div>
+  <div class="card">
+    <h3>미션 C · 열량 이상값 처리</h3>
+    <p class="muted small">평균±표준편차는 이상값 자체에 끌려가므로, <b>중앙값과 MAD(중앙값 절대 편차)</b>로 기준을 잡았습니다(로그 척도, 중앙값±5MAD).
+      기준 밖의 끼니마다 <b>삭제·수정·유지</b> 중 하나를 고르고 이유를 적으세요. 3대 영양소로 다시 계산한 열량(탄수화물·단백질 4kcal/g, 지방 9kcal/g)이 판단의 단서입니다.</p>
+    <div id="kcalStat"></div>
+    <div class="tablewrap"><table id="kcalTable"></table></div>
+  </div>
+  <div class="card">
+    <h3>미션 D · 칼슘 그래프의 수수께끼</h3>
+    <p class="muted small">전수 데이터의 월별 칼슘 중앙값입니다. 같은 두 달에 열량과 나머지 영양소는 변하지 않았습니다.</p>
+    <div id="caChart"></div>
+    <label for="caAns">이 급변은 메뉴 때문일까, 기록 방식 때문일까? 근거를 들어 쓰고, 이 두 달의 칼슘을 어떻게 다룰지 정하세요.</label>
+    <textarea id="caAns"></textarea>
+    <div class="btns"><button class="btn ghost sm" id="caReveal">전수 처리 결과 보기</button></div>
+    <div id="caResult"></div>
+  </div>
+  <div class="card"><div class="btns"><button class="btn pri" data-go="3">재료 분류 사전으로 →</button><span id="cleanDone"></span></div></div>
+</section>
+
+<!-- 3. 재료 분류 사전 -->
+<section id="s3">
+  <div class="card">
+    <div class="kicker">STEP 3 · 재료 분류 사전 · F-22</div>
+    <h2>요리 이름으로 재료를 찾는 규칙 만들기</h2>
+    <p>"돈육, 제육, 삼겹은 돼지고기" 같은 <b>낱말 규칙</b>으로 요리를 분류합니다. 규칙을 바꾸면 집계가 바뀝니다.
+      잘못 잡힌 요리(예: 딸기잼)를 찾아 빼 보세요. 사람이 정한 규칙의 오류를 확인하는 경험은, 기계가 학습한 분류가 왜 틀릴 수 있는지 이해하는 바탕이 됩니다.</p>
+    <div class="row">
+      <div><label for="dictSel">재료군</label><select id="dictSel"></select></div>
+      <div><label for="dictNew">새 재료군 이름</label><div style="display:flex;gap:6px"><input type="text" id="dictNew" placeholder="예: 버섯"><button class="btn sm" id="dictAdd">추가</button></div></div>
+    </div>
+    <label for="dictInc">찾을 낱말(| 로 구분)</label><input type="text" id="dictInc">
+    <label for="dictExc" style="display:block;margin-top:8px">빼는 낱말(| 로 구분, 예: 잼|우유)</label><input type="text" id="dictExc">
+    <div class="btns"><button class="btn sm" id="dictApply">규칙 적용</button><button class="btn ghost sm" id="dictReset">처음 규칙으로</button></div>
+    <div id="dictStat"></div>
+    <div id="dictChart"></div>
+    <h3>이 규칙에 걸린 요리 이름 (많은 순)</h3>
+    <p class="muted small">재료가 실제로 들어 있지 않거나 재료군이 다른 요리는 체크하세요. 체크한 이름은 이 재료군에서 빠집니다.</p>
+    <div class="tablewrap" style="max-height:360px;overflow:auto"><table id="dictTable"></table></div>
+    <div class="btns"><button class="btn pri" data-go="4">차트 빌더로 →</button></div>
+  </div>
+</section>
+
+<!-- 4. 차트 빌더 -->
+<section id="s4">
+  <div class="card">
+    <div class="kicker">STEP 4 · 차트 빌더 · F-07</div>
+    <h2>코드 없이 그래프 만들기</h2>
+    <div class="row">
+      <div><label for="cbView">그래프</label><select id="cbView">
+        <option value="month">월별 등장률</option><option value="sigun">시군 비교</option><option value="year">학년도 추이(같은 3~10월)</option>
+        <option value="nutr">영양소 분포</option><option value="school">우리 학교 대 경기도</option><option value="featured">그 달의 특징 메뉴(전수)</option>
+        <option value="rule">추천 규칙 실험</option><option value="live">우리 학교 최근 급식(나이스 실시간)</option><option value="peer">또래 통계(청소년건강행태조사)</option></select></div>
+      <div id="cbTargetBox"><label for="cbTarget">대상</label><select id="cbTarget"></select></div>
+      <div id="cbWordBox"><label for="cbWord">또는 낱말(| 로 여러 개)</label><input type="text" id="cbWord" placeholder="예: 수박|화채"></div>
+    </div>
+    <div class="row">
+      <div id="cbMeasureBox"><label>값</label><div class="chips" id="cbMeasure"></div></div>
+      <div id="cbNutrBox" class="hidden"><label for="cbNutr">영양소</label><select id="cbNutr"><option value="kcal">열량(kcal)</option><option value="ca">칼슘(mg)</option></select></div>
+      <div id="cbRefBox" class="hidden"><label for="cbRef">기준선(직접 입력, 출처를 주장 카드에 적기)</label><div style="display:flex;gap:6px"><input type="number" id="cbRef" placeholder="값"><input type="text" id="cbRefLbl" placeholder="이름(예: 급식 기준)"></div></div>
+      <div id="cbSchoolBox" class="hidden"><label for="cbSchool">우리 학교</label><input type="text" id="cbSchool" list="schoolList" placeholder="학교 이름 입력"><datalist id="schoolList"></datalist></div>
+      <div id="cbMetricBox" class="hidden"><label for="cbMetric">비교할 값</label><select id="cbMetric">
+        <option value="4">한 끼 열량 중앙값(kcal)</option><option value="5">한 끼 칼슘 중앙값(mg)</option><option value="6">끼니당 고유 메뉴 수</option>
+        <option value="7">과일이 나온 끼니(%)</option><option value="8">생선·해산물이 나온 끼니(%)</option></select></div>
+      <div id="cbMonthBox" class="hidden"><label for="cbMonth">달</label><select id="cbMonth"></select></div>
+      <div id="cbLiveBox" class="hidden"><label for="cbLive">학교(경기도 고등학교)</label><div style="display:flex;gap:6px"><input type="text" id="cbLive" list="schoolList" placeholder="학교 이름 입력"><button class="btn sm" id="cbLiveGo">최근 4주 불러오기</button></div></div>
+    </div>
+    <div id="cbRuleBox" class="hidden">
+      <p class="muted small" style="margin:4px 0 8px">'좋은 점심'의 규칙을 직접 정합니다. 고른 조건을 <b>모두</b> 만족하는 끼니만 통과합니다. 재료 조건은 재료 분류 사전의 규칙을 씁니다.</p>
+      <label>들어 있어야 하는 재료군</label><div class="chips" id="ruleFoods"></div>
+      <div class="row">
+        <div><label for="ruleKmin">열량 최소(kcal)</label><input type="number" id="ruleKmin" placeholder="비우면 조건 없음"></div>
+        <div><label for="ruleKmax">열량 최대(kcal)</label><input type="number" id="ruleKmax" placeholder="비우면 조건 없음"></div>
+        <div><label for="ruleCa">칼슘 이상(mg)</label><input type="number" id="ruleCa" placeholder="비우면 조건 없음"></div>
+        <div><label for="ruleProt">단백질 이상(g)</label><input type="number" id="ruleProt" step="0.1" placeholder="비우면 조건 없음"></div>
+      </div>
+      <div class="btns" style="margin-top:0"><button class="btn sm ghost" data-preset="f">하루 권장섭취량의 1/3 넣기(15~18세 여)</button><button class="btn sm ghost" data-preset="m">(15~18세 남)</button><button class="btn sm ghost" data-preset="x">숫자 조건 비우기</button></div>
+    </div>
+    <div id="cbOut"></div>
+    <div class="btns noprint"><button class="btn pri" id="cbToCard">이 그래프로 주장 카드 쓰기 →</button></div>
+  </div>
+  <div class="card">
+    <div class="kicker">그래프 함정 찾기 · F-16</div>
+    <h2>같은 데이터, 다른 인상</h2>
+    <p class="muted small">왼쪽과 오른쪽은 <b>같은 10% 표본</b>으로 그렸습니다. 어느 쪽이 오해를 부르는지, 왜 그런지 고르세요. 내 그래프를 주장 카드에 쓰기 전에 같은 점검을 합니다.</p>
+    <div id="traps"></div>
+  </div>
+</section>
+
+<!-- 5. 주장 카드 -->
+<section id="s5">
+  <div class="card">
+    <div class="kicker">STEP 5 · 주장 카드 · F-08</div>
+    <h2>그래프 하나 = 주장 하나</h2>
+    <p>주장(Claim) — 근거(Evidence) — 추론(Reasoning) — 한계. 네 칸을 모두 채워야 저장됩니다.</p>
+    <div class="note" id="cardGraph">아직 고른 그래프가 없습니다. 차트 빌더에서 "이 그래프로 주장 카드 쓰기"를 누르세요.</div>
+    <label for="cClaim">주장</label><textarea id="cClaim" placeholder="예: 경기도 고등학교 급식의 수박은 7월에 가장 자주 나온다"></textarea>
+    <label for="cEvid">근거 수치</label><textarea id="cEvid"></textarea>
+    <label for="cReason">추론 — 왜 이 수치가 주장을 뒷받침하는가</label><textarea id="cReason"></textarea>
+    <label for="cLimit">한계 — 이 결론이 틀릴 수 있는 이유</label><textarea id="cLimit"></textarea>
+    <div class="chips" id="limitHints" style="margin-top:6px"></div>
+    <div class="btns"><button class="btn pri" id="cSave">카드 저장</button><button class="btn ghost" id="cClear">비우기</button><span class="small" id="cMsg"></span></div>
+  </div>
+  <div class="card"><h3>모둠원 카드 합치기 · F-13</h3>
+    <p class="muted small">모둠원이 6단계에서 내려받은 결과 파일(.json)을 고르면, 그 사람의 카드가 아래 목록에 더해집니다. 같은 카드는 한 번만 들어옵니다. 파일은 이 기기 안에서만 읽습니다.</p>
+    <input type="file" id="cardImport" accept=".json,application/json" multiple aria-label="모둠원 결과 파일">
+    <div id="importMsg" class="small" style="margin-top:6px"></div></div>
+  <div class="card"><h3>저장한 카드</h3><div id="cardList"></div>
+    <div class="btns"><button class="btn pri" data-go="6">데이터 이야기로 →</button></div></div>
+</section>
+
+<!-- 6. 데이터 이야기 -->
+<section id="s6">
+  <div class="card">
+    <div class="kicker">STEP 6 · 데이터 이야기 · F-09</div>
+    <h2 id="storyTitle">데이터 이야기</h2>
+    <p class="muted noprint">카드 순서를 정하고 제안을 붙이면 발표용 한 장이 됩니다. 인쇄하거나 파일로 내려받으세요.</p>
+    <div class="row">
+      <div><label for="sAud">누구에게(실제 청중)</label><input type="text" id="sAud" placeholder="예: 영양교사 선생님, 학생회"></div>
+      <div><label for="sQ">우리의 질문</label><input type="text" id="sQ"></div>
+    </div>
+    <div id="storyCards"></div>
+    <label for="sProp">제안 — 무엇을, 왜, 어떻게 확인할지</label><textarea id="sProp"></textarea>
+    <div class="btns noprint"><button class="btn pri" id="sPrint">인쇄</button><button class="btn" id="sDown">파일로 내려받기(.json)</button>
+      <button class="btn ghost" id="sReset">처음부터 다시</button></div>
+    <p class="muted small">출처: 나이스 교육정보 개방 포털 급식 식단 정보(2026-11-16~17 수집). 경기도 고등학교 503곳, 2024.3~2026.11 점심. 특이값 처리 규칙은 school-meal-gg/README.md.</p>
+  </div>
+  <div class="card noprint">
+    <div class="kicker">마친 뒤 자기 평가 · F-20</div>
+    <h2>처음과 비교하기</h2>
+    <p class="muted small">시작할 때와 같은 문항입니다. 파일로 내려받기 전에 답하면 결과 파일에 함께 담깁니다.</p>
+    <div id="surveyPost"></div>
+  </div>
+</section>
+
+  </main>
+</div>
+
+<script src="meal-lab-data.js"></script>
+<script>
+"use strict";
+/* ============================== 기본 도구 ============================== */
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt = (v, d = 0) => v == null || isNaN(v) ? "—" : Number(v).toLocaleString("ko-KR", {minimumFractionDigits: d, maximumFractionDigits: d});
+const median = a => { if (!a.length) return NaN; const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+const mean = a => a.length ? a.reduce((s, v) => s + v, 0) / a.length : NaN;
+function wilson(k, n) { if (!n) return [0, 0]; const z = 1.96, p = k / n, d = 1 + z * z / n, c = p + z * z / (2 * n), r = z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)); return [(c - r) / d, (c + r) / d]; }
+const D = window.MEAL_DATA;
+if (!D) { document.body.innerHTML = "<p style='padding:30px'>데이터 파일(meal-lab-data.js)을 불러오지 못했습니다. 같은 폴더에 있는지 확인하세요.</p>"; throw new Error("no data"); }
+const MONTHS = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2];
+const FEW = m => (D.meta.monthMeals[String(m)] || 0) < 5000; // 방학 달
+
+/* ============================== 상태 저장(F-10) ============================== */
+const LS = "meallab_v1";
+let state = { step: 0, done: {}, name: "", team: "", q: { pick: -1, text: "", data: [], vars: [], guess: "" },
+  clean: { rules: [], target: "배추김치", merged: {}, mergeNote: "", decisions: {}, caAns: "" },
+  dict: null, dictSel: "", chart: { view: "month", target: "", word: "", measure: "rate", nutr: "kcal", ref: "", refLbl: "", school: "", metric: "4", month: "3월" },
+  draft: null, cards: [], story: { aud: "", q: "", prop: "", order: [] },
+  survey: { pre: {}, post: {} }, trap: {}, rule: { foods: ["과일"], kmin: "", kmax: "", ca: "", prot: "" }, live: { school: "" } };
+try { const s = JSON.parse(localStorage.getItem(LS) || "null"); if (s) state = Object.assign(state, s); } catch (e) {}
+function save() { try { localStorage.setItem(LS, JSON.stringify(state)); } catch (e) {} }
+
+/* ============================== 표본 풀기 ============================== */
+const DN = D.dn;
+const MEALS = D.sample.map(r => { const ymd = r[1], y = Math.floor(ymd / 10000), m = Math.floor(ymd / 100) % 100;
+  return { si: r[0], ymd, y, m, sy: m < 3 ? y - 1 : y, kcal: r[2], ca: r[3], d: r[4], p: r[5], f: r[6] }; });
+const SIG = D.sigun, SCH = D.schools;
+const DEFAULT_DICT = (() => { const o = {};
+  for (const [k, v] of Object.entries(D.groups)) o[k] = { inc: v, exc: "", out: [] };
+  for (const k of ["딸기(이름 포함 전체)", "봄나물", "수박", "귤·감귤", "포도류"]) o[k] = { inc: D.season[k], exc: "", out: [] };
+  return o; })();
+if (!state.dict) state.dict = JSON.parse(JSON.stringify(DEFAULT_DICT));
+
+function safeRe(p) { try { return p ? new RegExp(p) : null; } catch (e) { return null; } }
+function wordToRe(w) { return w.split("|").map(s => s.trim()).filter(Boolean).map(s => s.replace(/[.*+?^${}()[\]\\]/g, "\\$&")).join("|"); }
+const maskCache = new Map();
+function maskFor(rule) { // DN 위의 0/1 배열
+  const key = JSON.stringify(rule); if (maskCache.has(key)) return maskCache.get(key);
+  const inc = safeRe(rule.inc), exc = safeRe(rule.exc), out = new Set(rule.out || []);
+  const mk = new Uint8Array(DN.length);
+  if (inc) for (let i = 0; i < DN.length; i++) { const n = DN[i]; if (inc.test(n) && !(exc && exc.test(n)) && !out.has(n)) mk[i] = 1; }
+  maskCache.set(key, mk); return mk;
+}
+const hit = (meal, mk) => meal.d.some(i => mk[i]);
+function currentRule() {
+  const c = state.chart;
+  if (c.word && wordToRe(c.word)) return { label: `낱말 "${c.word}"`, rule: { inc: wordToRe(c.word), exc: "", out: [] } };
+  const k = c.target && state.dict[c.target] ? c.target : Object.keys(state.dict)[0];
+  return { label: `재료군 "${k}"(우리 사전)`, rule: state.dict[k] };
+}
+
+/* ============================== 단계 이동 ============================== */
+const STEPS = [["시작·데이터 카드", "문제와 데이터 읽기"], ["질문 보드", "답할 수 있는 질문"], ["정제 미션", "원본 고치기"],
+  ["재료 분류 사전", "규칙과 오류"], ["차트 빌더", "그래프 만들기"], ["주장 카드", "주장·근거·추론·한계"], ["데이터 이야기", "발표 한 장"]];
+function renderSteps() {
+  $("#steps").innerHTML = STEPS.map((s, i) => `<button class="step ${state.step === i ? "on" : ""} ${state.done[i] ? "done" : ""}" data-step="${i}">
+    <span class="no">${state.done[i] ? "✓" : i}</span><span><div class="nm">${s[0]}</div><div class="lbl">${s[1]}</div></span></button>`).join("");
+}
+function go(i) { state.done[state.step] = state.done[state.step] || (state.step === 0 && !!state.name); state.step = i; save(); show(); window.scrollTo({ top: 0 }); }
+function show() {
+  document.querySelectorAll("main section").forEach((s, i) => s.classList.toggle("on", i === state.step));
+  renderSteps(); $("#whoName").textContent = state.name || "—"; $("#whoTeam").textContent = state.team || "—";
+  ({ 0: r0, 1: r1, 2: r2, 3: r3, 4: r4, 5: r5, 6: r6 })[state.step]();
+}
+document.addEventListener("click", e => {
+  const s = e.target.closest("[data-step]"); if (s) return go(+s.dataset.step);
+  const g = e.target.closest("[data-go]"); if (g && !g.disabled) { state.done[state.step] = true; go(+g.dataset.go); }
+});
+
+/* ============================== 0. 데이터 카드 ============================== */
+function r0() {
+  $("#inName").value = state.name; $("#inTeam").value = state.team;
+  const m = D.meta;
+  const rows = [["출처", "나이스 교육정보 개방 포털 · 급식 식단 정보(mealServiceDietInfo), 학교 목록은 공공데이터포털 전국초중등학교위치표준데이터"],
+    ["수집", `인증키 없이 학교마다 주 단위로 조회(약 7만 1천 번 요청) · 2026-11-16~17`],
+    ["범위", `경기도 고등학교 ${m.schools}곳 · ${m.period} · 점심만`],
+    ["크기", `전수 ${fmt(m.rawMeals)}끼(특이값 처리 후 ${fmt(m.meals)}끼) · 이 도구의 표본 ${fmt(m.sampleN)}끼(10% 무작위, 씨앗 ${m.seed})`],
+    ["변수와 단위", "학교, 날짜(월·학년도), 요리 이름(알레르기 번호 포함), 열량(kcal), 칼슘(mg) 등 영양소 9종"],
+    ["없는 것", "재료 목록, 나트륨, 당류, 잔반량, 학생 개인 정보"],
+    ["알려진 한계", "재료는 요리 이름으로 추정 · 1·2월은 방학이라 끼니가 적음 · 학교마다 기록 기간이 다름(3개 학년도 모두 있는 곳 471곳) · 2024년 3~4월 칼슘 기록 오류 · 경기도만"],
+    ["특이값 처리", "오류만 지움: 급식이 아닌 기록·밥만 적힌 기록 129끼 삭제, 틀린 영양 값만 결측(메뉴는 남김). 기준과 건수는 정제 미션에서 직접 확인"]];
+  $("#dataCard").innerHTML = rows.map(r => `<tr><th style="width:120px">${r[0]}</th><td>${esc(r[1])}</td></tr>`).join("");
+  const it = introState();
+  $("#introNote").innerHTML = it ? `<div class="note ok">도입 미션 기록이 있습니다 — 계산 문제 ${it.ok}/${it.total}, AI 문장 판정 ${it.ai}/6. 결과 파일에 함께 담깁니다.</div>`
+    : `<div class="note">아직 <a href="meal-intro.html">도입 미션</a>(약 20분, 영양표시 읽기와 AI 추천 판정)을 하지 않았습니다. 선생님 안내에 따라 먼저 하거나 건너뛰세요.</div>`;
+  renderSurvey("#surveyPre", "pre");
+}
+/* 도입 미션(meal-intro.html) 기록 — 같은 기기·같은 주소의 localStorage에서 읽는다 */
+const INTRO_OK = { n1: [89.5, 90.5], n2: [54.5, 55.5], n3: [54.5, 55.5], n4: [32.5, 33.5], n5: [28.5, 29.5], n6: [137, 138], n7: [126.5, 127.5] };
+function introRaw() { try { return JSON.parse(localStorage.getItem("meallab_intro_v1") || "null"); } catch (e) { return null; } }
+function introState() { const r = introRaw(); if (!r || !r.num) return null;
+  const ok = Object.entries(INTRO_OK).filter(([k, [a, b]]) => r.num[k] != null && r.num[k] >= a && r.num[k] <= b).length;
+  const ai = Object.values(r.ai || {}).filter(x => x && x.checked).length;
+  return (ok || ai || Object.keys(r.num).length) ? { ok, total: Object.keys(INTRO_OK).length, ai } : null; }
+
+/* 자기 평가(F-20): 교사 제작 문항, 타당화하지 않은 5단계 자기 보고 */
+const SURVEY = ["나는 데이터로 답할 수 있는 질문과 답할 수 없는 질문을 구별할 수 있다.",
+  "나는 원본 데이터의 오류를 찾고, 지울지·고칠지·남길지 이유를 들어 정할 수 있다.",
+  "나는 10% 표본의 결과가 전체와 얼마나 다를 수 있는지 설명할 수 있다.",
+  "나는 그래프가 오해를 부르는 방식(잘린 축, 횟수와 비율 혼동 등)을 찾아낼 수 있다.",
+  "나는 데이터를 근거로 실제 청중에게 제안하는 글을 쓸 수 있다."];
+const LIKERT = ["전혀 아니다", "아니다", "보통", "그렇다", "매우 그렇다"];
+function renderSurvey(box, key) {
+  const a = state.survey[key] || (state.survey[key] = {}), pre = state.survey.pre || {};
+  $(box).innerHTML = SURVEY.map((q, i) => `<div class="qitem" style="cursor:default"><b>${i + 1}. ${esc(q)}</b>
+    <div class="chips" style="margin-top:6px">${LIKERT.map((l, v) => `<span class="chip ${a[i] === v + 1 ? "on" : ""}" data-sv="${key}" data-i="${i}" data-v="${v + 1}">${v + 1} ${l}</span>`).join("")}
+    ${key === "post" && pre[i] ? `<span class="small muted" style="align-self:center">처음: ${pre[i]}</span>` : ""}</div></div>`).join("") +
+    `<p class="small muted">${Object.keys(a).length}/${SURVEY.length}문항 답함</p>`;
+}
+document.addEventListener("click", e => { const c = e.target.closest("[data-sv]"); if (!c) return;
+  state.survey[c.dataset.sv][+c.dataset.i] = +c.dataset.v; save(); renderSurvey(c.dataset.sv === "pre" ? "#surveyPre" : "#surveyPost", c.dataset.sv); });
+$("#inName").addEventListener("input", e => { state.name = e.target.value.trim(); $("#whoName").textContent = state.name || "—"; save(); });
+$("#inTeam").addEventListener("input", e => { state.team = e.target.value.trim(); $("#whoTeam").textContent = state.team || "—"; save(); });
+
+/* ============================== 1. 질문 보드 ============================== */
+const QB = [
+  { t: "월별 빈도", q: "달마다 유독 자주 나오는 메뉴는 무엇이고, 그 달에만 나오는 메뉴와 일 년 내내 나오는 메뉴는 어떻게 구분할까?", data: ["전수 집계표"], vars: ["요리 이름", "월"] },
+  { t: "제철과 기념일", q: "수박·귤·딸기·봄나물은 몇 월에 급식에 오르고, 급식 달력은 제철과 기념일 중 무엇을 더 따를까?", data: ["급식 표본", "전수 집계표"], vars: ["요리 이름", "월"] },
+  { t: "단백질 급원", q: "고기·생선·달걀·콩은 달에 따라 비중이 달라질까?", data: ["급식 표본"], vars: ["요리 이름", "월"] },
+  { t: "지역 차이", q: "바다에 접한 시군(안산·시흥·화성·평택·김포)은 생선·해산물이 더 자주 나올까? 시군 차이는 학교 차이보다 클까?", data: ["급식 표본", "학교별 요약"], vars: ["요리 이름", "시군"] },
+  { t: "유행", q: "두바이 디저트, 탕후루, 제로 음료 같은 유행 메뉴는 학교에 어떻게 퍼지고 사라질까?", data: ["급식 표본", "전수 집계표"], vars: ["요리 이름", "학년도"] },
+  { t: "데이터 품질", q: "2024년 3~4월의 칼슘 값은 왜 다른 달과 다를까? 믿을 수 없는 값은 어떻게 찾고 다룰까?", data: ["원본 표본", "전수 집계표"], vars: ["칼슘", "월"] },
+  { t: "우리 학교", q: "우리 학교의 열량·칼슘·메뉴 다양성은 경기도 503곳 분포의 어디에 있을까?", data: ["학교별 요약"], vars: ["열량", "칼슘", "요리 이름"] }];
+const QDATA = ["급식 표본", "원본 표본", "전수 집계표", "학교별 요약"], QVARS = ["요리 이름", "월", "학년도", "시군", "고교 유형", "열량", "칼슘"];
+const NOT_IN_DATA = /나트륨|짠|소금|당류|설탕|잔반|남기|맛있|좋아|선호|만족|가격|단가|비용/;
+function r1() {
+  $("#qbank").innerHTML = QB.map((b, i) => `<div class="qitem ${state.q.pick === i ? "on" : ""}" data-q="${i}"><b>${b.t}</b><br><span>${esc(b.q)}</span></div>`).join("");
+  $("#qText").value = state.q.text; $("#qGuess").value = state.q.guess;
+  $("#qData").innerHTML = QDATA.map(d => `<span class="chip ${state.q.data.includes(d) ? "on" : ""}" data-qd="${d}">${d}</span>`).join("");
+  $("#qVars").innerHTML = QVARS.map(d => `<span class="chip ${state.q.vars.includes(d) ? "on" : ""}" data-qv="${d}">${d}</span>`).join("");
+  checkQ();
+}
+function checkQ() {
+  const ok = state.q.text.length >= 8 && state.q.data.length && state.q.vars.length;
+  $("#qNext").disabled = !ok;
+  $("#qHint").textContent = ok ? "" : "질문(8자 이상), 데이터, 변수를 모두 골라야 합니다.";
+  $("#qWarn").innerHTML = NOT_IN_DATA.test(state.q.text) ? `<div class="note warn">이 질문에는 데이터에 <b>없는</b> 변수(나트륨·당류·잔반·맛 선호·가격 등)가 들어 있는 것 같습니다. 이 데이터로 답할 수 있는 질문으로 바꾸거나, 답할 수 없는 부분을 한계로 적으세요.</div>` : "";
+}
+$("#qbank").addEventListener("click", e => { const it = e.target.closest("[data-q]"); if (!it) return; const b = QB[+it.dataset.q];
+  state.q.pick = +it.dataset.q; state.q.text = b.q; state.q.data = [...b.data]; state.q.vars = [...b.vars]; save(); r1(); });
+$("#qText").addEventListener("input", e => { state.q.text = e.target.value; save(); checkQ(); });
+$("#qGuess").addEventListener("input", e => { state.q.guess = e.target.value; save(); });
+$("#qData").addEventListener("click", e => { const c = e.target.closest("[data-qd]"); if (!c) return; const v = c.dataset.qd, a = state.q.data;
+  a.includes(v) ? a.splice(a.indexOf(v), 1) : a.push(v); save(); r1(); });
+$("#qVars").addEventListener("click", e => { const c = e.target.closest("[data-qv]"); if (!c) return; const v = c.dataset.qv, a = state.q.vars;
+  a.includes(v) ? a.splice(a.indexOf(v), 1) : a.push(v); save(); r1(); });
+
+/* ============================== 2. 정제 미션 ============================== */
+const RAW = D.raw.map(r => ({ si: r[0], ymd: r[1], items: r[2].split("<br/>").map(s => s.trim()).filter(Boolean), kcal: r[3], c: r[4], p: r[5], f: r[6] }));
+const CLEAN_RULES = [
+  { id: "num", name: "괄호 속 알레르기 번호 떼기", f: s => s.replace(/\([\d.,\s]*\)/g, "") },
+  { id: "sym", name: "기호(* # @ ★ ♥ 등) 떼기", f: s => s.replace(/[*#@◆★☆♥♡!]/g, "") },
+  { id: "tag", name: "(자율)·(선택) 같은 표시 떼기", f: s => s.replace(/\(\s*(자율|선택|sm|SM|중고등|완|구|중|고)\s*\)|\[\s*(자율|선택)\s*\]/g, "") },
+  { id: "sp", name: "띄어쓰기·앞뒤 부호 지우기", f: s => s.replace(/\s+/g, "").replace(/^[-/.,&+]+|[-/.,&+]+$/g, "") }];
+function applyClean(s, ids) { for (const r of CLEAN_RULES) if (ids.includes(r.id)) s = r.f(s); return s; }
+function r2() {
+  $("#rawN").textContent = fmt(RAW.length);
+  const ids = state.clean.rules;
+  $("#cleanRules").innerHTML = CLEAN_RULES.map(r => `<span class="chip ${ids.includes(r.id) ? "on" : ""}" data-cr="${r.id}">${r.name}</span>`).join("");
+  const before = new Set(RAW.flatMap(m => m.items)).size, after = new Set(RAW.flatMap(m => m.items.map(s => applyClean(s, ids))).filter(Boolean)).size;
+  $("#cleanStat").innerHTML = `<span class="stat"><b>${fmt(before)}</b><span>원본의 서로 다른 이름</span></span><span class="stat"><b>${fmt(after)}</b><span>규칙 적용 뒤</span></span>
+    <span class="stat"><b>${fmt(100 * (before - after) / before, 1)}%</b><span>줄어든 비율</span></span>`;
+  const ex = RAW.slice(0, 6).flatMap(m => m.items.slice(0, 2));
+  $("#cleanEx").innerHTML = `<tr><th>원본</th><th>규칙 적용 뒤</th></tr>` + ex.map(s => `<tr><td class="dish raw">${esc(s)}</td><td class="dish">${esc(applyClean(s, ids))}</td></tr>`).join("");
+  renderMerge(); renderKcal(); renderCa();
+  $("#mergeNote").value = state.clean.mergeNote; $("#caAns").value = state.clean.caAns;
+  cleanDone();
+}
+$("#cleanRules").addEventListener("click", e => { const c = e.target.closest("[data-cr]"); if (!c) return; const a = state.clean.rules, v = c.dataset.cr;
+  a.includes(v) ? a.splice(a.indexOf(v), 1) : a.push(v); save(); r2(); });
+const MERGE_TARGETS = { "배추김치": "김치", "깍두기": "깍두기|석박지", "우유": "우유", "흰쌀밥·잡곡밥": "밥$" };
+function renderMerge() {
+  const t = state.clean.target, pat = new RegExp(MERGE_TARGETS[t]), all = ["num", "sym", "tag", "sp"];
+  $("#mergeTarget").innerHTML = Object.keys(MERGE_TARGETS).map(k => `<span class="chip ${k === t ? "on" : ""}" data-mt="${k}">${k}</span>`).join("");
+  const cnt = new Map(); RAW.forEach(m => m.items.forEach(s => { const c = applyClean(s, all); if (pat.test(c)) cnt.set(c, (cnt.get(c) || 0) + 1); }));
+  const list = [...cnt.entries()].sort((a, b) => b[1] - a[1]); const sel = state.clean.merged[t] || [];
+  $("#mergeTable").innerHTML = `<tr><th>같은 음식?</th><th>표기</th><th class="num">횟수</th></tr>` + list.map(([n, c]) =>
+    `<tr><td><input type="checkbox" data-mn="${esc(n)}" ${sel.includes(n) ? "checked" : ""} aria-label="${esc(n)} 묶기"></td><td class="dish">${esc(n)}</td><td class="num">${c}</td></tr>`).join("");
+  mergeList = list; mergeStat();
+}
+let mergeList = [];
+function mergeStat() {
+  const list = mergeList, sel = state.clean.merged[state.clean.target] || [];
+  const top = list.length ? list[0] : ["—", 0], merged = list.filter(([n]) => sel.includes(n)).reduce((s, [, c]) => s + c, 0);
+  $("#mergeStat").innerHTML = `<p>가장 흔한 표기 <b class="dish">${esc(top[0])}</b> 하나로만 세면 <b>${top[1]}</b>번, 고른 표기를 묶으면 <b>${merged}</b>번입니다.
+    표기 ${list.length}가지 중 ${sel.filter(n => list.some(([m]) => m === n)).length}가지를 묶었습니다.</p>`;
+}
+$("#mergeTarget").addEventListener("click", e => { const c = e.target.closest("[data-mt]"); if (!c) return; state.clean.target = c.dataset.mt; save(); renderMerge(); });
+$("#mergeTable").addEventListener("change", e => { const n = e.target.dataset.mn; if (n == null) return; const t = state.clean.target;
+  const a = state.clean.merged[t] = state.clean.merged[t] || []; e.target.checked ? a.push(n) : a.splice(a.indexOf(n), 1); save(); mergeStat(); cleanDone(); });
+$("#mergeNote").addEventListener("input", e => { state.clean.mergeNote = e.target.value; save(); cleanDone(); });
+
+function kcalFlags() {
+  const v = RAW.map(m => m.kcal).filter(k => k > 0), lg = v.map(Math.log), md = median(lg), mad = 1.4826 * median(lg.map(x => Math.abs(x - md)));
+  const lo = Math.exp(md - 5 * mad), hi = Math.exp(md + 5 * mad);
+  return { lo, hi, list: RAW.map((m, i) => ({ m, i })).filter(({ m }) => m.kcal != null && (m.kcal < lo || m.kcal > hi || m.kcal === 0)).sort((a, b) => a.m.kcal - b.m.kcal) };
+}
+function renderKcal() {
+  const F = kcalFlags(), dec = state.clean.decisions;
+  const vals = (useDec) => RAW.map((m, i) => { const d = dec[i]; if (m.kcal == null) return null;
+    if (useDec && d) { if (d.a === "del") return null; if (d.a === "fix" && d.v) return +d.v; } return m.kcal; }).filter(v => v != null && v > 0);
+  const b = vals(false), a = vals(true), done = F.list.filter(({ i }) => dec[i] && dec[i].a && (dec[i].r || "").trim().length >= 4).length;
+  $("#kcalStat").innerHTML = `<p>기준: <b>${fmt(F.lo)}~${fmt(F.hi)} kcal</b> 밖 · 기준 밖 끼니 <b>${F.list.length}</b>개 · 처리한 끼니 <b>${done}</b>개</p>
+    <span class="stat"><b>${fmt(mean(b), 1)}</b><span>처리 전 평균</span></span><span class="stat"><b>${fmt(mean(a), 1)}</b><span>처리 후 평균</span></span>
+    <span class="stat"><b>${fmt(median(b), 1)}</b><span>처리 전 중앙값</span></span><span class="stat"><b>${fmt(median(a), 1)}</b><span>처리 후 중앙값</span></span>
+    <p class="muted small">평균과 중앙값 가운데 어느 쪽이 이상값에 더 크게 흔들리는지 비교해 보세요. 열량 순으로 정렬되어 있으니, 비슷한 끼니끼리 묶어 판단해도 됩니다.</p>
+    <p class="muted small">이 기준은 원본 표본 ${fmt(RAW.length)}끼에서 계산했습니다. 같은 방법으로 전수 24만 끼에서 계산하면 374~2,009kcal입니다. 기준이 데이터에서 나오므로, 표본이 바뀌면 기준도 조금 바뀝니다.</p>
+    <div class="row" style="align-items:end"><div><label for="kBulkA">한꺼번에: 처리</label><select id="kBulkA"><option value="del">삭제</option><option value="keep">유지</option></select></div>
+      <div><label for="kBulkMin">열량 범위(kcal)</label><div style="display:flex;gap:6px"><input type="number" id="kBulkMin" placeholder="부터"><input type="number" id="kBulkMax" placeholder="까지"></div></div>
+      <div><label for="kBulkR">이유</label><input type="text" id="kBulkR" placeholder="예: 0kcal은 기록이 없는 것"></div>
+      <div><button class="btn sm" id="kBulkGo">아직 고르지 않은 끼니에 적용</button></div></div>`;
+  $("#kcalTable").innerHTML = `<tr><th>날짜</th><th>메뉴(앞 4개)</th><th class="num">기록 열량</th><th class="num">계산 열량</th><th>처리</th><th>이유</th></tr>` +
+    F.list.map(({ m, i }) => { const d = dec[i] || {}, at = m.c != null ? 4 * m.c + 4 * m.p + 9 * m.f : null;
+      return `<tr><td class="mono small">${String(m.ymd).replace(/(\d{4})(\d\d)(\d\d)/, "$1.$2.$3")}</td>
+      <td class="small">${esc(m.items.slice(0, 4).map(s => applyClean(s, ["num", "sym", "tag", "sp"])).join(", "))}${m.items.length > 4 ? " 외" : ""}</td>
+      <td class="num">${fmt(m.kcal, 1)}</td><td class="num">${at == null ? "—" : fmt(at, 0)}</td>
+      <td><select data-ka="${i}" aria-label="처리 방법"><option value="">고르기</option><option value="del" ${d.a === "del" ? "selected" : ""}>삭제</option>
+        <option value="fix" ${d.a === "fix" ? "selected" : ""}>수정</option><option value="keep" ${d.a === "keep" ? "selected" : ""}>유지</option></select>
+        ${d.a === "fix" ? `<input type="number" data-kv="${i}" value="${esc(d.v || "")}" placeholder="고친 값" style="margin-top:4px">` : ""}</td>
+      <td><input type="text" data-kr="${i}" value="${esc(d.r || "")}" placeholder="이유"></td></tr>`; }).join("");
+}
+$("#kcalTable").addEventListener("change", e => { const t = e.target, dec = state.clean.decisions;
+  if (t.dataset.ka != null) { (dec[t.dataset.ka] = dec[t.dataset.ka] || {}).a = t.value; save(); renderKcal(); cleanDone(); }
+  if (t.dataset.kv != null) { (dec[t.dataset.kv] = dec[t.dataset.kv] || {}).v = t.value; save(); renderKcal(); } });
+$("#kcalStat").addEventListener("click", e => { if (e.target.id !== "kBulkGo") return;
+  const a = $("#kBulkA").value, r = $("#kBulkR").value.trim(), lo = $("#kBulkMin").value === "" ? -Infinity : +$("#kBulkMin").value, hi = $("#kBulkMax").value === "" ? Infinity : +$("#kBulkMax").value;
+  if (r.length < 4) { alert("이유를 4자 이상 적으세요."); return; }
+  kcalFlags().list.forEach(({ m, i }) => { const d = state.clean.decisions[i]; if ((!d || !d.a) && m.kcal >= lo && m.kcal <= hi) state.clean.decisions[i] = { a, r }; });
+  save(); renderKcal(); cleanDone(); });
+$("#kcalTable").addEventListener("input", e => { const t = e.target; if (t.dataset.kr == null) return; (state.clean.decisions[t.dataset.kr] = state.clean.decisions[t.dataset.kr] || {}).r = t.value; save(); cleanDone(); });
+
+function renderCa() {
+  const rows = D.full.calcium, W = 760, H = 250, L = 56, R = 744, T = 30, B = 210, ymax = 1200, st = (R - L) / (rows.length - 1);
+  const x = i => L + i * st, y = v => B - v / ymax * (B - T), odd = r => r.high / r.meals > 0.1;
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="월별 한 끼 칼슘 중앙값"><text x="${L}" y="18" font-size="12" fill="#8a99ad">한 끼 칼슘 중앙값(mg), 전수</text>`;
+  for (const t of [0, 400, 800, 1200]) s += `<line x1="${L}" x2="${R}" y1="${y(t)}" y2="${y(t)}" stroke="#1d2b41"/><text x="${L - 6}" y="${y(t) + 4}" font-size="11" fill="#8a99ad" text-anchor="end">${fmt(t)}</text>`;
+  s += `<polyline fill="none" stroke="#5f6c82" stroke-width="2" points="${rows.map((r, i) => `${x(i)},${y(r.median)}`).join(" ")}"/>`;
+  rows.forEach((r, i) => { s += `<circle cx="${x(i)}" cy="${y(r.median)}" r="${odd(r) ? 5 : 3}" fill="${odd(r) ? "#f2c14e" : "#5f6c82"}"><title>${r.ym}: ${fmt(r.median)}mg (${fmt(r.meals)}끼)</title></circle>`;
+    if (/-0[39]$/.test(r.ym)) s += `<text x="${x(i)}" y="${B + 18}" font-size="11" fill="#8a99ad" text-anchor="middle">${r.ym.slice(0, 4)}.${+r.ym.slice(5)}</text>`; });
+  $("#caChart").innerHTML = s + "</svg>";
+}
+$("#caAns").addEventListener("input", e => { state.clean.caAns = e.target.value; save(); cleanDone(); });
+$("#caReveal").addEventListener("click", () => {
+  const sm = D.full.outlierSummary.slice(1), cv = D.full.cleanVsRaw;
+  $("#caResult").innerHTML = `<div class="note ok"><b>전수 데이터의 처리 결과</b> — 2024년 3~4월 칼슘은 메뉴와 상관없이 거의 모든 학교에서 4배 넘게 기록되었고, 같은 달 다른 영양소는 그대로였습니다.
+    그래서 메뉴가 아니라 기록 방식의 오류로 보고 그 두 달의 칼슘만 지웠습니다(끼니와 메뉴는 남김). 전체 규칙은 아래와 같습니다.</div>
+    <div class="tablewrap"><table><tr><th>규칙</th><th class="num">건수</th></tr>${sm.map(r => `<tr><td class="small">${esc(r[0])}</td><td class="num">${fmt(+r[1])}</td></tr>`).join("")}</table></div>
+    <h3>처리 전후(전수)</h3><div class="tablewrap"><table><tr>${cv[0].map((h, j) => `<th class="${j ? "num" : ""}">${esc(h)}</th>`).join("")}</tr>
+    ${cv.slice(1).map(r => `<tr>${r.map((v, j) => `<td class="${j ? "num" : ""}">${j ? fmt(+v, j % 4 === 1 ? 0 : 1) : esc(v)}</td>`).join("")}</tr>`).join("")}</table></div>`;
+});
+function cleanDone() {
+  const F = kcalFlags(), dec = state.clean.decisions;
+  const a = state.clean.rules.length >= 3, b = Object.values(state.clean.merged).some(v => v.length >= 2),
+    c = F.list.every(({ i }) => dec[i] && dec[i].a && (dec[i].r || "").trim().length >= 4), d = state.clean.caAns.trim().length >= 20;
+  const ok = a && b && c && d; state.done[2] = ok;
+  $("#cleanDone").innerHTML = ok ? `<span class="done-badge">✓ 네 미션 완료</span>` :
+    `<span class="muted small">남은 미션: ${[!a && "A(규칙 3개 이상)", !b && "B(표기 2개 이상 묶기)", !c && "C(모든 이상값에 처리와 이유)", !d && "D(20자 이상)"].filter(Boolean).join(" · ")}</span>`;
+}
+
+/* ============================== 3. 재료 분류 사전 ============================== */
+function r3() {
+  const keys = Object.keys(state.dict); if (!keys.includes(state.dictSel)) state.dictSel = keys[0];
+  $("#dictSel").innerHTML = keys.map(k => `<option ${k === state.dictSel ? "selected" : ""}>${esc(k)}</option>`).join("");
+  const r = state.dict[state.dictSel]; $("#dictInc").value = r.inc; $("#dictExc").value = r.exc; renderDict();
+}
+function renderDict(keepTable) {
+  const k = state.dictSel, r = state.dict[k];
+  if (r.inc && !safeRe(r.inc)) { $("#dictStat").innerHTML = `<div class="note warn">규칙을 읽을 수 없습니다. 괄호나 특수 문자를 확인하세요.</div>`; return; }
+  const mk = maskFor(r), base = maskFor({ inc: (DEFAULT_DICT[k] || r).inc, exc: (DEFAULT_DICT[k] || r).exc, out: [] });
+  const n = MEALS.filter(m => hit(m, mk)).length, n0 = MEALS.filter(m => hit(m, base)).length;
+  $("#dictStat").innerHTML = `<span class="stat"><b>${fmt(100 * n / MEALS.length, 1)}%</b><span>지금 규칙: 이 재료군이 나온 끼니</span></span>
+    <span class="stat"><b>${fmt(100 * n0 / MEALS.length, 1)}%</b><span>처음 규칙</span></span><span class="stat"><b>${(r.out || []).length}</b><span>뺀 요리 이름</span></span>`;
+  $("#dictChart").innerHTML = monthBars(monthRate(mk), { title: `${k} — 월별 등장률(%)`, measure: "rate" });
+  if (keepTable) return;
+  const cnt = new Map(); for (const m of MEALS) for (const i of m.d) if (mk[i] || (r.out || []).includes(DN[i])) cnt.set(i, (cnt.get(i) || 0) + 1);
+  const list = [...cnt.entries()].sort((a, b) => b[1] - a[1]).slice(0, 60);
+  $("#dictTable").innerHTML = `<tr><th>잘못 잡힘</th><th>요리 이름</th><th class="num">끼니</th></tr>` + list.map(([i, c]) => {
+    const nm = DN[i], out = (r.out || []).includes(nm);
+    return `<tr><td><input type="checkbox" data-out="${esc(nm)}" ${out ? "checked" : ""} aria-label="${esc(nm)} 빼기"></td><td class="dish" style="${out ? "text-decoration:line-through;color:#5f6c82" : ""}">${esc(nm)}</td><td class="num">${c}</td></tr>`; }).join("");
+}
+$("#dictSel").addEventListener("change", e => { state.dictSel = e.target.value; save(); r3(); });
+$("#dictApply").addEventListener("click", () => { const r = state.dict[state.dictSel]; r.inc = $("#dictInc").value.trim(); r.exc = $("#dictExc").value.trim(); save(); renderDict(); });
+$("#dictReset").addEventListener("click", () => { const k = state.dictSel; state.dict[k] = JSON.parse(JSON.stringify(DEFAULT_DICT[k] || { inc: "", exc: "", out: [] })); save(); r3(); });
+$("#dictAdd").addEventListener("click", () => { const n = $("#dictNew").value.trim(); if (!n || state.dict[n]) return; state.dict[n] = { inc: "", exc: "", out: [] }; state.dictSel = n; $("#dictNew").value = ""; save(); r3(); });
+$("#dictTable").addEventListener("change", e => { const nm = e.target.dataset.out; if (nm == null) return; const r = state.dict[state.dictSel]; r.out = r.out || [];
+  e.target.checked ? r.out.push(nm) : r.out.splice(r.out.indexOf(nm), 1); save();
+  const td = e.target.closest("tr").querySelector("td.dish"); td.style.textDecoration = e.target.checked ? "line-through" : ""; td.style.color = e.target.checked ? "#5f6c82" : "";
+  renderDict(true); });
+
+/* ============================== 그래프 그리기 ============================== */
+function fullMonthly(k) { // 처음 규칙 그대로인 재료군만 전수 집계표와 비교할 수 있다
+  const r = state.dict[k], d = DEFAULT_DICT[k]; if (!r || !d) return null;
+  if (r.inc !== d.inc || r.exc !== d.exc || (r.out || []).length) return { modified: true };
+  const row = D.full.groups.find(x => x[0] === k) || D.full.season.find(x => x[0] === k);
+  return row ? { vals: row.slice(2).map(Number) } : null;
+}
+function monthRate(mk) {
+  const n = {}, k = {}; for (const m of MEALS) { n[m.m] = (n[m.m] || 0) + 1; if (hit(m, mk)) k[m.m] = (k[m.m] || 0) + 1; }
+  return MONTHS.map(m => ({ lab: m + "월", n: n[m] || 0, k: k[m] || 0, faint: FEW(m) }));
+}
+function monthBars(rows, o) {
+  const W = 760, H = 300, L = 52, R = 744, T = 40, B = 250, bw = (R - L) / rows.length;
+  const val = r => o.measure === "count" ? r.k : (r.n ? 100 * r.k / r.n : 0);
+  const ci = rows.map(r => wilson(r.k, r.n).map(v => 100 * v));
+  const full = o.measure !== "count" && o.full ? o.full : null;
+  const ymax = Math.max(1, ...rows.map((r, i) => o.measure === "count" ? r.k : (r.faint ? 100 * r.k / Math.max(1, r.n) : ci[i][1])), ...(full ? full : [])) * 1.12;
+  const y = v => B - Math.min(v, ymax) / ymax * (B - T), best = rows.reduce((b, r, i) => (!r.faint && val(r) > val(rows[b]) ? i : b), rows.findIndex(r => !r.faint));
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.title)}"><text x="${L}" y="20" font-size="14" font-weight="600" fill="#e6edf6">${esc(o.title)}</text>`;
+  s += `<line x1="${L}" x2="${R}" y1="${B}" y2="${B}" stroke="#26374f"/>`;
+  rows.forEach((r, i) => { const v = val(r), x = L + i * bw + 6, w = bw - 12, hi = i === best;
+    s += `<rect x="${x}" y="${y(v)}" width="${w}" height="${B - y(v)}" fill="${hi ? "#f2c14e" : "#45d3d8"}" fill-opacity="${r.faint ? .3 : hi ? 1 : .55}"><title>${r.lab}: ${fmt(r.n)}끼 중 ${fmt(r.k)}끼 (${fmt(r.n ? 100 * r.k / r.n : 0, 1)}%)</title></rect>`;
+    if (o.measure !== "count" && r.n) s += `<line x1="${x + w / 2}" x2="${x + w / 2}" y1="${y(ci[i][0])}" y2="${Math.max(T - 8, y(ci[i][1]))}" stroke="#8a99ad"/>`;
+    s += `<text x="${x + w / 2}" y="${B + 16}" font-size="11.5" fill="#8a99ad" text-anchor="middle">${r.lab}</text>`;
+    if (hi) s += `<text x="${x + w / 2}" y="${y(v) - 6}" font-size="12" font-weight="600" fill="#f2c14e" text-anchor="middle">${o.measure === "count" ? fmt(v) : fmt(v, 1) + "%"}</text>`;
+    if (full) { const fy = y(full[i]), cx = x + w / 2; s += `<path d="M${cx} ${fy - 6}L${cx + 6} ${fy}L${cx} ${fy + 6}L${cx - 6} ${fy}Z" fill="#a98bff" stroke="#070b14" stroke-width="1.5"><title>${r.lab} 전수: ${fmt(full[i], 1)}%</title></path>`; } });
+  if (full) s += `<path d="M${R - 168} 14L${R - 162} 20L${R - 168} 26L${R - 174} 20Z" fill="#a98bff"/><text x="${R - 156}" y="24" font-size="12" fill="#a98bff">전수(24만 끼) 값</text>`;
+  s += `<text x="${L}" y="${H - 6}" font-size="11" fill="#5f6c82">${o.measure === "count" ? "끼니 수(표본)" : "그 달 끼니 중 비율(%) · 회색 선은 95% 신뢰구간"} · 연한 막대는 방학 달(끼니 적음) · 노란 막대는 학기 중 최고</text>`;
+  return s + "</svg>";
+}
+function hbars(rows, o) { // rows: {lab, k, n}
+  const W = 760, rowH = 19, T = 34, L = 100, R = 610, H = T + rows.length * rowH + 30;
+  const ci = rows.map(r => wilson(r.k, r.n).map(v => 100 * v)), xmax = Math.max(1, ...ci.map(c => c[1])) * 1.02, x = v => L + Math.min(v, xmax) / xmax * (R - L);
+  const tot = rows.reduce((s, r) => s + r.k, 0) / Math.max(1, rows.reduce((s, r) => s + r.n, 0)) * 100;
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.title)}"><text x="10" y="20" font-size="14" font-weight="600" fill="#e6edf6">${esc(o.title)}</text>`;
+  s += `<line x1="${x(tot)}" x2="${x(tot)}" y1="${T - 4}" y2="${H - 26}" stroke="#f2c14e" stroke-dasharray="4 3"/><text x="${x(tot) + 4}" y="${H - 12}" font-size="11" fill="#f2c14e">경기도 전체(표본) ${fmt(tot, 1)}%</text>`;
+  rows.forEach((r, i) => { const yy = T + i * rowH, v = r.n ? 100 * r.k / r.n : 0;
+    s += `<text x="${L - 6}" y="${yy + 12}" font-size="11.5" fill="${r.hl ? "#f2c14e" : "#c9d3df"}" text-anchor="end">${esc(r.lab)}</text>
+      <rect x="${L}" y="${yy + 3}" width="${Math.max(0, x(v) - L)}" height="${rowH - 7}" fill="${r.hl ? "#f2c14e" : "#45d3d8"}" fill-opacity="${r.hl ? .9 : .55}"><title>${esc(r.lab)}: ${fmt(r.n)}끼 중 ${fmt(r.k)}끼 (${fmt(v, 1)}%)</title></rect>
+      <line x1="${x(ci[i][0])}" x2="${x(ci[i][1])}" y1="${yy + 9}" y2="${yy + 9}" stroke="#8a99ad"/>
+      <text x="${R + 10}" y="${yy + 12}" font-size="11" fill="#8a99ad">${fmt(v, 1)}% · n=${fmt(r.n)}</text>`; });
+  return s + "</svg>";
+}
+function hist(vals, o) {
+  const W = 760, H = 300, L = 52, R = 744, T = 40, B = 250, lo = o.lo, hi = o.hi, nb = 30, bw = (hi - lo) / nb, cnt = new Array(nb).fill(0);
+  vals.forEach(v => { const b = Math.floor((v - lo) / bw); if (b >= 0 && b < nb) cnt[b]++; });
+  const ymax = Math.max(1, ...cnt) * 1.1, x = v => L + (v - lo) / (hi - lo) * (R - L), y = c => B - c / ymax * (B - T);
+  const md = median(vals), mn = mean(vals);
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.title)}"><text x="${L}" y="20" font-size="14" font-weight="600" fill="#e6edf6">${esc(o.title)}</text>`;
+  cnt.forEach((c, i) => { s += `<rect x="${x(lo + i * bw) + 1}" y="${y(c)}" width="${(R - L) / nb - 2}" height="${B - y(c)}" fill="#45d3d8" fill-opacity=".55"><title>${fmt(lo + i * bw)}~${fmt(lo + (i + 1) * bw)}: ${fmt(c)}끼</title></rect>`; });
+  s += `<line x1="${L}" x2="${R}" y1="${B}" y2="${B}" stroke="#26374f"/>`;
+  for (let t = 0; t <= 5; t++) { const v = lo + (hi - lo) * t / 5; s += `<text x="${x(v)}" y="${B + 16}" font-size="11" fill="#8a99ad" text-anchor="middle">${fmt(v)}</text>`; }
+  const lines = [[md, "#f2c14e", `중앙값 ${fmt(md)}`], [mn, "#a98bff", `평균 ${fmt(mn)}`]]; if (o.ref) lines.push([o.ref, "#ff6b7d", `${o.refLbl || "기준선"} ${fmt(o.ref)}`]);
+  lines.forEach(([v, c, lab], k) => { if (v >= lo && v <= hi) s += `<line x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${B}" stroke="${c}" stroke-dasharray="4 3"/>`;
+    s += `<line x1="${R - 230}" x2="${R - 212}" y1="${T + 4 + k * 17}" y2="${T + 4 + k * 17}" stroke="${c}" stroke-dasharray="4 3" stroke-width="2"/><text x="${R - 206}" y="${T + 8 + k * 17}" font-size="11.5" fill="${c}">${esc(lab)}</text>`; });
+  s += `<text x="${L}" y="${H - 6}" font-size="11" fill="#5f6c82">${esc(o.unit)} · 표본 ${fmt(vals.length)}끼(특이값 처리 후) · 범위 밖 값은 그리지 않음</text>`;
+  return s + "</svg>";
+}
+function strip(o) { // 학교 503곳의 점
+  const W = 760, H = 180, L = 30, R = 730, mid = 100, vals = SCH.map((s, i) => ({ v: s[o.idx], i })).filter(d => d.v != null);
+  const vs = vals.map(d => d.v).sort((a, b) => a - b), lo = vs[0], hi = vs[vs.length - 1], x = v => L + (v - lo) / (hi - lo || 1) * (R - L);
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.title)}"><text x="${L}" y="20" font-size="14" font-weight="600" fill="#e6edf6">${esc(o.title)}</text>`;
+  vals.forEach((d, k) => { const jit = ((d.i * 37) % 41) - 20; s += `<circle cx="${x(d.v)}" cy="${mid + jit}" r="2.6" fill="#45d3d8" fill-opacity=".45"><title>${esc(SCH[d.i][0])}: ${d.v}</title></circle>`; });
+  const md = median(vs); s += `<line x1="${x(md)}" x2="${x(md)}" y1="74" y2="128" stroke="#8a99ad" stroke-dasharray="4 3"/><text x="${x(md)}" y="146" font-size="11" fill="#8a99ad" text-anchor="middle">경기도 중앙값 ${fmt(md, 1)}</text>`;
+  if (o.sel != null && SCH[o.sel][o.idx] != null) { const v = SCH[o.sel][o.idx];
+    s += `<line x1="${x(v)}" x2="${x(v)}" y1="56" y2="${mid}" stroke="#f2c14e"/><circle cx="${x(v)}" cy="${mid}" r="7" fill="#f2c14e" stroke="#070b14" stroke-width="2"/><text x="${Math.min(Math.max(x(v), L + 90), R - 90)}" y="50" font-size="12.5" font-weight="600" fill="#f2c14e" text-anchor="middle">${esc(SCH[o.sel][0])} ${v}</text>`; }
+  s += `<text x="${L}" y="${H - 8}" font-size="11" fill="#8a99ad">${fmt(lo, 1)}</text><text x="${R}" y="${H - 8}" font-size="11" fill="#8a99ad" text-anchor="end">${fmt(hi, 1)}</text>`;
+  return s + "</svg>";
+}
+
+/* ============================== 4. 차트 빌더 ============================== */
+let lastChart = null;
+function r4() {
+  const c = state.chart, keys = Object.keys(state.dict);
+  if (!keys.includes(c.target)) c.target = keys[0];
+  $("#cbView").value = c.view; $("#cbTarget").innerHTML = keys.map(k => `<option ${k === c.target ? "selected" : ""}>${esc(k)}</option>`).join("");
+  $("#cbWord").value = c.word; $("#cbNutr").value = c.nutr; $("#cbRef").value = c.ref; $("#cbRefLbl").value = c.refLbl;
+  $("#cbSchool").value = c.school; $("#cbMetric").value = c.metric;
+  $("#cbMeasure").innerHTML = [["rate", "비율(%)"], ["count", "횟수"]].map(([v, l]) => `<span class="chip ${c.measure === v ? "on" : ""}" data-ms="${v}">${l}</span>`).join("");
+  if (!$("#schoolList").children.length) $("#schoolList").innerHTML = SCH.map(s => `<option value="${esc(s[0])}">${esc(SIG[s[1]])} · ${esc(D.types[s[2]])}</option>`).join("");
+  const months = [...new Set(D.full.featured.slice(1).map(r => r[0]))];
+  $("#cbMonth").innerHTML = months.map(m => `<option ${m === c.month ? "selected" : ""}>${m}</option>`).join("");
+  const v = c.view, show = (id, on) => $(id).classList.toggle("hidden", !on);
+  const tv = ["month", "sigun", "year", "live"].includes(v);
+  show("#cbTargetBox", tv); $("#cbTargetBox").style.opacity = c.word ? .45 : 1;
+  $("#cbWordBox label").textContent = c.word ? "낱말(지금 이것을 씀 · 비우면 재료군)" : "또는 낱말(| 로 여러 개)"; show("#cbWordBox", tv); show("#cbMeasureBox", v === "month");
+  show("#cbNutrBox", v === "nutr"); show("#cbRefBox", v === "nutr"); show("#cbSchoolBox", ["school", "sigun"].includes(v)); show("#cbMetricBox", v === "school"); show("#cbMonthBox", v === "featured");
+  show("#cbLiveBox", v === "live"); show("#cbRuleBox", v === "rule");
+  if (v === "live") $("#cbLive").value = state.live.school || c.school || "";
+  if (v === "rule") { const r = state.rule;
+    $("#ruleFoods").innerHTML = RULE_FOODS.filter(k => state.dict[k]).map(k => `<span class="chip ${r.foods.includes(k) ? "on" : ""}" data-rf="${esc(k)}">${esc(k)}</span>`).join("");
+    $("#ruleKmin").value = r.kmin; $("#ruleKmax").value = r.kmax; $("#ruleCa").value = r.ca; $("#ruleProt").value = r.prot; }
+  drawChart(); renderTraps();
+}
+function schoolIdx(name) { const i = SCH.findIndex(s => s[0] === name); return i < 0 ? null : i; }
+function drawChart() {
+  const c = state.chart, out = $("#cbOut"); let html = "", sum = "";
+  if (c.view === "rule" || c.view === "live" || c.view === "peer") {
+    ({ html, sum } = ({ rule: ruleView, live: liveView, peer: peerView })[c.view]());
+  } else if (["month", "sigun", "year"].includes(c.view)) {
+    const { label, rule } = currentRule(); if (!safeRe(rule.inc)) { out.innerHTML = `<div class="note warn">대상 규칙이 비어 있거나 읽을 수 없습니다.</div>`; return; }
+    const mk = maskFor(rule);
+    if (c.view === "month") {
+      const rows = monthRate(mk), ok = rows.filter(r => !r.faint), rt = r => r.n ? 100 * r.k / r.n : 0;
+      const mx = ok.reduce((a, b) => rt(b) > rt(a) ? b : a), mn = ok.reduce((a, b) => rt(b) < rt(a) ? b : a);
+      const fm = c.word ? null : fullMonthly(c.target);
+      html = monthBars(rows, { title: `${label} — 월별 ${c.measure === "count" ? "등장 끼니 수" : "등장률"}`, measure: c.measure, full: fm && fm.vals });
+      if (fm && fm.vals && c.measure !== "count") {
+        const inside = rows.filter((r, i) => { const [a, b] = wilson(r.k, r.n); return fm.vals[i] >= 100 * a && fm.vals[i] <= 100 * b; }).length;
+        const diffs = rows.map((r, i) => Math.abs(rt(r) - fm.vals[i])), dmax = Math.max(...diffs), dm = rows[diffs.indexOf(dmax)].lab;
+        html += `<div class="note"><b>표본과 전수 견주기</b> — 보라색 마름모는 24만 끼 전체(전수)의 값입니다. 12개 달 중 <b>${inside}개 달</b>에서 전수 값이 표본의 95% 신뢰구간(회색 선) 안에 있습니다.
+          표본과 전수의 차이는 가장 큰 달(${dm})이 ${fmt(dmax, 1)}%p입니다. 방학 달은 표본 끼니가 적어 구간이 넓습니다.</div>`;
+      } else if (fm && fm.modified) html += `<p class="muted small">재료 분류 사전에서 규칙을 바꿔서 전수 값(처음 규칙 기준)과는 직접 비교할 수 없습니다.</p>`;
+      else if (c.word) html += `<p class="muted small">낱말 검색은 10% 표본에서만 계산합니다. 전수 값과 비교하려면 재료군(처음 규칙)을 고르세요.</p>`;
+      sum = `[월별 등장률] ${label} · 표본 ${fmt(MEALS.length)}끼 · 학기 중 최고 ${mx.lab} ${fmt(rt(mx), 1)}%(${fmt(mx.k)}/${fmt(mx.n)}끼), 최저 ${mn.lab} ${fmt(rt(mn), 1)}%`;
+    } else if (c.view === "sigun") {
+      const agg = SIG.map(() => ({ k: 0, n: 0 })); for (const m of MEALS) { const g = agg[SCH[m.si][1]]; g.n++; if (hit(m, mk)) g.k++; }
+      const sel = schoolIdx(c.school), selSig = sel == null ? -1 : SCH[sel][1];
+      const rows = SIG.map((nm, i) => ({ lab: nm, ...agg[i], hl: i === selSig })).sort((a, b) => b.k / b.n - a.k / a.n);
+      html = hbars(rows, { title: `${label} — 시군별 등장률(%)` }) + `<p class="muted small">막대 위 회색 선은 95% 신뢰구간입니다. 끼니 수(n)가 적은 시군은 구간이 넓어 차이를 단정하기 어렵습니다.</p>`;
+      sum = `[시군 비교] ${label} · 표본 · 최고 ${rows[0].lab} ${fmt(100 * rows[0].k / rows[0].n, 1)}%(n=${rows[0].n}), 최저 ${rows.at(-1).lab} ${fmt(100 * rows.at(-1).k / rows.at(-1).n, 1)}%(n=${rows.at(-1).n})`;
+    } else {
+      const ys = [2024, 2025, 2026], agg = ys.map(() => ({ k: 0, n: 0 }));
+      for (const m of MEALS) if (m.m >= 3 && m.m <= 10) { const j = ys.indexOf(m.sy); if (j >= 0) { agg[j].n++; if (hit(m, mk)) agg[j].k++; } }
+      const rows = ys.map((y, j) => ({ lab: y + "학년도", ...agg[j] }));
+      html = hbars(rows, { title: `${label} — 학년도별 등장률(같은 3~10월)` }) + `<p class="muted small">2026학년도는 11월 13일까지만 있어서 3~10월끼리 비교합니다.</p>`;
+      sum = `[학년도 추이] ${label} · 3~10월 · ` + rows.map(r => `${r.lab} ${fmt(100 * r.k / r.n, 2)}%(n=${fmt(r.n)})`).join(", ");
+    }
+  } else if (c.view === "nutr") {
+    const isK = c.nutr === "kcal", vals = MEALS.map(m => isK ? m.kcal : m.ca).filter(v => v != null);
+    const o = isK ? { lo: 300, hi: 1700, unit: "한 끼 열량(kcal)" } : { lo: 0, hi: 900, unit: "한 끼 칼슘(mg)" };
+    html = hist(vals, { ...o, title: `${o.unit} 분포`, ref: c.ref ? +c.ref : null, refLbl: c.refLbl });
+    const above = c.ref ? vals.filter(v => v >= +c.ref).length : null;
+    sum = `[영양소 분포] ${o.unit} · 표본 ${fmt(vals.length)}끼 · 중앙값 ${fmt(median(vals))}, 평균 ${fmt(mean(vals))}` + (c.ref ? ` · ${c.refLbl || "기준선"} ${c.ref} 이상인 끼니 ${fmt(100 * above / vals.length, 1)}%` : "");
+    if (c.ref) html += `<p class="small">기준선 ${esc(c.refLbl || "")} ${fmt(+c.ref)} 이상인 끼니: <b>${fmt(100 * above / vals.length, 1)}%</b>. 기준선의 출처(문서와 표)를 주장 카드의 근거에 꼭 적으세요.</p>`;
+    if (!isK) html += `<p class="muted small">2024년 3~4월 칼슘은 기록 오류라 빠져 있습니다(정제 미션 D).</p>`;
+  } else if (c.view === "school") {
+    const idx = +c.metric, sel = schoolIdx(c.school), lab = $("#cbMetric").selectedOptions[0].textContent;
+    html = strip({ idx, sel, title: `경기도 고등학교 503곳의 ${lab}` });
+    if (sel != null && SCH[sel][idx] != null) { const v = SCH[sel][idx], vs = SCH.map(s => s[idx]).filter(x => x != null), pct = 100 * vs.filter(x => x < v).length / vs.length;
+      html += `<p><b>${esc(SCH[sel][0])}</b>(${esc(SIG[SCH[sel][1]])}, ${esc(D.types[SCH[sel][2]])}, ${fmt(SCH[sel][3])}끼)의 값은 <b>${v}</b>로, 503곳 중 아래에서 <b>${fmt(pct, 0)}%</b> 위치입니다.</p>`;
+      sum = `[우리 학교 대 경기도] ${SCH[sel][0]} · ${lab} ${v} · 경기도 중앙값 ${fmt(median(vs), 1)} · 아래에서 ${fmt(pct, 0)}% 위치(전수, 학교 ${vs.length}곳)`;
+    } else { html += `<p class="muted">위에서 우리 학교 이름을 입력하면 노란 점으로 표시됩니다.</p>`; sum = `[우리 학교 대 경기도] ${lab} · 학교 ${SCH.length}곳 분포`; }
+  } else {
+    const rows = D.full.featured.slice(1).filter(r => r[0] === c.month);
+    html = `<h3>${esc(c.month)}의 특징 메뉴(전수) — 그 달 비중 ÷ 연중 비중</h3><div class="tablewrap"><table><tr><th>메뉴</th><th class="num">그 달 등장 끼니</th><th class="num">배율</th></tr>` +
+      rows.map(r => `<tr><td class="dish">${esc(r[1])}</td><td class="num">${fmt(+r[2])}</td><td class="num">${fmt(+r[4], 1)}배</td></tr>`).join("") + `</table></div>` +
+      `<p class="muted small">배율이 높을수록 그 달에 몰려 나오는 메뉴입니다. 단순 빈도는 김치와 밥이 차지해서 달의 특징이 보이지 않습니다. ${FEW(parseInt(c.month)) ? "방학 달이라 끼니가 적어 결과를 믿기 어렵습니다." : ""}</p>`;
+    sum = `[특징 메뉴] ${c.month}(전수) · ` + rows.slice(0, 4).map(r => `${r[1]} ${fmt(+r[4], 1)}배`).join(", ");
+  }
+  out.innerHTML = html; lastChart = sum;
+}
+const cbSet = (k, v) => { state.chart[k] = v; save(); r4(); };
+$("#cbView").addEventListener("change", e => cbSet("view", e.target.value));
+$("#cbTarget").addEventListener("change", e => { state.chart.word = ""; cbSet("target", e.target.value); });
+$("#cbWord").addEventListener("change", e => cbSet("word", e.target.value.trim()));
+$("#cbMeasure").addEventListener("click", e => { const c = e.target.closest("[data-ms]"); if (c) cbSet("measure", c.dataset.ms); });
+$("#cbNutr").addEventListener("change", e => cbSet("nutr", e.target.value));
+$("#cbRef").addEventListener("change", e => cbSet("ref", e.target.value));
+$("#cbRefLbl").addEventListener("change", e => cbSet("refLbl", e.target.value));
+$("#cbSchool").addEventListener("change", e => cbSet("school", e.target.value.trim()));
+$("#cbMetric").addEventListener("change", e => cbSet("metric", e.target.value));
+$("#cbMonth").addEventListener("change", e => cbSet("month", e.target.value));
+$("#ruleFoods").addEventListener("click", e => { const c = e.target.closest("[data-rf]"); if (!c) return; const a = state.rule.foods, k = c.dataset.rf;
+  a.includes(k) ? a.splice(a.indexOf(k), 1) : a.push(k); save(); r4(); });
+[["#ruleKmin", "kmin"], ["#ruleKmax", "kmax"], ["#ruleCa", "ca"], ["#ruleProt", "prot"]].forEach(([id, k]) => $(id).addEventListener("change", e => { state.rule[k] = e.target.value.trim(); save(); r4(); }));
+$("#cbRuleBox").addEventListener("click", e => { const b = e.target.closest("[data-preset]"); if (!b) return;
+  Object.assign(state.rule, b.dataset.preset === "x" ? { kmin: "", kmax: "", ca: "", prot: "" } : PRESET[b.dataset.preset]); save(); r4(); });
+$("#cbLiveGo").addEventListener("click", () => { const n = $("#cbLive").value.trim(); if (!n || LIVE.busy) return; state.live.school = n; save(); loadLive(n); });
+$("#cbLive").addEventListener("keydown", e => { if (e.key === "Enter") $("#cbLiveGo").click(); });
+$("#traps").addEventListener("click", e => { const t = e.target.closest("[data-trap]"); if (!t) return; state.trap[+t.dataset.trap] = +t.dataset.k; save(); renderTraps(); });
+
+/* ============================== F-15 추천 규칙 실험 ============================== */
+const RULE_FOODS = ["과일", "생선·해산물", "우유·유제품", "콩·두부", "달걀", "고기", "김치"];
+// 15~18세 권장섭취량(한국인 영양소 섭취기준 2020: 칼슘 여 800·남 900 mg, 단백질 여 55·남 65 g)을 3으로 나눈 계산값. 학교급식 공식 기준이 아니다.
+const PRESET = { f: { ca: "267", prot: "18.3" }, m: { ca: "300", prot: "21.7" } };
+const NUMLAB = { kmin: "열량 최소", kmax: "열량 최대", ca: "칼슘 이상", prot: "단백질 이상" }, NUMUNIT = { kmin: "kcal", kmax: "kcal", ca: "mg", prot: "g" };
+function ruleConds(r, scale) {
+  const sc = k => (scale && scale[k]) || 1;
+  return [["kmin", "kcal", (v, t) => v >= t], ["kmax", "kcal", (v, t) => v <= t], ["ca", "ca", (v, t) => v >= t], ["prot", "p", (v, t) => v >= t]]
+    .filter(([k]) => r[k] !== "" && r[k] != null && !isNaN(+r[k])).map(([k, f, op]) => ({ k, f, op, t: +r[k] * sc(k) }));
+}
+function ruleEval(r, scale) {
+  const foods = r.foods.filter(k => state.dict[k] && safeRe(state.dict[k].inc)).map(k => maskFor(state.dict[k])), num = ruleConds(r, scale);
+  const byM = {}, out = { n: 0, k: 0, na: 0, byM, num };
+  for (const m of MEALS) {
+    if (num.some(c => m[c.f] == null)) { out.na++; continue; }
+    const pass = foods.every(mk => hit(m, mk)) && num.every(c => c.op(m[c.f], c.t)), b = byM[m.m] || (byM[m.m] = { n: 0, k: 0 });
+    b.n++; out.n++; if (pass) { b.k++; out.k++; }
+  }
+  return out;
+}
+function ruleView() {
+  const r = state.rule, res = ruleEval(r);
+  const desc = [...r.foods.filter(k => state.dict[k]).map(k => `${k} 포함`), ...res.num.map(c => `${NUMLAB[c.k]} ${fmt(c.t, c.k === "prot" ? 1 : 0)} ${NUMUNIT[c.k]}`)];
+  if (!desc.length) return { html: `<div class="note">조건을 하나 이상 고르세요.</div>`, sum: "" };
+  const rows = MONTHS.map(m => ({ lab: m + "월", n: (res.byM[m] || {}).n || 0, k: (res.byM[m] || {}).k || 0, faint: FEW(m) }));
+  const rate = res.n ? 100 * res.k / res.n : 0, [a, b] = wilson(res.k, res.n);
+  let html = monthBars(rows, { title: "규칙을 통과한 끼니 — 월별 비율", measure: "rate" });
+  html += `<p>규칙: <b>${desc.map(esc).join(" 그리고 ")}</b><br>판정할 수 있는 ${fmt(res.n)}끼 중 <b>${fmt(res.k)}끼(${fmt(rate, 1)}%, 95% 신뢰구간 ${fmt(100 * a, 1)}~${fmt(100 * b, 1)}%)</b>가 통과합니다.${res.na ? ` 영양 값이 비어 있는 ${fmt(res.na)}끼는 판정에서 뺐습니다(0으로 치지 않음).` : ""}</p>`;
+  const sens = res.num.map(c => { const lo = ruleEval(r, { [c.k]: 0.9 }), hi = ruleEval(r, { [c.k]: 1.1 }); return { c, lo: 100 * lo.k / Math.max(1, lo.n), hi: 100 * hi.k / Math.max(1, hi.n) }; });
+  if (sens.length) html += `<h3>기준을 10% 바꾸면?</h3><div class="tablewrap"><table><tr><th>조건(기준 ×0.9 / 지금 / ×1.1)</th><th class="num">×0.9</th><th class="num">지금</th><th class="num">×1.1</th></tr>` +
+    sens.map(x => `<tr><td>${esc(NUMLAB[x.c.k])} ${fmt(x.c.t * .9, 1)} / ${fmt(x.c.t, 1)} / ${fmt(x.c.t * 1.1, 1)} ${NUMUNIT[x.c.k]}</td><td class="num">${fmt(x.lo, 1)}%</td><td class="num">${fmt(rate, 1)}%</td><td class="num">${fmt(x.hi, 1)}%</td></tr>`).join("") + `</table></div>`;
+  html += `<div class="note">AI 식단 추천도 이런 규칙이나 데이터에서 배운 가중치로 점수를 매깁니다. 기준 하나를 10%만 바꿔도 통과 비율이 크게 흔들린다면, 추천을 믿기 전에 <b>기준을 누가, 어떤 근거로 정했는지</b> 물어야 합니다.
+    '하루 권장섭취량의 1/3' 단추는 한국인 영양소 섭취기준(2020)의 15~18세 권장섭취량(칼슘 여 800·남 900 mg, 단백질 여 55·남 65 g)을 3으로 나눈 <b>계산값</b>을 넣습니다. 학교급식의 공식 영양 기준이 아닙니다.</div>`;
+  const sum = `[규칙 실험] ${desc.join(" 그리고 ")} · 표본 ${fmt(res.n)}끼 중 통과 ${fmt(rate, 1)}%(95% CI ${fmt(100 * a, 1)}~${fmt(100 * b, 1)}%)` +
+    sens.map(x => ` · ${NUMLAB[x.c.k]} 기준 ±10%면 ${fmt(Math.min(x.lo, x.hi), 1)}~${fmt(Math.max(x.lo, x.hi), 1)}%`).join("");
+  return { html, sum };
+}
+
+/* ============================== F-17 나이스 실시간(최근 4주) ============================== */
+// 인증키 없이 부르면 한 번에 5행만 오고 pIndex가 무시된다 → 월~금 한 주씩 4번 + 학교 찾기 1번
+const LIVE = { data: null, school: "", err: "", busy: false }, CLEAN_IDS = CLEAN_RULES.map(r => r.id);
+const ymdStr = d => d.getFullYear() + String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0");
+async function neis(svc, params) {
+  const u = "https://open.neis.go.kr/hub/" + svc + "?" + new URLSearchParams(Object.assign({ Type: "json", pIndex: "1", pSize: "5" }, params));
+  const r = await fetch(u); if (!r.ok) throw new Error("HTTP " + r.status);
+  const j = await r.json(), blk = j[svc];
+  if (!blk) { if (j.RESULT && j.RESULT.CODE === "INFO-200") return []; throw new Error((j.RESULT && j.RESULT.MESSAGE) || "응답을 읽지 못했습니다"); }
+  return (blk[1] && blk[1].row) || [];
+}
+async function loadLive(name) {
+  LIVE.busy = true; LIVE.err = ""; LIVE.school = name; if (state.chart.view === "live") drawChart();
+  try {
+    const sc = await neis("schoolInfo", { ATPT_OFCDC_SC_CODE: "J10", SCHUL_NM: name });
+    const hs = sc.find(x => x.SCHUL_NM === name) || sc[0];
+    if (!hs) throw new Error(`'${name}'을(를) 경기도교육청 학교 목록에서 찾지 못했습니다. 정식 이름(예: ○○고등학교)으로 넣어 보세요`);
+    const today = new Date(), mon = new Date(today); mon.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+    const meals = [], todayN = +ymdStr(today);
+    for (let w = 0; w < 4; w++) {
+      const a = new Date(mon); a.setDate(mon.getDate() - 7 * w); const b = new Date(a); b.setDate(a.getDate() + 4);
+      const rows = await neis("mealServiceDietInfo", { ATPT_OFCDC_SC_CODE: "J10", SD_SCHUL_CODE: hs.SD_SCHUL_CODE, MMEAL_SC_CODE: "2", MLSV_FROM_YMD: ymdStr(a), MLSV_TO_YMD: ymdStr(b) });
+      for (const r of rows) if (+r.MLSV_YMD <= todayN) meals.push({ ymd: +r.MLSV_YMD,
+        dishes: String(r.DDISH_NM || "").split(/<br\s*\/?>/).map(x => applyClean(x.trim(), CLEAN_IDS)).filter(Boolean),
+        kcal: parseFloat(r.CAL_INFO) || null, ca: (x => x ? +x[1] : null)(/칼슘\(mg\)\s*:\s*([\d.]+)/.exec(r.NTR_INFO || "")) });
+    }
+    meals.sort((x, y) => y.ymd - x.ymd);
+    LIVE.data = { name: hs.SCHUL_NM, meals, at: new Date().toLocaleString("ko-KR") };
+  } catch (e) { LIVE.err = (e && e.message) || String(e); LIVE.data = null; }
+  LIVE.busy = false; if (state.chart.view === "live") drawChart();
+}
+function nameTester(rule) { const inc = safeRe(rule.inc), exc = safeRe(rule.exc), out = new Set(rule.out || []); return n => !!inc && inc.test(n) && !(exc && exc.test(n)) && !out.has(n); }
+function liveView() {
+  if (LIVE.busy) return { html: `<p class="muted">나이스에서 '${esc(LIVE.school)}'의 최근 4주 점심을 불러오는 중입니다… (학교 찾기 1번 + 주마다 1번씩 4번 요청)</p>`, sum: "" };
+  if (LIVE.err) return { html: `<div class="note warn"><b>불러오지 못했습니다</b> — ${esc(LIVE.err)}. 인터넷 연결이나 학교망의 차단도 확인하세요. 나머지 기능은 그대로 쓸 수 있습니다.</div>`, sum: "" };
+  const L = LIVE.data;
+  if (!L) return { html: `<p class="muted">학교 이름을 넣고 '최근 4주 불러오기'를 누르면 나이스 교육정보 개방 포털에서 그 학교의 최근 점심을 바로 받아 옵니다.
+    이 도구의 표본(${esc(D.meta.period.split("~")[1].trim())}까지)보다 새로운 데이터라서, 표본으로 세운 주장을 <b>새 데이터로 검증</b>해 볼 수 있습니다. 학생 개인 정보는 오가지 않습니다.</p>`, sum: "" };
+  if (!L.meals.length) return { html: `<div class="note">${esc(L.name)}의 최근 4주 점심 기록이 나이스에 없습니다(방학이거나 아직 올라오지 않았을 수 있음).</div>`, sum: "" };
+  const { label, rule } = currentRule(), t = nameTester(rule), mk = maskFor(rule);
+  const n = L.meals.length, k = L.meals.filter(m => m.dishes.some(t)).length, [la, lb] = wilson(k, n);
+  const months = [...new Set(L.meals.map(m => Math.floor(m.ymd / 100) % 100))].sort((x, y) => x - y);
+  let sn = 0, sk = 0; for (const m of MEALS) if (months.includes(m.m)) { sn++; if (hit(m, mk)) sk++; }
+  const [a, b] = wilson(sk, sn), kc = L.meals.map(m => m.kcal).filter(v => v != null), si = schoolIdx(L.name), wd = "일월화수목금토";
+  let html = `<h3>${esc(L.name)} · 최근 점심 ${n}끼 (나이스 실시간, ${esc(L.at)} 조회)</h3>
+    <p>${esc(label)}이(가) 나온 끼니: <b>${k}/${n}끼(${fmt(100 * k / n, 1)}%, 95% 신뢰구간 ${fmt(100 * la, 1)}~${fmt(100 * lb, 1)}%)</b>.
+    같은 달(${months.map(m => m + "월").join("·")}) 경기도 표본은 ${fmt(sn)}끼 중 ${fmt(sn ? 100 * sk / sn : 0, 1)}%(95% 신뢰구간 ${fmt(100 * a, 1)}~${fmt(100 * b, 1)}%)입니다.</p>`;
+  if (kc.length) html += `<p>최근 열량 중앙값 <b>${fmt(median(kc))} kcal</b>${si != null && SCH[si][4] ? ` · 이 학교의 2024.3~2026.11 전수 중앙값 ${fmt(SCH[si][4])} kcal` : ""}.</p>`;
+  html += `<div class="tablewrap" style="max-height:380px;overflow:auto"><table><tr><th>날짜</th><th>메뉴(대상에 걸린 요리는 노란색)</th><th class="num">열량</th></tr>` + L.meals.map(m => {
+    const d = new Date(Math.floor(m.ymd / 10000), Math.floor(m.ymd / 100) % 100 - 1, m.ymd % 100), odd = m.kcal != null && (m.kcal < 349 || m.kcal > 2170);
+    return `<tr><td class="mono small">${String(m.ymd).replace(/(\d{4})(\d\d)(\d\d)/, "$1-$2-$3")} ${wd[d.getDay()]}</td><td class="dish">${m.dishes.map(x => t(x) ? `<b style="color:var(--amber)">${esc(x)}</b>` : esc(x)).join(" · ")}</td>
+      <td class="num" ${odd ? `style="color:var(--red)" title="정제 미션의 열량 기준(349~2,170 kcal) 밖"` : ""}>${m.kcal == null ? "—" : fmt(m.kcal)}</td></tr>`; }).join("") + `</table></div>`;
+  html += `<div class="note">20끼 안팎은 표본이 작아 신뢰구간이 넓습니다. 차이가 보여도 우연일 수 있으니, <b>새 데이터에서도 같은 방향이 나오는지</b>를 보세요. 이 값들은 특이값 처리 전 원본입니다(빨간 열량은 정제 미션 기준 밖).</div>`;
+  const sum = `[새 데이터 검증] ${L.name} 최근 점심 ${n}끼(나이스 실시간, ${L.at}) · ${label} ${k}/${n}끼(${fmt(100 * k / n, 1)}%, 95% CI ${fmt(100 * la, 1)}~${fmt(100 * lb, 1)}%) · 같은 달 경기도 표본 ${fmt(sn ? 100 * sk / sn : 0, 1)}%(n=${fmt(sn)})`;
+  return { html, sum };
+}
+
+/* ============================== F-05 또래 통계 ============================== */
+// 질병관리청 청소년건강행태조사 주요통계(kdca.go.kr/yhs, 2026-11-20 확인). 주 5일 이상 아침식사 결식률(%), 전국 중·고등학생, 성별. 2024는 보도자료(2024.11.22)와 교차 확인.
+const PEER = { years: [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
+  boys: [27.3, 30.1, 32.2, 34.6, 35.5, 37.0, 37.4, 39.7, 40.2, 41.9], girls: [29.3, 33.0, 35.1, 36.9, 39.2, 39.1, 40.7, 42.6, 44.7, 45.3] };
+function lineChart(o) {
+  const W = 760, H = 300, L = 52, R = 690, T = 40, B = 250, ymax = o.ymax, n = o.x.length, x = i => L + i * (R - L) / (n - 1), y = v => B - v / ymax * (B - T);
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.title)}"><text x="${L}" y="20" font-size="14" font-weight="600" fill="#e6edf6">${esc(o.title)}</text>`;
+  for (let v = 0; v <= ymax; v += 10) s += `<line x1="${L}" x2="${R}" y1="${y(v)}" y2="${y(v)}" stroke="#1d2b41"/><text x="${L - 8}" y="${y(v) + 4}" font-size="11" fill="#8a99ad" text-anchor="end">${v}</text>`;
+  o.x.forEach((lab, i) => { s += `<text x="${x(i)}" y="${B + 16}" font-size="11.5" fill="#8a99ad" text-anchor="middle">${lab}</text>`; });
+  o.series.forEach(se => { s += `<polyline fill="none" stroke="${se.c}" stroke-width="2.5" points="${se.v.map((v, i) => `${x(i)},${y(v)}`).join(" ")}"/>`;
+    se.v.forEach((v, i) => { s += `<circle cx="${x(i)}" cy="${y(v)}" r="3.5" fill="${se.c}"><title>${o.x[i]} ${se.name} ${v}%</title></circle>`; });
+    s += `<text x="${R + 8}" y="${y(se.v.at(-1)) + 4}" font-size="12" font-weight="600" fill="${se.c}">${se.name} ${se.v.at(-1)}</text>`; });
+  s += `<text x="${L}" y="${H - 6}" font-size="11" fill="#5f6c82">${esc(o.foot)}</text>`;
+  return s + "</svg>";
+}
+function peerView() {
+  const P = PEER, html = lineChart({ title: "주 5일 이상 아침을 거른 청소년 비율(%) — 전국 중·고등학생", x: P.years, ymax: 50,
+      series: [{ name: "남", v: P.boys, c: "#45d3d8" }, { name: "여", v: P.girls, c: "#f2c14e" }], foot: "세로축 0부터 · 출처: 질병관리청 청소년건강행태조사 주요통계" }) +
+    `<div class="note"><b>정의</b> — 최근 7일 동안 5일 이상 아침식사를 하지 않은 학생의 비율. 해마다 표본 학교 약 800곳의 중1~고3 약 6만 명이 응답하는 조사입니다.
+     같은 조사에서 2024년 주 3회 이상 패스트푸드를 먹은 비율은 남 31.2%, 여 26.5%였습니다(질병관리청·교육부 보도자료, 2024.11.22).</div>
+    <div class="note warn"><b>급식 데이터와 섞을 때 조심할 점</b> — 이 조사는 전국 중·고등학생의 <b>응답</b>이고, 급식 데이터는 경기도 고등학교가 <b>제공한</b> 식단입니다. 대상도 방법도 다릅니다.
+     "아침을 거르는 학생이 늘었으니 점심 한 끼가 더 중요해졌다"는 추론은 가능하지만, 급식 데이터만으로는 학생이 실제로 무엇을 먹었는지(잔반, 결식) 알 수 없습니다. 두 데이터의 연결을 주장 카드의 '추론'과 '한계'에 함께 적으세요.</div>`;
+  const sum = `[또래 통계] 청소년건강행태조사 주 5일 이상 아침식사 결식률(전국 중·고등학생): 남 ${P.boys[0]}%(${P.years[0]}) → ${P.boys.at(-1)}%(${P.years.at(-1)}), 여 ${P.girls[0]}% → ${P.girls.at(-1)}%`;
+  return { html, sum };
+}
+
+/* ============================== F-16 그래프 함정 찾기 ============================== */
+function miniBars(rows, o) { // rows: {lab, v, lo?, hi?, faint?}
+  const W = 380, H = 236, L = 40, R = 370, T = 40, B = 196, bw = (R - L) / rows.length, ymin = o.ymin || 0;
+  const raw = Math.max(...rows.map(r => o.ci ? (r.faint ? r.v : r.hi) : r.v)) * 1.15, nice = raw > 20 ? Math.ceil(raw / 10) * 10 : raw > 5 ? Math.ceil(raw / 2) * 2 : Math.ceil(raw * 2) / 2;
+  const ymax = o.ymax || nice, y = v => B - (Math.max(ymin, Math.min(v, ymax)) - ymin) / (ymax - ymin) * (B - T);
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.title)}"><text x="8" y="18" font-size="12.5" font-weight="600" fill="#e6edf6">${esc(o.title)}</text>`;
+  [ymin, (ymin + ymax) / 2, ymax].forEach(v => { s += `<line x1="${L}" x2="${R}" y1="${y(v)}" y2="${y(v)}" stroke="#1d2b41"/><text x="${L - 5}" y="${y(v) + 4}" font-size="10" fill="#8a99ad" text-anchor="end">${fmt(v, v % 1 ? 1 : 0)}</text>`; });
+  rows.forEach((r, i) => { const x0 = L + i * bw + bw * .15, w = bw * .7;
+    s += `<rect x="${x0}" y="${y(r.v)}" width="${w}" height="${B - y(r.v)}" fill="#45d3d8" fill-opacity="${o.ci && r.faint ? .3 : .7}"><title>${esc(r.lab)}: ${fmt(r.v, 1)}${r.n ? ` (n=${fmt(r.n)})` : ""}</title></rect>`;
+    if (o.ci && r.hi != null) s += `<line x1="${x0 + w / 2}" x2="${x0 + w / 2}" y1="${y(r.lo)}" y2="${Math.max(T - 6, y(r.hi))}" stroke="#c9d3df" stroke-width="1.4"/>`;
+    if (rows.length <= 6) s += `<text x="${x0 + w / 2}" y="${y(r.v) - 5}" font-size="11" fill="#f2c14e" text-anchor="middle">${fmt(r.v, 1)}</text>`;
+    s += `<text x="${x0 + w / 2}" y="${B + 14}" font-size="10" fill="#8a99ad" text-anchor="middle">${esc(r.lab)}</text>`; });
+  if (o.foot) s += `<text x="8" y="${H - 6}" font-size="10" fill="#5f6c82">${esc(o.foot)}</text>`;
+  return s + "</svg>";
+}
+function miniH(rows, o) {
+  const W = 380, rowH = 21, T = 32, L = 74, R = 300, H = T + rows.length * rowH + 8, xmax = Math.max(...rows.map(r => r.v)) * 1.05, x = v => L + v / xmax * (R - L);
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.title)}"><text x="8" y="18" font-size="12.5" font-weight="600" fill="#e6edf6">${esc(o.title)}</text>`;
+  rows.forEach((r, i) => { const yy = T + i * rowH;
+    s += `<text x="${L - 6}" y="${yy + 14}" font-size="11" fill="#c9d3df" text-anchor="end">${esc(r.lab)}</text><rect x="${L}" y="${yy + 4}" width="${x(r.v) - L}" height="${rowH - 8}" fill="#45d3d8" fill-opacity=".7"/>
+      <text x="${x(r.v) + 5}" y="${yy + 14}" font-size="10.5" fill="#8a99ad">${fmt(r.v, o.dec || 0)}${o.unit} · n=${fmt(r.n)}</text>`; });
+  return s + "</svg>";
+}
+function miniLine(rows, o) { // rows: {lab, v, n}; o.tick(r, i) → 눈금 글자 또는 ""
+  const W = 380, H = 236, L = 40, R = 366, T = 40, B = 196, n = rows.length, x = i => L + (n === 1 ? 0 : i * (R - L) / (n - 1));
+  const raw = Math.max(...rows.map(r => r.v)) * 1.15, ymax = raw > 20 ? Math.ceil(raw / 10) * 10 : raw > 5 ? Math.ceil(raw / 2) * 2 : Math.ceil(raw * 2) / 2, y = v => B - v / ymax * (B - T);
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.title)}"><text x="8" y="18" font-size="12.5" font-weight="600" fill="#e6edf6">${esc(o.title)}</text>`;
+  [0, ymax / 2, ymax].forEach(v => { s += `<line x1="${L}" x2="${R}" y1="${y(v)}" y2="${y(v)}" stroke="#1d2b41"/><text x="${L - 5}" y="${y(v) + 4}" font-size="10" fill="#8a99ad" text-anchor="end">${fmt(v, v % 1 ? 1 : 0)}</text>`; });
+  s += `<polyline fill="none" stroke="#45d3d8" stroke-width="2" points="${rows.map((r, i) => `${x(i)},${y(r.v)}`).join(" ")}"/>`;
+  rows.forEach((r, i) => { s += `<circle cx="${x(i)}" cy="${y(r.v)}" r="3" fill="#45d3d8" fill-opacity="${r.n < 150 ? .3 : 1}"><title>${esc(r.lab)}: ${fmt(r.v, 1)}% (n=${fmt(r.n)})</title></circle>`;
+    const t = o.tick(r, i); if (t) s += `<text x="${x(i)}" y="${B + 14}" font-size="10" fill="#8a99ad" text-anchor="middle">${esc(t)}</text>`; });
+  if (o.foot) s += `<text x="8" y="${H - 6}" font-size="10" fill="#5f6c82">${esc(o.foot)}</text>`;
+  return s + "</svg>";
+}
+let TRAPS = null;
+function buildTraps() {
+  const dm = k => maskFor(DEFAULT_DICT[k]), pr = (k, n) => 100 * k / Math.max(1, n);
+  const fr = dm("과일"), ys = [2024, 2025, 2026], ag = ys.map(() => ({ n: 0, k: 0 }));
+  for (const m of MEALS) if (m.m >= 3 && m.m <= 10) { const j = ys.indexOf(m.sy); if (j >= 0) { ag[j].n++; if (hit(m, fr)) ag[j].k++; } }
+  const r1 = ys.map((yy, j) => ({ lab: yy + "학년도", v: pr(ag[j].k, ag[j].n), n: ag[j].n })), v1 = r1.map(r => r.v);
+  const lo1 = Math.floor(Math.min(...v1) - 1), hi1 = Math.ceil(Math.max(...v1) + .5), d1 = Math.max(...v1) - Math.min(...v1);
+  const fi = dm("생선·해산물"), sg = SIG.map(() => ({ n: 0, k: 0 })); for (const m of MEALS) { const g = sg[SCH[m.si][1]]; g.n++; if (hit(m, fi)) g.k++; }
+  const cnt = SIG.map((nm, i) => ({ lab: nm, v: sg[i].k, n: sg[i].n })).sort((a, b) => b.v - a.v).slice(0, 8);
+  const rt = SIG.map((nm, i) => ({ lab: nm, v: pr(sg[i].k, sg[i].n), n: sg[i].n })).filter(r => r.n >= 200).sort((a, b) => b.v - a.v).slice(0, 8);
+  const r3 = monthRate(dm("귤·감귤")).map(r => { const [a, b] = wilson(r.k, r.n); return { lab: r.lab.replace("월", ""), v: pr(r.k, r.n), lo: 100 * a, hi: 100 * b, n: r.n, faint: r.faint }; });
+  const top = r3.reduce((a, b) => b.v > a.v ? b : a), topT = r3.filter(r => !r.faint).reduce((a, b) => b.v > a.v ? b : a);
+  const gm = dm("귤·감귤"), ym = {}; for (const m of MEALS) { const o = ym[m.y * 100 + m.m] || (ym[m.y * 100 + m.m] = { n: 0, k: 0 }); o.n++; if (hit(m, gm)) o.k++; }
+  const r4 = Object.keys(ym).map(Number).sort((a, b) => a - b).map(k => ({ k, m: k % 100, lab: `${Math.floor(k / 100)}년 ${k % 100}월`, v: pr(ym[k].k, ym[k].n), n: ym[k].n }));
+  const pick = r4.filter(r => r.k >= 202504 && r.k <= 202512), p0 = pick[0], p1 = pick.at(-1), nov = r4.filter(r => r.m === 11);
+  return [
+    { title: "세로축이 어디서 시작하나", left: miniBars(r1, { title: "A. 학년도별 과일 등장률(3~10월, %)", ymin: lo1, ymax: hi1 }), right: miniBars(r1, { title: "B. 같은 값, 세로축 0부터", ymin: 0 }),
+      q: "A를 본 친구가 '과일이 학년도마다 크게 바뀌었다'고 말합니다. 맞는 판단은?",
+      opts: ["A와 B는 서로 다른 값을 그렸다", "값은 같다. A는 세로축이 0이 아닌 곳에서 시작해서 작은 차이를 크게 보이게 한다", "B는 표본이 더 커서 차이가 작게 보인다"], a: 1,
+      exp: `세 학년도 사이 가장 큰 차이는 ${fmt(d1, 1)}%p입니다. 막대그래프는 막대의 길이로 크기를 견주므로 세로축을 0에서 시작해야 합니다. 작은 차이를 확대해 보이고 싶다면 점그래프를 쓰고 '축이 잘렸다'고 표시합니다.` },
+    { title: "횟수인가 비율인가", left: miniH(cnt, { title: "A. 생선·해산물이 나온 끼니 수(상위 8)", unit: "끼" }), right: miniH(rt, { title: "B. 생선·해산물이 나온 끼니 비율(상위 8, %)", unit: "%", dec: 1 }),
+      q: "'생선·해산물이 가장 자주 나오는 시군'을 말하려면 어느 그래프를 써야 하나?",
+      opts: ["A — 횟수가 많으면 자주 나온 것이다", "B — 시군마다 학교 수와 끼니 수(n)가 달라서 비율로 견주어야 한다", "어느 쪽이든 순위가 같다"], a: 1,
+      exp: `A의 1위 ${cnt[0].lab}는 표본 끼니가 ${fmt(cnt[0].n)}끼로 많습니다. 학교가 많은 시군은 횟수가 저절로 커집니다. 비율(B)로 보면 1위는 ${rt[0].lab}(${fmt(rt[0].v, 1)}%, n=${fmt(rt[0].n)})입니다. 비율의 차이가 우연보다 큰지는 차트 빌더의 시군 비교에서 신뢰구간으로 확인하세요(B는 표본 200끼 이상인 시군만).` },
+    { title: "끼니 수가 적은 달", left: miniBars(r3.map(r => ({ lab: r.lab, v: r.v, n: r.n })), { title: "A. 귤·감귤 월별 등장률(%)", foot: "가로: 월" }),
+      right: miniBars(r3, { title: "B. 같은 값 + 95% 신뢰구간, 연한 막대는 방학 달", ci: true, foot: "가로: 월" }),
+      q: `A만 보면 ${top.lab}월이 가장 높습니다. '귤은 ${top.lab}월에 가장 자주 나온다'고 말할 수 있나?`,
+      opts: [`그렇다. ${top.lab}월 막대가 가장 높다`, `단정하기 어렵다. ${top.lab}월은 표본 끼니가 적어 신뢰구간이 넓고 다른 달과 겹친다`, "아니다. 귤은 여름 과일이다"], a: top.faint ? 1 : 0,
+      exp: `${top.lab}월 표본은 ${fmt(top.n)}끼입니다(학기 중 최고인 ${topT.lab}월은 ${fmt(topT.n)}끼). ${top.lab}월 ${fmt(top.v, 1)}%의 95% 신뢰구간은 ${fmt(top.lo, 1)}~${fmt(top.hi, 1)}%, ${topT.lab}월은 ${fmt(topT.lo, 1)}~${fmt(topT.hi, 1)}%입니다. 끼니 수(n)와 오차를 함께 보여 주지 않는 비율 그래프는 우연을 패턴처럼 보이게 합니다.` },
+    { title: "기간을 골라내면", left: miniLine(pick, { title: "A. 귤·감귤 등장률(%), 2025년 4~12월", tick: r => r.m + "월" }),
+      right: miniLine(r4, { title: "B. 같은 값, 2024년 3월~2026년 11월 전체", tick: r => r.m === 3 ? `${String(Math.floor(r.k / 100)).slice(2)}.3` : r.m === 9 ? "9" : "", foot: "연한 점은 끼니 150끼 미만(방학 달)" }),
+      q: "A를 근거로 '경기도 급식에서 귤이 갈수록 늘고 있다'고 말해도 될까?",
+      opts: ["된다. 아홉 달 동안 꾸준히 올랐다", "안 된다. 귤은 해마다 가을·겨울에 늘고 봄에 주는 계절 패턴이라, 시작과 끝 달을 고르면 '추세'처럼 보인다", "된다. 24만 끼에서 뽑은 표본이라 믿을 만하다"], a: 1,
+      exp: `A는 ${p0.lab} ${fmt(p0.v, 1)}%에서 ${p1.lab} ${fmt(p1.v, 1)}%로 오릅니다. 그런데 B를 보면 같은 모양이 해마다 되풀이됩니다. 추세를 말하려면 같은 달끼리 견주어야 합니다: 11월 ` +
+        nov.map(r => `${Math.floor(r.k / 100)}년 ${fmt(r.v, 1)}%(n=${fmt(r.n)})`).join(", ") + `. 그래프에 쓴 기간과 그 기간을 고른 이유를 함께 밝혀야 합니다.` }];
+}
+function renderTraps() {
+  if (!TRAPS) TRAPS = buildTraps();
+  const done = TRAPS.filter((t, i) => state.trap[i] != null), right = TRAPS.filter((t, i) => state.trap[i] === t.a).length;
+  $("#traps").innerHTML = TRAPS.map((t, i) => { const a = state.trap[i];
+    return `<div class="qitem" style="cursor:default"><b>함정 ${i + 1} · ${esc(t.title)}</b><div class="grid2"><div>${t.left}</div><div>${t.right}</div></div>
+      <p style="margin:8px 0 4px"><b>${esc(t.q)}</b></p>${t.opts.map((o, k) => `<div class="qitem ${a === k ? "on" : ""}" data-trap="${i}" data-k="${k}" style="margin:5px 0"><span>${k + 1}. ${esc(o)}</span></div>`).join("")}
+      ${a != null ? `<div class="note ${a === t.a ? "ok" : "warn"}">${a === t.a ? "맞습니다." : `제안 답은 ${t.a + 1}번입니다.`} ${esc(t.exp)}</div>` : ""}</div>`; }).join("") +
+    (done.length ? `<p class="small muted">${done.length}/${TRAPS.length}개 답함 · 제안 답과 같은 것 ${right}개</p>` : "");
+}
+$("#cbToCard").addEventListener("click", () => { state.draft = Object.assign(state.draft || {}, { graph: lastChart, evid: lastChart }); state.done[4] = true; go(5); });
+
+/* ============================== 5. 주장 카드 ============================== */
+const HINTS = ["10% 표본이라 오차가 있다", "재료를 요리 이름으로 추정했다", "방학 달은 끼니가 적다", "경기도만의 결과다", "상관이 원인을 뜻하지는 않는다", "기준선 값의 출처를 확인하지 못했다"];
+function r5() {
+  const d = state.draft || {};
+  $("#cardGraph").innerHTML = d.graph ? `<b>그래프</b> — ${esc(d.graph)}` : "아직 고른 그래프가 없습니다. 차트 빌더에서 \"이 그래프로 주장 카드 쓰기\"를 누르세요.";
+  $("#cClaim").value = d.claim || ""; $("#cEvid").value = d.evid || ""; $("#cReason").value = d.reason || ""; $("#cLimit").value = d.limit || "";
+  $("#limitHints").innerHTML = HINTS.map(h => `<span class="chip" data-hint="${esc(h)}">+ ${esc(h)}</span>`).join("");
+  $("#cardList").innerHTML = state.cards.length ? state.cards.map((c, i) => cardHTML(c, i, true)).join("") : `<p class="muted">아직 저장한 카드가 없습니다.</p>`;
+}
+function cardHTML(c, i, tools) {
+  return `<div class="claim"><h4>${i + 1}. ${esc(c.claim)}${c.from ? ` <span class="pill">모둠원 카드</span>` : ""}</h4><dl><dt>근거</dt><dd>${esc(c.evid)}</dd><dt>추론</dt><dd>${esc(c.reason)}</dd>
+    <dt>한계</dt><dd>${esc(c.limit)}</dd><dt>그래프</dt><dd class="small muted">${esc(c.graph || "—")}</dd><dt>작성</dt><dd class="small">${esc(c.author)} · ${esc(c.at)}</dd></dl>
+    ${tools ? `<div class="btns noprint"><button class="btn sm ghost" data-edit="${i}">고치기</button><button class="btn sm ghost" data-del="${i}">지우기</button></div>` : ""}</div>`;
+}
+["cClaim", "cEvid", "cReason", "cLimit"].forEach(id => $("#" + id).addEventListener("input", e => {
+  state.draft = state.draft || {}; state.draft[{ cClaim: "claim", cEvid: "evid", cReason: "reason", cLimit: "limit" }[id]] = e.target.value; save(); }));
+$("#limitHints").addEventListener("click", e => { const h = e.target.closest("[data-hint]"); if (!h) return; const t = $("#cLimit");
+  t.value = (t.value ? t.value.replace(/\s*$/, "") + " / " : "") + h.dataset.hint; t.dispatchEvent(new Event("input")); });
+$("#cSave").addEventListener("click", () => {
+  const d = state.draft || {}, need = [["claim", "주장"], ["evid", "근거"], ["reason", "추론"], ["limit", "한계"]].filter(([k]) => !(d[k] || "").trim() || d[k].trim().length < 6);
+  if (need.length) { $("#cMsg").innerHTML = `<span style="color:var(--red)">${need.map(n => n[1]).join(", ")} 칸을 6자 이상 채우세요.</span>`; return; }
+  if (!/\d/.test(d.evid)) { $("#cMsg").innerHTML = `<span style="color:var(--red)">근거에는 수치가 하나 이상 있어야 합니다.</span>`; return; }
+  const prev = d.editing != null ? state.cards[d.editing] : null; // 모둠원 카드를 고쳐도 원래 작성자를 지킨다
+  const card = { claim: d.claim.trim(), evid: d.evid.trim(), reason: d.reason.trim(), limit: d.limit.trim(), graph: d.graph || "",
+    author: prev && prev.from ? prev.author : [state.name || "이름 없음", state.team].filter(Boolean).join(" · "), at: new Date().toLocaleString("ko-KR") };
+  if (prev && prev.from) card.from = prev.from;
+  if (d.editing != null) state.cards[d.editing] = card; else state.cards.push(card);
+  state.draft = null; state.done[5] = true; save(); r5(); $("#cMsg").innerHTML = `<span style="color:var(--green)">저장했습니다.</span>`;
+});
+$("#cClear").addEventListener("click", () => { state.draft = null; save(); r5(); });
+/* F-13 모둠원 카드 합치기: 결과 파일(.json)을 이 기기 안에서만 읽는다 */
+$("#cardImport").addEventListener("change", async e => {
+  let add = 0, dup = 0; const bad = [], who = new Set();
+  for (const f of e.target.files) {
+    try {
+      const j = JSON.parse(await f.text());
+      if (!j || !String(j.앱 || "").startsWith("식탁 문제 해결단") || !Array.isArray(j.카드)) throw new Error("형식");
+      for (const c of j.카드) {
+        if (!c || typeof c.claim !== "string" || !c.claim.trim()) continue;
+        const card = { claim: c.claim, evid: String(c.evid || ""), reason: String(c.reason || ""), limit: String(c.limit || ""), graph: String(c.graph || ""),
+          author: String(c.author || j.이름 || "모둠원"), at: String(c.at || ""), from: String(c.from || j.이름 || f.name) };
+        if (state.cards.some(x => x.claim === card.claim && x.author === card.author)) { dup++; continue; }
+        state.cards.push(card); add++; who.add(card.author);
+      }
+    } catch (err) { bad.push(f.name); }
+  }
+  e.target.value = ""; save(); r5();
+  $("#importMsg").innerHTML = `<span style="color:var(--green)">${add}장을 더했습니다${who.size ? `(${esc([...who].join(", "))})` : ""}.</span>` + (dup ? ` 이미 있는 카드 ${dup}장은 건너뛰었습니다.` : "") +
+    (bad.length ? ` <span style="color:var(--red)">읽지 못한 파일: ${esc(bad.join(", "))} — 6단계에서 내려받은 결과 파일인지 확인하세요.</span>` : "");
+});
+$("#cardList").addEventListener("click", e => { const ed = e.target.closest("[data-edit]"), de = e.target.closest("[data-del]");
+  if (ed) { const i = +ed.dataset.edit; state.draft = Object.assign({}, state.cards[i], { editing: i }); save(); r5(); window.scrollTo({ top: 0 }); }
+  if (de && confirm("이 카드를 지울까요?")) { state.cards.splice(+de.dataset.del, 1); save(); r5(); } });
+
+/* ============================== 6. 데이터 이야기 ============================== */
+function r6() {
+  const s = state.story; if (!s.q && state.q.text) s.q = state.q.text;
+  s.order = s.order.filter(i => i < state.cards.length); state.cards.forEach((_, i) => { if (!s.order.includes(i)) s.order.push(i); });
+  $("#storyTitle").textContent = `${state.team || "우리 모둠"}의 데이터 이야기`;
+  $("#sAud").value = s.aud; $("#sQ").value = s.q; $("#sProp").value = s.prop;
+  $("#storyCards").innerHTML = s.order.length ? s.order.map((ci, k) => `<div>${cardHTML(state.cards[ci], k, false)}<div class="btns noprint" style="margin:-4px 0 8px">
+    <button class="btn sm ghost" data-up="${k}" ${k === 0 ? "disabled" : ""}>↑ 위로</button><button class="btn sm ghost" data-dn="${k}" ${k === s.order.length - 1 ? "disabled" : ""}>↓ 아래로</button></div></div>`).join("")
+    : `<p class="muted">주장 카드를 먼저 저장하세요.</p>`;
+  renderSurvey("#surveyPost", "post");
+  save();
+}
+$("#storyCards").addEventListener("click", e => { const o = state.story.order, u = e.target.closest("[data-up]"), d = e.target.closest("[data-dn]");
+  if (u) { const k = +u.dataset.up; [o[k - 1], o[k]] = [o[k], o[k - 1]]; } else if (d) { const k = +d.dataset.dn; [o[k + 1], o[k]] = [o[k], o[k + 1]]; } else return; save(); r6(); });
+$("#sAud").addEventListener("input", e => { state.story.aud = e.target.value; save(); });
+$("#sQ").addEventListener("input", e => { state.story.q = e.target.value; save(); });
+$("#sProp").addEventListener("input", e => { state.story.prop = e.target.value; state.done[6] = e.target.value.trim().length >= 20; save(); });
+$("#sPrint").addEventListener("click", () => window.print());
+$("#sDown").addEventListener("click", () => {
+  const sv = k => SURVEY.map((_, i) => state.survey[k] && state.survey[k][i] != null ? state.survey[k][i] : null);
+  const out = { 앱: "식탁 문제 해결단 v1.0", 작성: new Date().toISOString(), 이름: state.name, 모둠: state.team, 질문: state.q, 청중: state.story.aud,
+    카드: state.story.order.map(i => state.cards[i]), 제안: state.story.prop, 정제기록: { 규칙: state.clean.rules, 묶기: state.clean.merged, 묶기메모: state.clean.mergeNote,
+    열량처리: state.clean.decisions, 칼슘판단: state.clean.caAns }, 재료사전: state.dict,
+    설문: { 문항: SURVEY, 척도: "1 전혀 아니다 ~ 5 매우 그렇다(교사 제작, 타당화하지 않은 자기 보고)", 사전: sv("pre"), 사후: sv("post") },
+    그래프함정: (TRAPS || (TRAPS = buildTraps())).map((t, i) => ({ 함정: t.title, 고른답: state.trap[i] != null ? state.trap[i] + 1 : null, 제안답: t.a + 1 })),
+    규칙실험: state.rule, 도입: introRaw() };
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 2)], { type: "application/json" }));
+  a.download = `siktak-lab_${new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "")}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+$("#sReset").addEventListener("click", () => { if (confirm("모든 진행 상황을 지우고 처음부터 시작할까요?")) { try { localStorage.removeItem(LS); } catch (e) {} location.reload(); } });
+
+show();
+</script>
+</body>
+</html>
