@@ -49,7 +49,9 @@ dn = [d for d, _ in names.most_common()]
 di = {d: i for i, d in enumerate(dn)}
 sample = [[ci[x["code"]], int(x["ymd"]), round(x["kcal"]) if x["kcal"] else None,
            round(x["ntr"]["칼슘(mg)"]) if "칼슘(mg)" in x["ntr"] else None,
-           [di[d] for d in x["dishes"]]] for x in samp]
+           [di[d] for d in x["dishes"]],
+           round(x["ntr"]["단백질(g)"], 1) if "단백질(g)" in x["ntr"] else None,
+           round(x["ntr"]["지방(g)"], 1) if "지방(g)" in x["ntr"] else None] for x in samp]
 
 # 정제 미션용 원본 표본(처리 전 문자열 그대로)
 rawrec = {(r["SD_SCHUL_CODE"], r["MLSV_YMD"]): r for r in rows}
