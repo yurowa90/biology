@@ -1,0 +1,385 @@
+<!--
+  식탁 문제 해결단 · 교사용 안내 (PRD F-12) — 학생용 활동: meal-lab.html
+  단일 파일 정적 페이지(외부 라이브러리 없음). '결과 모아 보기'는 학생이 내려받은 .json 파일을 이 브라우저 안에서만 읽습니다.
+  성취기준 문구는 2022 개정 과학과 교육과정(교육부 고시 제2022-33호 [별책 9]) 재배포 PDF에서 옮겼습니다.
+-->
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>식탁 문제 해결단 · 교사용 안내</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230e1626'/%3E%3Ccircle cx='16' cy='17' r='8' fill='none' stroke='%23f2c14e' stroke-width='3'/%3E%3Cpath d='M9 8v6M23 8v6' stroke='%2345d3d8' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+  :root{--bg:#070b14;--panel:#0e1626;--line:#1d2b41;--line2:#26374f;--txt:#e6edf6;--muted:#8a99ad;--faint:#5f6c82;
+    --cyan:#45d3d8;--green:#33d17f;--amber:#f2c14e;--red:#ff6b7d;--violet:#a98bff;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;--sans:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR",sans-serif}
+  *{box-sizing:border-box} html,body{margin:0}
+  body{font-family:var(--sans);color:var(--txt);background:linear-gradient(180deg,#070b14,#060910);min-height:100vh;-webkit-font-smoothing:antialiased}
+  a{color:var(--cyan)}
+  header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:14px 26px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(8,13,22,.85);backdrop-filter:blur(6px);z-index:5}
+  header .t{font-size:18px;font-weight:700} header .t span{color:var(--amber)} header .r{margin-left:auto;display:flex;gap:10px;flex-wrap:wrap}
+  .lnk{font-family:var(--mono);font-size:11px;letter-spacing:.1em;padding:7px 12px;border:1px solid var(--line2);border-radius:8px;color:var(--muted);text-decoration:none;background:none;cursor:pointer}
+  .wrap{display:grid;grid-template-columns:220px minmax(0,1fr);gap:24px;max-width:1240px;margin:0 auto;padding:22px}
+  nav.toc{position:sticky;top:76px;align-self:start;display:flex;flex-direction:column;gap:4px;font-size:13.5px}
+  nav.toc a{color:var(--muted);text-decoration:none;padding:6px 10px;border-radius:8px;border:1px solid transparent} nav.toc a:hover{border-color:var(--line2);color:var(--txt)}
+  @media(max-width:880px){.wrap{grid-template-columns:minmax(0,1fr);padding:14px} nav.toc{position:static;flex-direction:row;flex-wrap:wrap} header{padding:12px 14px}}
+  section{background:linear-gradient(180deg,var(--panel),#0c1422);border:1px solid var(--line);border-radius:16px;padding:20px 22px;margin-bottom:18px;scroll-margin-top:80px}
+  h1{font-size:22px;margin:0 0 6px} h2{font-size:19px;margin:0 0 8px} h3{font-size:15.5px;margin:18px 0 8px;color:var(--amber)}
+  .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--cyan);margin-bottom:6px}
+  p,li{font-size:14.5px;line-height:1.7} .muted{color:var(--muted)} .small{font-size:12.5px}
+  .note{border-left:3px solid var(--amber);background:rgba(242,193,78,.06);padding:10px 14px;border-radius:0 10px 10px 0;font-size:13.5px;line-height:1.65;margin:12px 0}
+  .warn{border-left-color:var(--red);background:rgba(255,107,125,.07)} .ok{border-left-color:var(--green);background:rgba(51,209,127,.07)}
+  .tw{overflow-x:auto} table{border-collapse:collapse;width:100%;font-size:13.5px} th,td{border-bottom:1px solid var(--line);padding:8px;text-align:left;vertical-align:top;line-height:1.6}
+  th{color:var(--muted);font-weight:600;font-size:12.5px;white-space:nowrap} td.num{text-align:right;font-family:var(--mono)}
+  .std{font-size:13.5px;line-height:1.65;margin:6px 0} .std b{font-family:var(--mono);color:var(--cyan);font-weight:600}
+  ul.check{list-style:none;padding-left:0} ul.check li{padding-left:26px;position:relative} ul.check li::before{content:"☐";position:absolute;left:2px;color:var(--amber)}
+  .btn{font:inherit;font-size:13.5px;font-weight:600;white-space:nowrap;padding:9px 14px;border-radius:10px;border:1px solid var(--line2);background:#13203a;color:var(--txt);cursor:pointer}
+  .btn.pri{background:var(--amber);color:#141414;border-color:var(--amber)} .btns{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;align-items:center}
+  select{font:inherit;font-size:12.5px;color:var(--txt);background:#0a1220;border:1px solid var(--line2);border-radius:7px;padding:4px 6px}
+  .claim{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:8px 0;background:#0b1424}
+  .claim dl{margin:0;display:grid;grid-template-columns:70px 1fr;gap:3px 10px;font-size:13.5px} .claim dt{color:var(--muted)} .claim dd{margin:0}
+  .pill{display:inline-block;font-family:var(--mono);font-size:11px;padding:2px 7px;border-radius:6px;border:1px solid var(--line2);color:var(--muted)}
+  .pill.g{color:var(--green);border-color:rgba(51,209,127,.4)} .pill.r{color:var(--red);border-color:rgba(255,107,125,.4)}
+  @media print{header,nav.toc,.noprint{display:none!important} body{background:#fff;color:#000} .wrap{display:block;padding:0}
+    section{border:none;background:#fff;color:#000;page-break-inside:avoid} .muted,th{color:#444} .note{background:#f7f3e6} td,th{border-color:#bbb}}
+</style>
+</head>
+<body>
+<header>
+  <div class="t">식탁 문제 해결단 <span>· 교사용 안내</span></div>
+  <div class="r"><a class="lnk" href="meal-lab.html">학생용 활동 열기 →</a><button class="lnk" onclick="window.print()">인쇄</button><a class="lnk" href="../index.html">← 교과서 홈</a></div>
+</header>
+<div class="wrap">
+<nav class="toc noprint" aria-label="목차">
+  <a href="#overview">1. 한눈에 보기</a><a href="#standards">2. 성취기준</a><a href="#plan6">3. 6차시 운영안</a><a href="#plan4">4. 4차시 축약안</a>
+  <a href="#prep">5. 사전 준비</a><a href="#guide">6. 단계별 해설·오개념</a><a href="#rubric">7. 평가 기준</a><a href="#critique">8. 비평 프로토콜</a>
+  <a href="#collect">9. 결과 모아 보기</a><a href="#safety">10. 안전·윤리</a><a href="#refs">11. 참고문헌</a><a href="#verify">12. 수치 검수표</a>
+</nav>
+<main>
+
+<section id="overview">
+  <div class="kicker">F-12 · 교사용 안내 · v1.0</div>
+  <h1>경기도 고교 급식 24만 끼로 하는 데이터 과학 PBL</h1>
+  <p>학생은 실제 공공 데이터(나이스 급식 식단 정보)를 정제하고 분석해, 우리 학교 급식에 대한 제안을 <b>실제 청중</b>에게 발표합니다.
+    기술보다 <b>데이터를 의심하고 한계를 말하는 힘</b>이 목표입니다.</p>
+  <div class="tw"><table>
+    <tr><th>대상·과목</th><td>고등학교 1학년 · 통합과학2 Ⅵ 과학과 미래 사회 + 과학탐구실험2</td></tr>
+    <tr><th>차시</th><td>6차시 권장(통합과학2 3차시 + 과학탐구실험2 3차시 연계) · 1차시 앞 20분은 <a href="meal-intro.html">도입 미션</a> · 시간이 부족하면 4차시 축약안</td></tr>
+    <tr><th>모둠·기기</th><td>3~4명 모둠 · 모둠당 기기 1~2대(역할: 조작, 기록, 검토, 발표) · 진행 상황은 기기 브라우저에만 저장되므로 <b>같은 기기</b>를 계속 쓰게 합니다</td></tr>
+    <tr><th>데이터</th><td>경기도 고등학교 503곳 · 2024.3~2026.11 점심 · 특이값 처리 후 244,815끼 · 앱 안에서는 10% 무작위 표본 24,312끼와 전수 집계표</td></tr>
+    <tr><th>산출물</th><td>하위 질문 → 정제 기록 → 재료 사전 수정 → 그래프 → 주장 카드(주장·근거·추론·한계) → 데이터 이야기(제안) → 개인 논증 글</td></tr>
+  </table></div>
+  <div class="note warn"><b>v1.0 — 아직 남은 검증</b> 앱에 쓰인 기준값은 원문으로 확인하고 상태를 12절 검수표에 적었습니다. 영양교사 검수와 학급 파일럿은 아직 하지 않았습니다.
+    본 수업 전에 한 학급으로 파일럿을 하고, 막히는 지점과 소요 시간을 기록해 주세요. 사전·사후 자기 평가(F-20)는 교사가 만든 문항이며 타당화하지 않았습니다.</div>
+  <div class="tw"><table>
+    <tr><th>v1.0에서 더한 것</th><th>어디에</th><th>수업에서 하는 일</th></tr>
+    <tr><td>도입 미션(F-01)</td><td><a href="meal-intro.html">meal-intro.html</a></td><td>영양표시의 %를 기준치로 계산하고, 'AI 식단 도우미'의 문장 여섯 개를 수용·수정·거부로 판정한다(20분)</td></tr>
+    <tr><td>또래 통계(F-05)</td><td>차트 빌더 → 또래 통계</td><td>청소년건강행태조사의 아침 결식률 추이(2016~2025, 남녀)를 급식 데이터와 연결하되, 대상·방법이 다름을 한계로 적는다</td></tr>
+    <tr><td>추천 규칙 실험(F-15)</td><td>차트 빌더 → 추천 규칙 실험</td><td>'좋은 점심' 규칙을 직접 만들고, 기준을 ±10% 바꿀 때 통과 비율이 얼마나 흔들리는지 본다</td></tr>
+    <tr><td>그래프 함정 찾기(F-16)</td><td>차트 빌더 아래</td><td>잘린 축, 횟수와 비율 혼동, 작은 n, 기간 골라내기의 네 가지 함정을 같은 표본으로 비교한다</td></tr>
+    <tr><td>새 데이터 검증(F-17)</td><td>차트 빌더 → 우리 학교 최근 급식</td><td>나이스에서 최근 4주 점심을 바로 받아, 표본으로 세운 주장이 새 데이터에서도 맞는지 확인한다</td></tr>
+    <tr><td>모둠원 카드 합치기(F-13)</td><td>주장 카드 단계</td><td>모둠원의 결과 파일을 불러와 카드를 한 이야기로 모은다</td></tr>
+    <tr><td>사전·사후 자기 평가(F-20)</td><td>0단계와 6단계</td><td>같은 5문항에 두 번 답한다. 결과 파일에 담겨 9절에서 모아 볼 수 있다</td></tr>
+  </table></div>
+  <p class="muted small"><b>일부만 한 것</b> — F-13의 원래 요구는 '모둠 코드로 여러 기기가 같은 보드를 실시간으로 본다'인데, 서버 없이는 할 수 없어 <b>결과 파일 합치기</b>로 대신했습니다. F-05는 공표 통계 중 원문으로 확인한 지표(아침 결식률 2016~2025 성별, 패스트푸드 2024)만 넣었고 학년별 값은 없습니다.
+    F-18(학급 수합과 동료 비평)은 9절의 파일 모아 보기와 8절의 종이 비평 프로토콜로 대신합니다.<br>
+    <b>하지 않은 것과 이유</b> — 학급 익명 설문(F-14)은 응답을 모을 서버가 필요합니다. 전국 조사 원시자료 분석(F-19)은 이용 조건 확인과 가중치 처리가 먼저입니다. 주장 카드 AI 피드백(F-21)은 피드백의 타당도를 검증하지 않았고 학생 글이 외부 모델로 전송됩니다.</p>
+</section>
+
+<section id="standards">
+  <h2>2. 성취기준</h2>
+  <p class="muted small">2022 개정 과학과 교육과정(교육부 고시 제2022-33호 [별책 9])의 문구입니다. 출판사가 재배포한 PDF에서 옮겼으니, 평가 계획서에 쓰기 전에 국가교육과정정보센터 원문과 한 번 더 대조하세요.</p>
+  <div class="std"><b>[10통과2-03-02]</b> 빅데이터를 과학기술사회에서 사용하고 있는 사례를 조사하고, 빅데이터 활용의 장점과 문제점을 추론할 수 있다. <span class="pill g">중심</span></div>
+  <div class="std"><b>[10통과2-03-03]</b> 인공지능 로봇, 사물인터넷 등과 같이 과학기술의 발전을 인간 삶과 환경 개선에 활용하는 사례를 찾고, 이러한 과학기술의 발전이 미래 사회에 미치는 유용성과 한계를 예측할 수 있다. <span class="pill">약한 대응: 재료 분류 사전으로 보완</span></div>
+  <div class="std"><b>[10통과2-03-04]</b> 과학기술의 발전 과정에서 발생할 수 있는 과학 관련 사회적 쟁점(SSI)과 과학기술 이용에서 과학 윤리의 중요성에 대해 논증할 수 있다.</div>
+  <div class="std"><b>[10과탐2-01-02]</b> 사회적 이슈나 생활 속에서 과학 탐구 문제를 발견하고, 이를 해결하기 위한 과학탐구 활동을 계획하고 수행할 수 있다. <span class="pill g">중심</span></div>
+  <div class="std"><b>[10과탐2-01-03]</b> 과학 개념을 적용하여 실생활 문제의 해결방안을 창의적으로 고안하고, 필요한 도구를 설계⋅제작할 수 있다.</div>
+  <div class="std"><b>[10과탐2-02-02]</b> 과학 원리가 적용된 첨단 과학기술 및 탐구 산출물을 발표하고 공유하며, 이를 확산할 수 있다.</div>
+  <div class="std"><b>[10과탐2-02-03]</b> 탐구 활동 과정에서 지켜야 할 생명 존중, 연구 진실성, 지식 재산권 존중 등과 같은 연구 윤리와 함께, 과학기술 이용과 관련된 과학 윤리 및 안전 사항을 준수할 수 있다.</div>
+  <p class="muted small">[10통과2-03-01]은 감염병의 진단·추적을 사례로 명시한 기준이라 이 프로젝트에 대응시키지 않습니다.</p>
+</section>
+
+<section id="plan6">
+  <h2>3. 6차시 운영안</h2>
+  <p>탐구 순서는 통계적 탐구 순환인 문제–계획–데이터–분석–결론(Wild &amp; Pfannkuch, 1999)을 따릅니다. 실제 탐구는 앞뒤로 오가므로, 4차시에 정제로 되돌아가는 모둠을 막지 마세요.</p>
+  <div class="tw"><table>
+    <tr><th>차시</th><th>국면</th><th>앱 단계</th><th>핵심 발문</th><th>산출물</th><th>형성평가 포인트</th></tr>
+    <tr><td>1</td><td>문제</td><td>도입 미션(20분)<br>0 시작·데이터 카드·사전 자기 평가<br>1 질문 보드</td>
+      <td>"라벨의 11%는 무엇의 11%인가?" · "AI의 말을 무엇으로 확인했나?" · "24만 끼 기록으로 답할 수 있는 질문과 없는 질문은?"</td>
+      <td>도입 미션 답, 모둠 하위 질문, 쓸 데이터·변수, 예상</td><td>단위(100 mL당·총 내용량당)를 맞추는가 · 질문이 데이터에 있는 변수로 답할 수 있는가(맛·나트륨·잔반은 없음)</td></tr>
+    <tr><td>2</td><td>계획·데이터</td><td>2 정제 미션 A~D</td>
+      <td>"0kcal 끼니는 지울까, 고칠까, 둘까?" · "평균과 중앙값 중 어느 쪽이 오류에 더 흔들리나?" · "칼슘이 두 달만 4배인 까닭은?"</td>
+      <td>정제 기록(규칙, 묶은 표기, 열량 처리와 이유, 칼슘 판단)</td><td>처리마다 이유가 있는가 · 불리한 값을 이유 없이 지우지 않았는가</td></tr>
+    <tr><td>3</td><td>분석 ①</td><td>3 재료 분류 사전<br>4 차트 빌더(월별·시군)</td>
+      <td>"딸기우유도 딸기인가?" · "규칙을 바꾸면 결론도 바뀌나?"</td>
+      <td>사전 수정 기록, 그래프 2개 이상</td><td>잘못 잡힌 요리를 찾아냈는가 · 규칙 변경 전후를 비교했는가</td></tr>
+    <tr><td>4</td><td>분석 ②</td><td>4 차트 빌더(학년도·분포·우리 학교·추천 규칙 실험·또래 통계)<br>그래프 함정 찾기<br>5 주장 카드</td>
+      <td>"표본의 7월 9.9%와 전수 8.9%, 어느 쪽을 근거로 쓰나?" · "신뢰구간이 겹치면 차이가 있다고 말할 수 있나?" · "칼슘 기준을 10% 낮추면 '좋은 점심'은 몇 % 늘어나나?"</td>
+      <td>주장 카드 2~3장</td><td>근거에 수치·출처·표본/전수가 있는가 · 한계 칸이 구체적인가 · 내 그래프에 함정 네 가지가 없는가</td></tr>
+    <tr><td>5</td><td>해결·비평</td><td>4 우리 학교 최근 급식(새 데이터 검증)<br>5 카드 고치기·모둠원 카드 합치기<br>6 데이터 이야기 초안</td>
+      <td>"우리 제안은 누구에게, 무엇을, 어떻게 확인하자는 것인가?"</td>
+      <td>모둠 간 비평 기록(피드백 사다리), 제안 초안</td><td>비평을 받아 카드나 제안을 실제로 고쳤는가</td></tr>
+    <tr><td>6</td><td>발표·성찰</td><td>6 데이터 이야기 인쇄·발표·사후 자기 평가</td>
+      <td>"급식 빅데이터를 쓰는 것의 장점과 문제점은?" ([10통과2-03-02], [10통과2-03-04])</td>
+      <td>청중 발표, 개인 논증 글(600~800자)</td><td>청중의 답변·질문을 기록했는가 · 개인 글이 데이터의 한계를 논증하는가</td></tr>
+  </table></div>
+  <div class="note">도입 미션 뒤에는 우리 학교의 실제 급식표 한 주를 보여 주며 0단계로 넘어가면 좋습니다. 학생이 "이 메뉴는 몇 번이나 나올까?", "다른 학교도 그럴까?"를 떠올리면 그것이 하위 질문의 씨앗입니다.</div>
+</section>
+
+<section id="plan4">
+  <h2>4. 4차시 축약안</h2>
+  <div class="tw"><table>
+    <tr><th>차시</th><th>하는 일</th><th>줄인 것</th></tr>
+    <tr><td>1</td><td>도입 미션 1·3(10분) · 데이터 카드 · 질문 보드(질문 은행에서 고르기 권장)</td><td>도입 미션 2(카페인), 직접 질문 쓰기는 선택</td></tr>
+    <tr><td>2</td><td>정제 미션 A와 D만 모둠이 하고, B와 C는 교사가 화면으로 시연 · 재료 분류 사전</td><td>정제 일부를 교사가 미리 함</td></tr>
+    <tr><td>3</td><td>차트 빌더 · 그래프 함정 1개 · 주장 카드 2장</td><td>6차시안의 3·4차시를 합침 · 규칙 실험과 새 데이터 검증은 선택</td></tr>
+    <tr><td>4</td><td>데이터 이야기 발표 · 발표 뒤 질의로 비평 대신 · 개인 글은 과제</td><td>모둠 간 비평 차시를 없앰</td></tr>
+  </table></div>
+  <p class="muted small">정제를 건너뛰면 "데이터는 원래 깨끗하다"는 오해가 남기 쉽습니다. 시간이 없어도 미션 D(칼슘 그래프)는 꼭 하기를 권합니다.</p>
+</section>
+
+<section id="prep">
+  <h2>5. 사전 준비</h2>
+  <h3>영양교사 협의 (청중이자 협력자)</h3>
+  <ul class="check">
+    <li>프로젝트의 목적이 급식 평가가 아니라 <b>데이터로 질문하고 제안하는 연습</b>임을 먼저 공유한다.</li>
+    <li>급식을 만드는 제약(단가, 조리 인력, 학생 기호도, 식재료 수급, 영양 관리 기준)을 학생에게 소개해 줄 수 있는지 묻는다.</li>
+    <li>데이터의 한계를 함께 확인한다: 재료 목록이 없고, 요리 이름으로 재료를 추정하며, 2024년 3~4월 칼슘처럼 기록 오류가 있다.</li>
+    <li>6차시 발표를 들어 주고, 제안에 <b>언제까지 어떤 형식으로 답할지</b> 약속받는다. 답이 없으면 프로젝트의 실제성이 무너진다.</li>
+  </ul>
+  <h3>그 밖의 준비</h3>
+  <ul class="check">
+    <li>보건교사에게 활동 내용을 공유하고, 식이 문제가 걱정되는 학생의 대체 역할(데이터 정제 담당 등)을 정해 둔다.</li>
+    <li>우리 학교가 앱의 503곳에 있는지, 기록이 언제부터 있는지 '우리 학교 대 경기도' 화면에서 확인한다(3개 학년도 기록이 모두 있는 학교는 471곳).</li>
+    <li>학교 기기에서 학생용 활동을 미리 열어 본다. 데이터 파일이 3MB라 첫 로딩에 몇 초 걸릴 수 있다.</li>
+    <li>'우리 학교 최근 급식'은 학교망에서 나이스 교육정보 개방 포털(open.neis.go.kr)에 접속할 수 있어야 한다. 미리 한 번 불러와 본다. 막혀 있으면 그 기능만 쓸 수 없고 나머지는 그대로 된다.</li>
+    <li>도입 미션의 답은 같은 기기·같은 주소에서 열어야 탐구 앱의 결과 파일에 함께 담긴다.</li>
+    <li>이름 칸에 실명 대신 모둠 별칭을 쓰게 해도 된다. 앱은 서버로 아무것도 보내지 않는다.</li>
+    <li>평가 기준(7절)과 비평 질문 카드(8절)를 인쇄한다.</li>
+  </ul>
+</section>
+
+<section id="guide">
+  <h2>6. 단계별 해설과 예상 오개념</h2>
+  <div class="tw"><table>
+    <tr><th>단계</th><th>학생이 자주 하는 것</th><th>교사의 개입</th></tr>
+    <tr><td>도입 미션</td><td>라벨의 '11%'를 한 병 전체의 값으로 읽는다 · 기준치를 '나에게 필요한 양'으로 여긴다 · AI 문장을 출처 없이 모두 수용하거나 모두 거부한다</td>
+      <td>"이 %는 무엇에 대한 비율인가?"를 되묻는다. 칼슘 230 mg이 기준치로는 33%, 15~18세 여자 권장섭취량으로는 29%임을 비교시킨다. 판정보다 <b>무엇으로 확인했는지</b>를 발표하게 한다(제안 답은 수용·수정·거부가 2개씩)</td></tr>
+    <tr><td>질문 보드</td><td>"학생들이 좋아하는 메뉴는?"처럼 데이터에 없는 변수(선호, 맛, 나트륨, 잔반)를 묻는다</td>
+      <td>앱이 경고를 띄운다. "그 질문을 대신할 수 있는, 데이터에 있는 변수는?"으로 바꾸게 한다(예: 선호 → 자주 나오는 메뉴는 선호를 뜻하는가?)</td></tr>
+    <tr><td>정제 A·B</td><td>표기를 지나치게 묶는다("배추김치또는파김치"까지)</td>
+      <td>묶은 결과보다 <b>묶지 않은 이유를 적었는지</b>가 핵심이다. 사람마다 판단이 다를 수 있음을 인정하고, 판단을 기록하게 한다</td></tr>
+    <tr><td>정제 C</td><td>기준 밖 끼니를 모두 삭제한다 · 끼니 기록 전체를 지운다</td>
+      <td>계산 열량(탄수화물·단백질 4kcal/g, 지방 9kcal/g)이 단서다. 전수 처리에서는 메뉴는 남기고 틀린 영양 값만 결측으로 바꿨다. 실제 간편식·대체식(시험·파업)은 낮아도 진짜 끼니일 수 있다</td></tr>
+    <tr><td>정제 D</td><td>"그 두 달에 칼슘이 많은 메뉴가 나왔다"</td>
+      <td>"같은 두 달에 거의 모든 학교에서 동시에? 다른 영양소는 왜 그대로?" 메뉴가 아니라 기록 방식이 바뀌었다는 추론으로 이끈다. 원인은 확인되지 않았다는 점도 말해 준다</td></tr>
+    <tr><td>재료 사전</td><td>낱말 하나로 재료를 다 잡았다고 믿는다</td>
+      <td>오분류 예: 딸기 → 딸기우유·딸기잼 · 쑥 → 쑥갓 · 미나리 → 사철 나오는 숙주미나리무침 · 콩 → 콩나물 · 닭과 삼계가 "닭다리삼계탕" 한 요리에 함께 듦. 사람이 만든 규칙의 오류가 기계 분류의 오류와 같은 구조임을 짚는다([10통과2-03-03])</td></tr>
+    <tr><td>차트 빌더</td><td>막대가 높으면 무조건 차이가 있다고 본다 · 방학 달 값을 그대로 해석한다</td>
+      <td>회색 선(95% 신뢰구간)이 겹치면 차이를 단정하지 않는다. 1·2월은 끼니가 적다. 시군별 n이 작은 곳(연천군 등)은 구간이 넓다. 보라색 마름모(전수)와 막대(표본)를 견주며 표본 오차를 체험하게 한다</td></tr>
+    <tr><td>추천 규칙 실험</td><td>'1/3 넣기' 값을 급식의 공식 기준으로 여긴다 · 통과 비율이 낮으면 급식이 나쁘다고 결론짓는다</td>
+      <td>1/3 값은 권장섭취량을 3으로 나눈 계산값이고 학교급식 영양관리기준이 아니다. 핵심은 기준을 ±10% 바꿀 때 결과가 얼마나 흔들리는지이며, 이것이 AI 추천 점수를 의심해야 하는 이유다([10통과2-03-03])</td></tr>
+    <tr><td>그래프 함정</td><td>잘린 축 그래프를 보고 큰 변화라고 읽는다 · 횟수 1위를 '가장 자주'로 읽는다</td>
+      <td>네 함정을 푼 뒤 자기 모둠 그래프를 같은 질문으로 점검하게 한다. 시군 비교는 학교 수가 달라 반드시 비율로 본다. 계절이 있는 값은 시작·끝 달을 골라 '추세'를 만들 수 있다</td></tr>
+    <tr><td>새 데이터 검증</td><td>최근 4주 20끼의 비율을 표본과 같은 정밀도로 믿는다 · 한 학교의 값으로 경기도를 말한다</td>
+      <td>20끼의 신뢰구간이 얼마나 넓은지 보게 한다. 같은 방향인지(검증)와 같은 크기인지(정밀도)를 구분한다. 받아 온 값은 처리 전 원본이라 이상값이 섞일 수 있다</td></tr>
+    <tr><td>또래 통계</td><td>"아침 결식이 늘어서 급식 열량이 늘었다"처럼 두 데이터를 인과로 잇는다</td>
+      <td>청소년건강행태조사는 전국 중·고등학생의 응답, 급식 데이터는 경기도 고등학교의 제공 식단이다. 연결은 추론과 한계 칸에 쓰고 인과로 단정하지 않게 한다</td></tr>
+    <tr><td>우리 학교</td><td>"우리 학교 열량이 낮으니 급식이 나쁘다"</td>
+      <td>학교별 값에는 메뉴 차이와 <b>기록 방식의 차이</b>가 함께 들어 있다. 다른 학교의 순위를 매기는 발표는 하지 않게 한다</td></tr>
+    <tr><td>주장 카드</td><td>근거에 수치가 없다 · 한계 칸에 "없음" · 상관을 원인으로 말한다</td>
+      <td>앱은 근거에 수치가 없으면 저장을 막는다. 한계 힌트 칩을 쓰되 자기 말로 고치게 한다. "바다에 접한 시군과 아닌 시군의 생선 비율이 같다(둘 다 34.6%)"처럼 예상이 틀린 결과도 좋은 주장이 된다</td></tr>
+  </table></div>
+</section>
+
+<section id="rubric">
+  <h2>7. 평가 기준</h2>
+  <p class="muted small">주장 카드 기준은 주장–근거–추론 틀(McNeill &amp; Krajcik, 2011)에 데이터 과학의 한계 인식을 더한 것입니다. 수행평가에 반영한다면 모둠 산출물과 개인 글을 나누어 평가하기를 권합니다(무임승차 대응).</p>
+  <h3>7.1 주장 카드 (카드 1장 기준)</h3>
+  <div class="tw"><table>
+    <tr><th>기준</th><th>4 우수</th><th>3 충족</th><th>2 부분</th><th>1 미흡</th></tr>
+    <tr><td>주장</td><td>그래프로 확인할 수 있는 범위(대상·기간·지역)를 밝힌 한 문장</td><td>분명하지만 범위가 일부 빠짐</td><td>그래프와 어긋나거나 지나치게 넓음</td><td>주장이 없거나 의견뿐</td></tr>
+    <tr><td>근거</td><td>수치와 n, 표본인지 전수인지, 출처가 모두 있음</td><td>수치와 출처가 있으나 n이나 표본·전수 구분이 빠짐</td><td>수치가 하나뿐이거나 출처가 불분명</td><td>수치가 없음</td></tr>
+    <tr><td>추론</td><td>근거가 주장을 뒷받침하는 까닭을 비교(다른 달·시군·전수)나 통계 개념(신뢰구간, 중앙값)으로 설명</td><td>까닭을 설명하나 비교가 약함</td><td>근거를 되풀이함</td><td>추론이 없음</td></tr>
+    <tr><td>한계</td><td>이 카드에 해당하는 한계를 구체적으로 둘 이상(이름 추정, 표본 오차, 기록 오류, 일반화, 인과)</td><td>구체적 한계 하나</td><td>일반적인 말("데이터가 부족하다")뿐</td><td>"없음" 또는 빈칸</td></tr>
+  </table></div>
+  <h3>7.2 데이터 이야기와 발표 (모둠)</h3>
+  <div class="tw"><table>
+    <tr><th>기준</th><th>4 우수</th><th>3 충족</th><th>2 부분</th><th>1 미흡</th></tr>
+    <tr><td>청중 적합성</td><td>실제 청중의 권한과 제약(단가·인력·기호도)을 고려한 제안</td><td>청중을 정했으나 제약 고려가 약함</td><td>청중이 막연함</td><td>청중이 없음</td></tr>
+    <tr><td>제안</td><td>무엇을, 왜, 어떻게 확인할지(다음 학기 기록 등)까지 구체적</td><td>무엇과 왜가 분명</td><td>바람이나 요구에 그침</td><td>제안이 없음</td></tr>
+    <tr><td>투명성</td><td>정제 결정, 재료 규칙, 데이터 범위(경기도·기간)를 밝힘</td><td>둘을 밝힘</td><td>하나만 밝힘</td><td>밝히지 않음</td></tr>
+    <tr><td>비평 반영</td><td>받은 비평과 그에 따라 고친 점을 말함</td><td>고친 점이 있음</td><td>비평을 받았으나 고치지 않음</td><td>비평 과정 없음</td></tr>
+  </table></div>
+  <h3>7.3 개인 논증 글 (600~800자, [10통과2-03-02]·[10통과2-03-04])</h3>
+  <p><b>과제:</b> "급식 식단 빅데이터를 학교 급식 개선에 쓰는 것의 장점과 문제점은 무엇인가? 이번 탐구에서 겪은 사례를 근거로 논증하시오."</p>
+  <ul>
+    <li>장점 하나 이상을 이번 탐구의 구체적 결과로 뒷받침했는가(예: 제철 패턴, 유행의 확산)</li>
+    <li>문제점 하나 이상을 직접 겪은 사례로 뒷받침했는가(예: 칼슘 기록 오류, 이름 기반 재료 추정, 표본 오차)</li>
+    <li>반론을 하나 다루고 답했는가</li>
+    <li>데이터 활용의 윤리(정제 기록 공개, 불리한 값 숨기지 않기, 학교 서열화 경계)를 언급했는가</li>
+  </ul>
+</section>
+
+<section id="critique">
+  <h2>8. 비평 프로토콜 — 피드백 사다리</h2>
+  <p>비평 기준이 없으면 칭찬만 오갑니다. 하버드 Project Zero의 피드백 사다리(Perkins, 2003)를 데이터 탐구에 맞게 고쳐, 모둠당 8분 안에 네 칸을 순서대로 밟게 합니다. 만든 모둠이 산출물의 주인이며, 제안을 꼭 받아들일 필요는 없습니다.</p>
+  <div class="tw"><table>
+    <tr><th>단계</th><th>하는 일</th><th>말 시작</th></tr>
+    <tr><td>1 명료화</td><td>이해하지 못한 것을 묻는다</td><td>"이 그래프는 표본인가요, 전수인가요?" · "n은 몇 끼인가요?"</td></tr>
+    <tr><td>2 가치</td><td>잘한 점을 구체적으로 말한다</td><td>"정제에서 ○○을 지우지 않고 남긴 이유가 설득력 있었다"</td></tr>
+    <tr><td>3 우려</td><td>걱정되는 점을 질문 형태로 말한다</td><td>"신뢰구간이 겹치는데 차이가 있다고 해도 될까요?" · "재료 규칙을 바꾸면 결론이 그대로일까요?"</td></tr>
+    <tr><td>4 제안</td><td>고칠 방법을 제안한다</td><td>"전수 값(보라색)과 비교한 문장을 넣으면 어떨까요?"</td></tr>
+  </table></div>
+  <h3>데이터 과학 질문 카드 (인쇄해서 나눠 주기)</h3>
+  <ul>
+    <li>이 결론은 <b>표본</b>에서 나왔나, <b>전수</b>에서 나왔나?</li>
+    <li>몇 끼(n)로 계산했나? 방학 달이나 작은 시군이 섞였나?</li>
+    <li>재료를 어떤 낱말 규칙으로 찾았나? 잘못 잡힌 요리는 없나?</li>
+    <li>정제에서 무엇을 지우거나 고쳤고, 그 결정이 결론을 바꾸나?</li>
+    <li>"~때문에"라고 말해도 되나, "~와 함께 나타난다"까지만 말할 수 있나?</li>
+    <li>경기도 결과를 전국이나 다른 해로 넓혀도 되나?</li>
+  </ul>
+</section>
+
+<section id="collect">
+  <h2>9. 결과 모아 보기</h2>
+  <p>학생이 '데이터 이야기' 단계에서 <b>파일로 내려받기(.json)</b>를 누르면 <code>siktak-lab_날짜시각.json</code> 파일이 생깁니다(모둠과 이름은 파일 안에 들어 있습니다). 그 파일들을 여기서 한꺼번에 열면 모둠별 진행 상황과 주장 카드를 볼 수 있고, 7.1 기준으로 점수를 매겨 표로 내려받을 수 있습니다.</p>
+  <div class="note ok">파일은 이 브라우저 안에서만 읽습니다. 어디에도 올리지 않습니다. 매긴 점수는 이 기기의 브라우저에 저장됩니다.</div>
+  <div class="btns noprint"><input type="file" id="files" accept=".json,application/json" multiple aria-label="학생 결과 파일 고르기">
+    <button class="btn" id="scoreCsv">점수 표 내려받기(.csv)</button><button class="btn" id="clearScores">점수 지우기</button></div>
+  <div class="tw"><table id="sumTable"><tr><td class="muted">아직 연 파일이 없습니다.</td></tr></table></div>
+  <div id="surveyOut"></div>
+  <div id="cardsOut"></div>
+</section>
+
+<section id="safety">
+  <h2>10. 안전·윤리</h2>
+  <ul>
+    <li><b>개인 섭취 기록을 받지 않습니다.</b> 이 프로젝트의 분석 대상은 개인의 식사가 아니라 급식 기록입니다. 열량을 세거나 기록하게 하는 활동은 섭식 문제를 부추길 수 있다는 연구가 있습니다(Simpson &amp; Mazzeo, 2017).</li>
+    <li>체중, 체형, 외모를 활동이나 발표의 소재로 삼지 않습니다.</li>
+    <li>분석이 급식 비난이나 영양교사 평가로 흐르지 않게 합니다. 제안은 "누가 잘못했다"가 아니라 "무엇을 확인해 보자"로 씁니다.</li>
+    <li>학교별 값으로 다른 학교의 순위를 매기지 않습니다. 값에는 기록 방식의 차이가 섞여 있습니다.</li>
+    <li>정제 결정을 기록하고, 불리한 값을 이유 없이 지우지 않습니다([10과탐2-02-03] 연구 진실성).</li>
+    <li>도입 미션은 키·몸무게·체형을 묻지 않습니다. 카페인 계산은 예시 체중 55 kg으로만 합니다. 학생에게 자기 체중으로 계산해 보라고 하지 마세요.</li>
+    <li>'우리 학교 최근 급식'은 학교 이름과 날짜만 나이스로 보냅니다. 학생 정보는 오가지 않습니다.</li>
+    <li>사전·사후 자기 평가는 성적에 넣지 않습니다. 학생에게도 그렇게 알립니다.</li>
+    <li>나이스와 공공데이터포털의 이용 약관과 출처 표기 방식은 아직 확인하지 못했습니다. 학생 산출물을 학교 밖에 공개하기 전에 확인하세요.</li>
+  </ul>
+</section>
+
+<section id="refs">
+  <h2>11. 참고문헌과 확인 상태</h2>
+  <div class="tw"><table>
+    <tr><th>문헌</th><th>쓰인 곳</th><th>확인 상태</th></tr>
+    <tr><td>교육부(2022). 과학과 교육과정. 교육부 고시 제2022-33호 [별책 9].</td><td>2절</td><td>재배포 PDF에서 문구 확인. 고시 원문 대조는 남음</td></tr>
+    <tr><td>Wild, C. J., &amp; Pfannkuch, M. (1999). Statistical thinking in empirical enquiry. <i>International Statistical Review, 67</i>(3), 223–265.</td><td>3절</td><td>서지 기억. 대조 필요</td></tr>
+    <tr><td>Larmer, J., Mergendoller, J., &amp; Boss, S. (2015). <i>Setting the standard for project based learning</i>. ASCD.</td><td>전체 설계(PBL 필수 요소)</td><td>서지 기억. 대조 필요</td></tr>
+    <tr><td>McNeill, K. L., &amp; Krajcik, J. (2011). <i>Supporting grade 5–8 students in constructing explanations in science: The claim, evidence, and reasoning framework for talk and writing</i>. Pearson.</td><td>7.1</td><td>서지 확인(출판사 목록. 판에 따라 2012로도 표기)</td></tr>
+    <tr><td>Perkins, D. (2003). <i>King Arthur's round table: How collaborative conversations create smart organizations</i>. Wiley. · Project Zero, Ladder of Feedback.</td><td>8절</td><td>Project Zero 자료의 출처 표기로 확인. 책 원문은 미확인</td></tr>
+    <tr><td>Aguinis, H., Gottfredson, R. K., &amp; Joo, H. (2013). Best-practice recommendations for defining, identifying, and handling outliers. <i>Organizational Research Methods, 16</i>(2), 270–301.</td><td>정제 미션 C의 원칙</td><td>서지와 초록 확인</td></tr>
+    <tr><td>Leys, C., Ley, C., Klein, O., Bernard, P., &amp; Licata, L. (2013). Detecting outliers: Do not use standard deviation around the mean, use absolute deviation around the median. <i>Journal of Experimental Social Psychology, 49</i>(4), 764–766.</td><td>정제 미션 C의 기준(중앙값·MAD)</td><td>요지 확인(2차 자료)</td></tr>
+    <tr><td>Van den Broeck, J., et al. (2005). Data cleaning: Detecting, diagnosing, and editing data abnormalities. <i>PLoS Medicine, 2</i>(10), e267.</td><td>정제 기록·처리 전후 비교</td><td>서지와 초록 확인</td></tr>
+    <tr><td>식품의약품안전처(2024.12). 한눈에 보는 영양표시 가이드라인(민원인 안내서). 참고 2 「1일 영양성분 기준치」(「식품 등의 표시·광고에 관한 법률 시행규칙」[별표 5]).</td><td>도입 미션 1</td><td>원문 PDF에서 기준치 값과 비율 계산법(함량 ÷ 기준치 × 100, 반올림해 정수) 확인(2026-11-20)</td></tr>
+    <tr><td>식품의약품안전처. 「식품등의 표시기준」[표 2] 한국인 영양섭취기준(사단법인 한국영양학회, 2020).</td><td>도입 미션 1, 추천 규칙 실험의 1/3 값</td><td>법제처가 제공한 표 PDF에서 15~18세 값(칼슘 남 900·여 800 mg, 단백질 남 65·여 55 g)과 권장섭취량 정의 확인(2026-11-20)</td></tr>
+    <tr><td>식품의약품안전처. 카페인 최대 일일섭취권고량(어린이·청소년 체중 1 kg당 2.5 mg 이하, 성인 400 mg 이하).</td><td>도입 미션 2</td><td>식약처 자료를 인용한 검색 결과와 보도가 일치함을 확인. 식약처 원문 페이지 직접 대조는 남음</td></tr>
+    <tr><td>질병관리청. 청소년건강행태조사 주요통계(kdca.go.kr/yhs) — 주 5일 이상 아침식사 결식률.</td><td>또래 통계</td><td>주요통계 표에서 2016~2025 성별 값 확인(2026-11-20). 2024 값은 보도자료와 교차 확인. 2014~2015 값과 학년별 값은 찾지 못해 넣지 않음</td></tr>
+    <tr><td>질병관리청·교육부(2024.11.22). 제20차(2024년) 청소년건강행태조사 결과 보도자료.</td><td>또래 통계(패스트푸드 2024)</td><td>정부24 게재본과 지역 언론 보도에서 같은 값 확인. 보도자료 PDF 원문은 미열람</td></tr>
+    <tr><td>나이스 교육정보 개방 포털. 학교기본정보(schoolInfo)·급식식단정보(mealServiceDietInfo) Open API.</td><td>원자료, 새 데이터 검증</td><td>인증키 없이 부르면 5행만 오고 pIndex가 무시됨을 직접 시험(2026-11-20). CORS 허용 확인. 이용 약관은 미확인</td></tr>
+    <tr><td>FAO (2003). <i>Food energy – methods of analysis and conversion factors</i>. FAO Food and Nutrition Paper 77.</td><td>정제 미션 C(4·4·9 kcal/g)</td><td>서지 기억. 대조 필요. 경기도 원자료 98% 끼니에서 4·4·9 계산값과 기록 열량의 비가 0.98~1.04로 맞음을 직접 확인</td></tr>
+    <tr><td>Simpson, C. C., &amp; Mazzeo, S. E. (2017). Calorie counting and fitness tracking technology: Associations with eating disorder symptomatology. <i>Eating Behaviors, 26</i>, 89–92.</td><td>10절</td><td>서지 기억. 대조 필요</td></tr>
+  </table></div>
+</section>
+
+<section id="verify">
+  <h2>12. 수치 검수표 (F-11)</h2>
+  <p>학생 화면에 나오는 기준값과 외부 통계입니다. 전체 목록(데이터에서 계산한 값, 처리 규칙의 건수 포함)은 저장소의 <a href="../school-meal-gg/VERIFICATION.md">school-meal-gg/VERIFICATION.md</a>에 있습니다. 기준이 개정되면 이 표와 앱의 값을 함께 고쳐야 합니다.</p>
+  <div class="tw"><table>
+    <tr><th>값</th><th>쓰인 곳</th><th>출처</th><th>상태</th></tr>
+    <tr><td>1일 영양성분 기준치: 탄수화물 324 g, 당류 100 g, 단백질 55 g, 지방 54 g, 포화지방 15 g, 나트륨 2,000 mg, 칼슘 700 mg, 식이섬유 25 g</td><td>도입 미션 1</td><td>시행규칙 [별표 5] · 식약처 안내서(2024.12)</td><td><span class="pill g">원문 확인</span></td></tr>
+    <tr><td>% 기준치 = 함량 ÷ 기준치 × 100, 반올림해 정수</td><td>도입 미션 1</td><td>식약처 안내서(2024.12)</td><td><span class="pill g">원문 확인</span></td></tr>
+    <tr><td>15~18세 권장섭취량: 칼슘 남 900·여 800 mg, 단백질 남 65·여 55 g</td><td>도입 미션 1, 규칙 실험</td><td>식품등의 표시기준 [표 2](한국영양학회 2020)</td><td><span class="pill g">원문 확인</span></td></tr>
+    <tr><td>권장섭취량 = 집단의 약 97~98%가 필요량을 채우는 섭취 수준</td><td>도입 미션 1 설명</td><td>같은 표의 각주</td><td><span class="pill g">원문 확인</span></td></tr>
+    <tr><td>어린이·청소년 카페인 체중 1 kg당 2.5 mg 이하</td><td>도입 미션 2</td><td>식품의약품안전처</td><td><span class="pill">2차 자료로 확인</span></td></tr>
+    <tr><td>나이스 급식 영양 정보는 9종(탄수화물·단백질·지방·비타민A·티아민·리보플라빈·비타민C·칼슘·철)이고 나트륨이 없다</td><td>데이터 카드, 도입 미션 3</td><td>수집한 원자료의 NTR_INFO</td><td><span class="pill g">원자료 확인</span></td></tr>
+    <tr><td>주 5일 이상 아침 결식률 2016~2025(남 27.3→41.9%, 여 29.3→45.3%)</td><td>또래 통계</td><td>질병관리청 청소년건강행태조사 주요통계</td><td><span class="pill g">공표 표 확인</span></td></tr>
+    <tr><td>주 3회 이상 패스트푸드 2024(남 31.2%, 여 26.5%)</td><td>또래 통계</td><td>질병관리청·교육부 보도자료(2024.11.22)</td><td><span class="pill">게재본으로 확인</span></td></tr>
+    <tr><td>제품 A~E의 영양 값과 카페인 값</td><td>도입 미션</td><td>수업용 가상 값</td><td><span class="pill r">실제 제품 아님</span></td></tr>
+  </table></div>
+  <p class="muted small">이 표에 없는 '하루 권장섭취량의 1/3'은 위 권장섭취량을 3으로 나눈 계산값입니다. 학교급식법 시행규칙의 학교급식 영양관리기준은 원문을 확인하지 못해 앱에 넣지 않았습니다.</p>
+</section>
+</main>
+</div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const LS = "meallab_teacher_scores_v1";
+let scores = {}; try { scores = JSON.parse(localStorage.getItem(LS) || "{}"); } catch (e) {}
+const saveScores = () => { try { localStorage.setItem(LS, JSON.stringify(scores)); } catch (e) {} };
+const CRIT = ["주장", "근거", "추론", "한계"];
+let docs = [];
+function len(s) { return (s || "").trim().length; }
+function render() {
+  if (!docs.length) { $("#sumTable").innerHTML = `<tr><td class="muted">아직 연 파일이 없습니다.</td></tr>`; $("#cardsOut").innerHTML = ""; $("#surveyOut").innerHTML = ""; return; }
+  const own = d => (d.카드 || []).filter(k => !k.from);
+  $("#sumTable").innerHTML = `<tr><th>모둠</th><th>이름</th><th>하위 질문</th><th>도입 계산·AI 판정</th><th>정제 규칙</th><th>묶은 표기</th><th>열량 처리</th><th>칼슘 판단</th><th>사전에서 뺀 이름</th><th>그래프 함정</th><th>카드(본인/가져옴)</th><th>제안</th><th>자기 평가 평균 사전→사후</th></tr>` +
+    docs.map(({ f, d }) => { const c = d.정제기록 || {}, merged = Object.values(c.묶기 || {}).reduce((s, a) => s + a.length, 0),
+      dec = Object.values(c.열량처리 || {}).filter(x => x && x.a).length, outs = Object.values(d.재료사전 || {}).reduce((s, r) => s + ((r && r.out) || []).length, 0);
+      const it = introScore(d.도입), tr = (d.그래프함정 || []).filter(x => x.고른답 != null), trOk = tr.filter(x => x.고른답 === x.제안답).length, sv = d.설문 || {};
+      return `<tr><td>${esc(d.모둠)}</td><td>${esc(d.이름)}</td><td class="small">${esc((d.질문 || {}).text)}</td><td class="num">${it ? `${it.ok}/${it.total} · ${it.ai}/6` : "—"}</td><td class="num">${(c.규칙 || []).length}/4</td>
+        <td class="num">${merged}</td><td class="num">${dec}</td><td>${len(c.칼슘판단) >= 20 ? '<span class="pill g">작성</span>' : '<span class="pill r">미흡</span>'}</td>
+        <td class="num">${outs}</td><td class="num">${tr.length ? `${trOk}/${tr.length}` : "—"}</td><td class="num">${own(d).length}/${(d.카드 || []).length - own(d).length}</td><td>${len(d.제안) >= 20 ? '<span class="pill g">작성</span>' : '<span class="pill r">미흡</span>'}</td>
+        <td class="num">${fmtAvg(sv.사전)} → ${fmtAvg(sv.사후)}</td></tr>`; }).join("");
+  renderSurvey();
+  $("#cardsOut").innerHTML = docs.map(({ f, d }) => `<h3>${esc(d.모둠 || "모둠")} · ${esc(d.이름 || "")} <span class="pill">${esc(f)}</span></h3>
+    <p class="small muted">청중: ${esc(d.청중 || "—")} · 제안: ${esc(d.제안 || "—")}</p>` +
+    (d.카드 || []).map((k, i) => { const key = f + "#" + i, sc = scores[key] || {};
+      if (k.from) return `<div class="claim" style="opacity:.6"><b>${i + 1}. ${esc(k.claim)}</b> <span class="pill">가져온 카드 · ${esc(k.author)}</span><p class="small muted" style="margin:4px 0 0">모둠원의 파일에서 가져온 카드입니다. 원래 작성자의 파일에서 채점하세요.</p></div>`;
+      return `<div class="claim"><b>${i + 1}. ${esc(k.claim)}</b><dl><dt>근거</dt><dd>${esc(k.evid)}</dd><dt>추론</dt><dd>${esc(k.reason)}</dd><dt>한계</dt><dd>${esc(k.limit)}</dd><dt>그래프</dt><dd class="small muted">${esc(k.graph)}</dd></dl>
+      <div class="btns">${CRIT.map(cr => `<label class="small">${cr} <select data-key="${esc(key)}" data-cr="${cr}"><option value="">-</option>${[4, 3, 2, 1].map(v => `<option ${+sc[cr] === v ? "selected" : ""}>${v}</option>`).join("")}</select></label>`).join("")}
+      <span class="small muted" data-sum="${esc(key)}">${CRIT.every(cr => sc[cr]) ? "합계 " + CRIT.reduce((s, cr) => s + +sc[cr], 0) + "/16" : ""}</span></div></div>`; }).join("")).join("");
+}
+/* 도입 미션 정답 범위(meal-intro.html과 같다) */
+const INTRO_OK = { n1: [89.5, 90.5], n2: [54.5, 55.5], n3: [54.5, 55.5], n4: [32.5, 33.5], n5: [28.5, 29.5], n6: [137, 138], n7: [126.5, 127.5] };
+function introScore(r) { if (!r || !r.num) return null;
+  return { ok: Object.entries(INTRO_OK).filter(([k, [a, b]]) => r.num[k] != null && r.num[k] >= a && r.num[k] <= b).length, total: Object.keys(INTRO_OK).length,
+    ai: Object.values(r.ai || {}).filter(x => x && x.checked).length }; }
+const avg = a => { const v = (a || []).filter(x => typeof x === "number"); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null; };
+const fmtAvg = a => { const m = avg(a); return m == null ? "—" : m.toFixed(1); };
+function renderSurvey() { // 문항별 사전·사후 평균(두 번 다 답한 학생만 짝지어 셈)
+  const ds = docs.map(x => x.d.설문).filter(x => x && Array.isArray(x.문항));
+  if (!ds.length) { $("#surveyOut").innerHTML = ""; return; }
+  const items = ds[0].문항;
+  const rows = items.map((q, i) => { const pairs = ds.filter(x => typeof (x.사전 || [])[i] === "number" && typeof (x.사후 || [])[i] === "number");
+    const pre = avg(pairs.map(x => x.사전[i])), post = avg(pairs.map(x => x.사후[i]));
+    return `<tr><td class="small">${i + 1}. ${esc(q)}</td><td class="num">${pairs.length}</td><td class="num">${pre == null ? "—" : pre.toFixed(2)}</td><td class="num">${post == null ? "—" : post.toFixed(2)}</td>
+      <td class="num">${pre == null ? "—" : (post - pre >= 0 ? "+" : "") + (post - pre).toFixed(2)}</td></tr>`; }).join("");
+  $("#surveyOut").innerHTML = `<h3>자기 평가(F-20) — 문항별 평균, 1~5</h3><div class="tw"><table><tr><th>문항</th><th class="num">짝 n</th><th class="num">사전</th><th class="num">사후</th><th class="num">변화</th></tr>${rows}</table></div>
+    <p class="muted small">교사가 만든 자기 보고 문항이고 타당화하지 않았습니다. 비교 집단이 없으므로 변화를 수업의 효과로 단정할 수 없습니다. 짝 n이 작으면(예: 10명 미만) 해석하지 마세요.</p>`;
+}
+$("#files").addEventListener("change", async e => {
+  for (const file of e.target.files) {
+    try { const d = JSON.parse(await file.text()); if (!d || !("카드" in d)) throw new Error("형식");
+      docs = docs.filter(x => x.f !== file.name); docs.push({ f: file.name, d }); }
+    catch (err) { alert(`${file.name}: 식탁 문제 해결단 결과 파일이 아닙니다.`); }
+  }
+  docs.sort((a, b) => String(a.d.모둠).localeCompare(String(b.d.모둠), "ko")); render();
+});
+$("#cardsOut").addEventListener("change", e => { const t = e.target; if (!t.dataset.key) return;
+  (scores[t.dataset.key] = scores[t.dataset.key] || {})[t.dataset.cr] = t.value; saveScores();
+  const sc = scores[t.dataset.key], el = document.querySelector(`[data-sum="${CSS.escape(t.dataset.key)}"]`);
+  if (el) el.textContent = CRIT.every(cr => sc[cr]) ? "합계 " + CRIT.reduce((s, cr) => s + +sc[cr], 0) + "/16" : ""; });
+$("#scoreCsv").addEventListener("click", () => {
+  const rows = [["파일", "모둠", "이름", "카드 번호", "주장 문장", ...CRIT.map(c => c + " 점수"), "합계"]];
+  docs.forEach(({ f, d }) => (d.카드 || []).forEach((k, i) => { if (k.from) return; const sc = scores[f + "#" + i] || {};
+    rows.push([f, d.모둠, d.이름, i + 1, k.claim, ...CRIT.map(cr => sc[cr] || ""), CRIT.every(cr => sc[cr]) ? CRIT.reduce((s, cr) => s + +sc[cr], 0) : ""]); }));
+  const csv = "﻿" + rows.map(r => r.map(v => `"${String(v == null ? "" : v).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = "siktak-lab_claim-scores.csv"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+$("#clearScores").addEventListener("click", () => { if (confirm("이 기기에 저장된 점수를 모두 지울까요?")) { scores = {}; saveScores(); render(); } });
+</script>
+</body>
+</html>

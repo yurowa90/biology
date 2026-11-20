@@ -10,6 +10,11 @@
 index.html                                  교과서 홈(목차 네비게이션)
 activities/enzyme-kinetics.html             효소반응속도 워크북(UI + 로직 + 시뮬레이터 + 서술형 자가 점검)
 activities/enso.html                        엘니뇨·라니냐 워크북(시뮬레이터 + ONI·실시간 수온 + GRASPS 자가 점검·자기평가)
+activities/meal-intro.html                  식탁 문제 해결단 도입 미션
+activities/meal-lab.html                    식탁 문제 해결단(급식 데이터 PBL)
+activities/meal-lab-teacher.html            식탁 문제 해결단 교사용 안내
+activities/meal-lab-data.js                 위 활동의 데이터(10% 무작위 표본·정제 미션 원본 표본·전수 집계표). school-meal-gg/build_web_data.py가 만든다
+school-meal-gg/                             경기도 고등학교 504곳 급식 데이터(2024.3~2026.11 점심 24만 끼) 수집·분석 스크립트와 수업용 집계표. 앱의 기준값·통계 출처와 확인 상태는 school-meal-gg/VERIFICATION.md
 teacher.html                                교사 대시보드
 data/oni.json                               NOAA ONI(배포 때 자동 수집, 저장소에는 오프라인용 스냅샷/자리표시)
 scripts/fetch-oni.mjs                       NOAA ONI → data/oni.json 변환·검증, 활동 HTML 내장 스냅샷 교체(외부 의존성 없음)
