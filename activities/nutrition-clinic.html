@@ -140,7 +140,7 @@ const COMMON_AI = [
   { msg: "🚀 \"2주 집중 플랜\": 하루 900 kcal만 먹으면 목표를 가장 빨리 이룰 수 있어요!", ctx: "앱의 목표가 '빠른 변화'로 설정되어 있다.", a: 2, ok: -1,
     why: "900 kcal는 15~18세 에너지필요추정량(남 2,700, 여 2,000 kcal)의 33~45%에 그칩니다. 성장기의 극단적인 제한은 영양 결핍과 섭식 문제의 위험을 키웁니다. AI는 주어진 목표 하나만 좇을 수 있고, 그 목표가 건강한지는 사람이 판단해야 합니다." },
   { msg: "🎁 식단·심박·수면 기록을 제휴 광고사에 제공하는 데 '전체 동의'하면 프리미엄 1개월 무료!", ctx: "약관은 4,000자이고, 제공 기간은 '서비스 종료 시까지'다.", a: 2, ok: 1,
-    why: "건강에 관한 정보는 개인정보 보호법에서 민감정보로 다루며, 따로 동의를 받아야 합니다. 빅데이터는 많은 사람의 기록이 모일 때 쓸모가 커지지만, 목적·범위·기간이 불분명한 전체 동의는 거부하거나, 무엇을 누구에게 언제까지 주는지 확인한 뒤 결정해야 합니다." }];
+    why: "건강에 관한 정보는 개인정보 보호법에서 민감정보로 다루며, 다른 정보와 따로 동의를 받거나 법령에 근거가 있을 때만 처리할 수 있습니다(제23조). 빅데이터는 많은 사람의 기록이 모일 때 쓸모가 커지지만, 목적·범위·기간이 불분명한 전체 동의는 거부하거나, 무엇을 누구에게 언제까지 주는지 확인한 뒤 결정해야 합니다." }];
 
 /* 의뢰인(가상). 체중(kg)은 카페인 권고량 계산에만 쓴다. now: 어제 먹은 것(현재 식단) — 문항·그래프의 '어제' 값과 같아야 한다 */
 const P = {
@@ -367,7 +367,7 @@ function critRows(d) {
 }
 function fgLine(tray) { const g = groups(tray), miss = FG_NAMES.filter((_, i) => !g.includes(i));
   return `<p class="su-small" style="margin:0">🧺 <b>식품군 ${g.length} / 5</b> · ${g.length ? g.map(i => FG_NAMES[i]).join(" · ") : "아직 없음"}${miss.length && g.length ? ` <span class="su-muted">(빠진 것: ${miss.join(" · ")})</span>` : ""}</p>
-    <p class="su-tiny su-muted" style="margin:0">식품군은 판정에 넣지 않는 참고 정보입니다. 식품구성자전거의 분류(유지·당류 제외)를 따른 수업용 분류예요.</p>`; }
+    <p class="su-tiny su-muted" style="margin:0">식품군은 판정에 넣지 않는 참고 정보입니다. 「한국인을 위한 식생활지침」 1항의 다섯 식품군(곡류, 고기·생선·달걀·콩류, 채소, 과일, 우유·유제품)을 따른 수업용 분류예요.</p>`; }
 function s3(p) {
   const c = C(), d = judge(p, c.tray), t = d.t, over = t.won > BUDGET, can = t.n >= 4 && !over, base = judge(p, p.now);
   const list = FOODS.filter(f => c.cat === "all" || f.c === c.cat);
@@ -469,7 +469,7 @@ function s6(p) { const pl = plan(), m = S.measure;
   <div class="su-stack">
     <div class="su-card su-stack"><b>① 해 볼 만한 것 하나 고르기</b><div class="su-row" role="group" aria-label="실천 목표">${GOALS.map(chip).join("")}</div>
       <details ${GOALS_LESS.some(g => g[0] === pl.goal) ? "open" : ""}><summary class="su-small">줄이는 목표 더 보기</summary><div class="su-row" style="margin-top:8px">${GOALS_LESS.map(chip).join("")}</div></details>
-      <p class="su-tiny su-muted" style="margin:0">무언가를 빼는 계획보다 더하는 계획이 지키기 쉬운 경우가 많아요.</p></div>
+      <p class="su-tiny su-muted" style="margin:0">무언가를 빼는 계획보다 더하는 계획이 지키기 쉬운 경우가 많아요. 물 충분히 마시기와 아침식사는 「한국인을 위한 식생활지침」(2021) 3항·5항에도 들어 있어요.</p></div>
     <div class="su-card su-stack"><b>② "만약 ~하면, ~하겠다"로 쓰기</b>
       ${fld("when", "만약 (언제·어디서)", "예: 학원 가기 전에 편의점에 들르면")}${fld("then", "그러면 (무엇을)", "예: 탄산음료 대신 물을 고르겠다")}</div>
     <div class="su-card su-stack"><b>③ 막힐 때를 미리 생각하기</b>
@@ -548,7 +548,7 @@ function teacher() {
   <div class="su-grid"><div class="su-card su-stack"><b>영양교사와 함께하기</b><ul class="su-small" style="margin:0;padding-left:18px">
       <li>영양교사: 음식 27가지의 값과 식품군 분류 검수, 1차시 공동 수업(라벨과 기준), 급식 식단과 연계</li>
       <li>과학교사: 자료 해석, AI 추천 판정, 논증 지도</li>
-      <li>근거: 영양교사의 직무에는 식생활 지도, 정보 제공, 영양상담이 있다(학교급식법 시행령 제8조, 2차 자료로 확인).</li></ul></div>
+      <li>근거: 영양교사의 직무에는 식생활 지도, 정보 제공, 영양상담이 있다(학교급식법 시행령 제8조 제3호, 법제처 국가법령정보센터 원문 확인).</li></ul></div>
     <div class="su-card su-stack"><b>학기 단위 연계안</b><ol class="su-small" style="margin:0;padding-left:18px">
       <li>식탁 상담소(2차시)</li><li>식탁 문제 해결단: 급식 데이터 탐구(6차시)</li>
       <li>2주 뒤 실천 되돌아보기(자기 점검 3문항: 해 봤나, 무엇이 막았나, 다음엔 무엇을 바꿀까. 기록은 걷지 않음)</li>
@@ -567,9 +567,9 @@ function teacher() {
   <div class="su-card su-stack"><b>수치의 출처와 확인 상태</b><ul class="su-small" style="margin:0;padding-left:18px">
     <li>15~18세 에너지필요추정량(남 2,700·여 2,000 kcal), 단백질 권장섭취량(65·55 g), 칼슘 권장섭취량(800·700 mg), 식이섬유 충분섭취량(25·20 g), 나트륨 만성질환위험감소섭취량(2,300 mg), 첨가당(총 에너지의 10% 이내): 보건복지부·한국영양학회 「2025 한국인 영양소 섭취기준」 요약표에서 확인. 2020년판보다 칼슘·식이섬유가 낮아졌다.</li>
     <li>1일 영양성분 기준치와 비율 계산법: 「식품 등의 표시·광고에 관한 법률 시행규칙」[별표 5], 식약처 영양표시 가이드라인(2024.12)에서 확인.</li>
-    <li>카페인 체중 1 kg당 2.5 mg 이하: 식품의약품안전처(2차 자료로 확인). 건강정보가 민감정보라는 점: 개인정보 보호법 제23조(2차 자료로 확인).</li>
+    <li>청소년 카페인 체중 1 kg당 2.5 mg 이하(60 kg이면 150 mg): 식품의약품안전처 「청소년과 함께하는 카페인 섭취 줄이기」(2021.6.1, <a href="https://www.korea.kr/news/policyNewsView.do?newsId=148887836">정책브리핑 게재</a>)에서 확인. 성인 400 mg은 식약처 원자료 대조 전. 건강정보가 민감정보라는 점: 개인정보 보호법 제23조 제1항(법제처 원문 확인).</li>
     <li>음식별 영양 값·가격, 의뢰인, 7일 기록은 수업용 근삿값과 가상 자료이며 영양교사 검수 전이다. 전체 목록: <code>school-meal-gg/VERIFICATION.md</code></li>
-    <li>식품군: 식품구성자전거의 6개 식품군 가운데 유지·당류를 뺀 5개(수업용 분류, 검수 전). 2025 섭취기준의 식사구성안은 '활용편'으로 따로 나올 예정이다.</li></ul></div>
+    <li>식품군: 「한국인을 위한 식생활지침」 1항의 다섯 식품군(식품구성자전거의 6개 식품군 가운데 유지·당류를 뺀 것). 음식별 분류는 수업용이며 검수 전. 2025 섭취기준의 식사구성안은 '활용편'으로 따로 나올 예정이다.</li></ul></div>
   <div class="su-card su-stack"><b>영양교육 관점의 참고문헌(PubMed에서 서지·초록 확인)</b><ul class="su-small" style="margin:0;padding-left:18px">
     <li>Adriaanse, M. A., et al. (2011). Do implementation intentions help to eat a healthy diet? <i>Appetite, 56</i>(1), 183–193. <a href="https://doi.org/10.1016/j.appet.2010.10.012">doi</a></li>
     <li>Contento, I. R. (2008). Nutrition education: linking research, theory, and practice. <i>Asia Pac J Clin Nutr, 17</i>(Suppl 1), 176–179.</li>
@@ -578,7 +578,7 @@ function teacher() {
     <li>Simpson, C. C., & Mazzeo, S. E. (2017). Calorie counting and fitness tracking technology. <i>Eat Behav, 26</i>, 89–92. <a href="https://doi.org/10.1016/j.eatbeh.2017.02.002">doi</a></li>
     <li>Vidgen, H. A., & Gallegos, D. (2014). Defining food literacy and its components. <i>Appetite, 76</i>, 50–59. <a href="https://doi.org/10.1016/j.appet.2014.01.010">doi</a></li>
     <li>Worsley, A. (2002). Nutrition knowledge and food consumption. <i>Asia Pac J Clin Nutr, 11</i>(Suppl 3), S579–S585. <a href="https://doi.org/10.1046/j.1440-6047.11.supp3.7.x">doi</a></li>
-    <li>보건복지부·농림축산식품부·식품의약품안전처(2021). 「한국인을 위한 식생활지침」(보도자료로 확인).</li></ul></div>
+    <li>보건복지부·농림축산식품부·식품의약품안전처(2021.4.14). 「한국인을 위한 식생활지침」. <a href="https://www.korea.kr/news/policyNewsView.do?newsId=148886239">정책브리핑 게재 표</a>로 9개 항목 확인.</li></ul></div>
   <div class="su-row"><button class="su-btn" data-act="home">돌아가기</button><a class="su-btn ghost" href="../teacher.html">교사 대시보드 →</a></div></section>`; }
 
 /* ═══════════════ 그리기 ═══════════════ */
