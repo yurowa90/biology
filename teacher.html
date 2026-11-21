@@ -674,6 +674,22 @@ function nFirst(r){ const a=[...(r.문제발견||[]),...(r.자료해석||[])]; r
 function nAI(r){ const a=(r.AI판정||[]).filter(x=>x&&x.고른판정); return { same:a.filter(x=>x.고른판정===x.제안판정).length, n:a.length }; }
 function nCerLen(r){ const c=r.논증||{}; return ["주장","근거","추론","반박"].reduce((s,k)=>s+String(c[k]||"").trim().length,0); }
 function nClients(){ const by={}; nutris.forEach(r=>{ const c=(r.의뢰인&&r.의뢰인.이름)||"?"; (by[c]=by[c]||[]).push(r); }); return by; }
+/* v1.1 필드: 측정(시작 전·마무리 점검), 실천(학생이 넣기로 한 경우만), 환경제안, 식단.식품군. 예전 파일에는 없다 */
+const N_MTYPE=["단위 맞추기","%의 뜻","추천 판단"];
+const sumOf=a=>a.reduce((s,v)=>s+(+v||0),0);
+function nM(x){ return x&&Array.isArray(x.정답)&&Array.isArray(x.효능감) ? { c:sumOf(x.정답), e:avgOf(x.효능감), item:x.정답 } : null; }
+function nStudents(){ const by={}; nutris.forEach(r=>{ const k=(r.이름||"?")+"|"+(r.모둠||""); (by[k]=by[k]||[]).push(r); });
+  Object.values(by).forEach(a=>a.sort((x,y)=>String(y.작성||"").localeCompare(String(x.작성||"")))); return by; }
+function nMeasStats(){ const st=nStudents(), pairs=[]; let skipped=0, late=0, none=0;
+  Object.values(st).forEach(rs=>{ const withM=rs.filter(r=>r.측정); if(!withM.length){ none++; return; }
+    const both=withM.find(r=>nM(r.측정.사전)&&nM(r.측정.사후)); if(both) pairs.push({ pre:nM(both.측정.사전), post:nM(both.측정.사후) });
+    else if(withM[0].측정.늦은시작) late++; else if(withM[0].측정.건너뜀) skipped++; });
+  return { pairs, skipped, late, none, n:Object.keys(st).length }; }
+function nPlanStats(){ const st=nStudents(), goals={}, env=[]; let share=0, hidden=0;
+  Object.values(st).forEach(rs=>{ const withP=rs.find(r=>r.실천&&r.실천.포함), anyP=rs.find(r=>r.실천);
+    if(withP){ share++; const g=withP.실천.목표||"?"; goals[g]=(goals[g]||0)+1; } else if(anyP) hidden++;
+    const e=rs.find(r=>String(r.환경제안||"").trim()); if(e) env.push({ name:e.이름||"(이름 없음)", team:e.모둠||"", text:String(e.환경제안).trim() }); });
+  return { goals, share, hidden, env }; }
 function renderNutri(){
   if(!nutris.length) return `<div class="empty"><div class="big">🥗</div>아직 식탁 상담소 결과가 없습니다.<br>
     학생이 탐구를 마치고 내려받은 결과 파일(<code>nutri-clinic_의뢰인_날짜시각.json</code>)을 위에 끌어다 놓으세요.</div>`;
@@ -693,9 +709,27 @@ function nOverview(){
     <div class="stat"><div class="k">식단 기준 충족(/9)</div><div class="v">${ds.length?f1(avgOf(ds.map(r=>r.식단.어제충족)))+"→"+f1(avgOf(ds.map(r=>r.식단.설계충족))):"—"}<small>${ds.length?" · 어제→설계":""}</small></div></div>
   </div>
   <div class="card"><h2>AI 알림 판정</h2><p class="csub">제안 판정과 같은 비율은 ${aN?Math.round(aSame/aN*100)+"% ("+aSame+"/"+aN+")":"—"}입니다. 제안과 달라도 이유가 타당하면 인정합니다. 알림별 분포는 '문항 분석' 탭에서 봅니다.</p></div>
+  ${nMeasCard()}${nPlanCard()}
   <div class="card"><h2>읽는 법</h2><p class="csub" style="margin:0">첫 시도 정답률은 학생이 처음 고른 답이 맞은 비율입니다. 학생은 맞힐 때까지 다시 고를 수 있으므로 낮은 문항은 다시 설명할 지점입니다.
     식단 기준 아홉 가지는 열량(필요추정량의 90~110%), 단백질·칼슘·식이섬유, 나트륨·첨가당·카페인, 예산, 좋아하는 음식입니다. 점수가 아니라 충족한 개수입니다.</p></div>`;
 }
+function nMeasCard(){ const m=nMeasStats(), P=m.pairs;
+  if(!P.length&&!m.skipped&&!m.late) return `<div class="card"><h2>시작 전·마무리 점검</h2><p class="csub" style="margin:0">점검 기록이 있는 결과 파일이 아직 없습니다(식탁 상담소 v1.1부터 기록).</p></div>`;
+  const it=i=>{ const a=P.filter(x=>x.pre.item[i]).length, b=P.filter(x=>x.post.item[i]).length; return `<div class="bar-wrap"><div class="bar-lab">${N_MTYPE[i]}</div><div class="bar-track"><div class="bar-fill" style="width:${P.length?Math.round(a/P.length*100):0}%;background:#33506e"></div></div><div class="bar-val">시작 ${a}명</div></div>
+    <div class="bar-wrap"><div class="bar-lab"></div><div class="bar-track"><div class="bar-fill" style="width:${P.length?Math.round(b/P.length*100):0}%;background:var(--green)"></div></div><div class="bar-val">마무리 ${b}명</div></div>`; };
+  return `<div class="card"><h2>시작 전·마무리 점검</h2>
+    <div class="stats" style="margin-bottom:10px">
+      <div class="stat"><div class="k">정답(/3) 시작→마무리</div><div class="v">${P.length?f1(avgOf(P.map(x=>x.pre.c)))+"→"+f1(avgOf(P.map(x=>x.post.c))):"—"}</div></div>
+      <div class="stat"><div class="k">자신감(1~5) 시작→마무리</div><div class="v">${P.length?f1(avgOf(P.map(x=>x.pre.e)))+"→"+f1(avgOf(P.map(x=>x.post.e))):"—"}</div></div>
+      <div class="stat"><div class="k">두 번 다 한 학생</div><div class="v">${P.length}<small> 명</small></div></div></div>
+    ${P.length?[0,1,2].map(it).join(""):""}
+    <p class="csub" style="margin:10px 0 0">점검을 건너뛴 학생 ${m.skipped}명 · 늦게 시작해 시작 전 점검이 없는 학생 ${m.late}명. 같은 학생(이름+모둠)의 여러 파일은 한 번만 셉니다. 평행형 A·B를 무작위 순서로 쓴 수업용 문항이며 타당도 검증 전입니다. 같은 수업 안의 단기 변화이고 연습 효과가 섞여 있으므로 행동 변화의 근거로 쓰지 않습니다.</p></div>`; }
+function nPlanCard(){ const s=nPlanStats(), g=Object.entries(s.goals).sort((a,b)=>b[1]-a[1]);
+  return `<div class="card"><h2>나에게 옮기기(6단계)</h2>
+    <p class="csub">실천 계획을 보고서에 넣은 학생 ${s.share}명 · 넣지 않은 학생 ${s.hidden}명. 넣지 않은 계획은 학생 기기에만 있으며 여기 오지 않습니다. 계획은 평가하지 않습니다.</p>
+    ${g.length?g.map(([k,n])=>`<div class="bar-wrap"><div class="bar-lab">${esc(k)}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(n/Math.max(1,s.share)*100)}%;background:var(--cyan)"></div></div><div class="bar-val">${n}명</div></div>`).join(""):""}
+    <h3 style="margin:14px 0 6px;font-size:14px">학교·집에서 바뀌면 좋을 것(환경 제안 ${s.env.length}건)</h3>
+    ${s.env.length?`<ul style="margin:0;padding-left:18px;font-size:13.5px;line-height:1.7">${s.env.map(x=>`<li>${esc(x.text)} <span style="color:var(--faint);font-size:12px">— ${esc(x.name)}${x.team?" · "+esc(x.team):""}</span></li>`).join("")}</ul><p class="csub" style="margin:8px 0 0">학생회·영양교사와 나눌 제안 후보입니다. 식탁 문제 해결단의 데이터 제안으로 이어 갈 수 있습니다.</p>`:'<p class="csub" style="margin:0">아직 없습니다.</p>'}</div>`; }
 function nRoster(){
   const rows=nutris.map(r=>({ key:nutriKey(r), r, name:r.이름||"(이름 없음)", team:r.모둠||"", cl:(r.의뢰인&&r.의뢰인.이름)||"", f:nFirst(r), a:nAI(r),
     d:r.식단||{}, len:nCerLen(r), done:!!r.완료, ts:r.작성||"" }));
@@ -720,9 +754,16 @@ function nDetail(r){
     <div class="dline"><span class="lab">식판</span>${d.식판?Object.entries(d.식판).map(([k,v])=>esc(k)+(v>1?" ×"+v:"")).join(", "):"—"}</div>
     ${(d.기준||[]).map(x=>`<div class="dline"><span class="lab">${esc(x.판정)}</span>${esc(x.기준)}: ${esc(x.값)} / ${esc(x.기준값)} ${esc(x.단위)}</div>`).join("")}
     ${d.양보?`<div class="dline"><span class="lab">양보</span>${esc(d.양보)}</div>`:""}
+    ${d.식품군?`<div class="dline"><span class="lab">식품군</span>어제 ${esc(d.식품군.어제)}/5 → 설계 ${esc(d.식품군.설계==null?"—":d.식품군.설계)}/5${d.식품군.설계식품군?" ("+d.식품군.설계식품군.map(esc).join(" · ")+")":""}</div>`:""}
     <h4 style="margin-top:14px">AI 알림 판정</h4>${(r.AI판정||[]).map((x,i)=>`<div class="dline"><span class="lab">AI${i+1}</span>${esc(x.알림)} → <b style="color:${x.고른판정===x.제안판정?"var(--green)":x.고른판정===x.일리있는다른판정?"var(--amber)":"var(--red)"}">${esc(x.고른판정||"—")}</b> <span style="color:var(--faint)">제안 ${esc(x.제안판정)}</span>${x.이유?`<div class="dessay">${esc(x.이유)}</div>`:""}</div>`).join("")}
     <h4 style="margin-top:14px">논증</h4><div class="dline"><span class="lab">논제</span>${esc(c.논제||"")}</div>
-    ${["주장","근거","추론","반박"].map(k=>`<div class="dline"><span class="lab">${k}</span><div class="dessay">${esc(c[k]||"—")}</div></div>`).join("")}</div>`;
+    ${["주장","근거","추론","반박"].map(k=>`<div class="dline"><span class="lab">${k}</span><div class="dessay">${esc(c[k]||"—")}</div></div>`).join("")}
+    ${r.실천||r.환경제안!=null?`<h4 style="margin-top:14px">나에게 옮기기</h4>
+      ${r.실천&&r.실천.포함?`<div class="dline"><span class="lab">목표</span>${esc(r.실천.목표||"")}</div><div class="dline"><span class="lab">계획</span>만약 ${esc(r.실천.만약||"—")}, ${esc(r.실천.그러면||"")}</div><div class="dline"><span class="lab">대비</span>${esc(r.실천.장애물||"—")} → ${esc(r.실천.대안||"—")}</div>`
+        :`<div class="dline"><span class="lab">계획</span><span class="no">학생이 보고서에 넣지 않음</span></div>`}
+      <div class="dline"><span class="lab">환경 제안</span>${esc(r.환경제안||"—")}</div>`:""}
+    ${r.측정?`<h4 style="margin-top:14px">시작 전·마무리 점검</h4>${nM(r.측정.사전)&&nM(r.측정.사후)?`<div class="dline"><span class="lab">정답</span>${nM(r.측정.사전).c}/3 → ${nM(r.측정.사후).c}/3 <span style="color:var(--faint)">(${esc(r.측정.순서||"")})</span></div><div class="dline"><span class="lab">자신감</span>${f1(nM(r.측정.사전).e)} → ${f1(nM(r.측정.사후).e)}</div>`
+      :`<div class="dline"><span class="lab">상태</span>${r.측정.늦은시작?"늦은 시작(사전 없음)":r.측정.건너뜀?"건너뜀":nM(r.측정.사전)?"마무리 점검 전":"—"}</div>`}`:""}</div>`;
 }
 function nItems(){
   const by=nClients();
@@ -748,10 +789,14 @@ function bindNutri(){
 }
 function nutriCsv(){
   if(!nutris.length){ toast("내보낼 식탁 상담소 기록이 없습니다.",true); return; }
-  const head=["제출시각","이름","모둠","의뢰인","첫 시도 정답","문항 수","식단 어제 충족(/9)","식단 설계 충족(/9)","식단 제출 횟수","AI 제안과 같은 판정","AI 판정 수","논증 글자 수","완료"];
+  const head=["제출시각","이름","모둠","의뢰인","첫 시도 정답","문항 수","식단 어제 충족(/9)","식단 설계 충족(/9)","식단 제출 횟수","식품군 어제(/5)","식품군 설계(/5)","AI 제안과 같은 판정","AI 판정 수","논증 글자 수",
+    "점검 순서","시작 전 정답(/3)","마무리 정답(/3)","시작 전 자신감","마무리 자신감","점검 상태","실천 목표(넣은 경우만)","환경 제안","완료"];
   const q=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"', lines=[head.map(q).join(",")];
   nutris.forEach(r=>{ const f=nFirst(r), a=nAI(r), d=r.식단||{};
-    lines.push([r.작성, r.이름, r.모둠, r.의뢰인&&r.의뢰인.이름, f.ok, f.n, d.어제충족, d.설계충족, d.제출횟수, a.same, a.n, nCerLen(r), r.완료?"예":"아니오"].map(q).join(",")); });
+    const m=r.측정||null, pre=m&&nM(m.사전), post=m&&nM(m.사후), fg=d.식품군||{};
+    const mst=!m?"":pre&&post?"두 번 완료":m.늦은시작?"늦은 시작":m.건너뜀?"건너뜀":pre?"마무리 전":"";
+    lines.push([r.작성, r.이름, r.모둠, r.의뢰인&&r.의뢰인.이름, f.ok, f.n, d.어제충족, d.설계충족, d.제출횟수, fg.어제, fg.설계, a.same, a.n, nCerLen(r),
+      m?m.순서:"", pre?pre.c:"", post?post.c:"", pre?f1(pre.e):"", post?f1(post.e):"", mst, r.실천&&r.실천.포함?r.실천.목표:"", r.환경제안||"", r.완료?"예":"아니오"].map(q).join(",")); });
   const el=document.createElement("a"); el.href=URL.createObjectURL(new Blob(["﻿"+lines.join("\n")],{type:"text/csv;charset=utf-8"}));
   el.download="nutri-clinic_dashboard.csv"; document.body.appendChild(el); el.click(); el.remove(); setTimeout(()=>URL.revokeObjectURL(el.href),1000);
 }
