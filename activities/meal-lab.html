@@ -636,7 +636,8 @@ function monthBars(rows, o) {
     s += `<rect x="${x}" y="${y(v)}" width="${w}" height="${B - y(v)}" fill="${hi ? PAL.hi : PAL.bar}" fill-opacity="${r.faint ? .3 : hi ? 1 : .55}"><title>${r.lab}: ${fmt(r.n)}끼 중 ${fmt(r.k)}끼 (${fmt(r.n ? 100 * r.k / r.n : 0, 1)}%)</title></rect>`;
     if (o.measure !== "count" && r.n) s += `<line x1="${x + w / 2}" x2="${x + w / 2}" y1="${y(ci[i][0])}" y2="${Math.max(T - 8, y(ci[i][1]))}" stroke="${PAL.label}"/>`;
     s += `<text x="${x + w / 2}" y="${B + 16}" font-size="11.5" fill="${PAL.label}" text-anchor="middle">${r.lab}</text>`;
-    if (hi) s += `<text x="${x + w / 2}" y="${y(v) - 6}" font-size="12" font-weight="600" fill="${PAL.hi}" text-anchor="middle">${o.measure === "count" ? fmt(v) : fmt(v, 1) + "%"}</text>`;
+    if (hi) { let top = y(v); if (o.measure !== "count" && r.n) top = Math.min(top, Math.max(T - 8, y(ci[i][1]))); if (full) top = Math.min(top, y(full[i]) - 6);
+      s += `<text x="${x + w / 2}" y="${top - 6}" font-size="12" font-weight="600" fill="${PAL.hi}" stroke="${PAL.bg}" stroke-width="3" paint-order="stroke" text-anchor="middle">${o.measure === "count" ? fmt(v) : fmt(v, 1) + "%"}</text>`; }
     if (full) { const fy = y(full[i]), cx = x + w / 2; s += `<path d="M${cx} ${fy - 6}L${cx + 6} ${fy}L${cx} ${fy + 6}L${cx - 6} ${fy}Z" fill="${PAL.full}" stroke="${PAL.bg}" stroke-width="1.5"><title>${r.lab} 전수: ${fmt(full[i], 1)}%</title></path>`; } });
   if (full) s += `<path d="M${R - 168} 14L${R - 162} 20L${R - 168} 26L${R - 174} 20Z" fill="${PAL.full}"/><text x="${R - 156}" y="24" font-size="12" fill="${PAL.full}">전수(24만 끼) 값</text>`;
   s += `<text x="${L}" y="${H - 6}" font-size="11" fill="${PAL.faint}">${o.measure === "count" ? "끼니 수(표본)" : "그 달 끼니 중 비율(%) · 회색 선은 95% 신뢰구간"} · 연한 막대는 방학 달(끼니 적음) · 노란 막대는 학기 중 최고</text>`;
