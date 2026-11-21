@@ -1,12 +1,13 @@
 <!--
-  효소반응속도 워크북 — 교사 대시보드
-  서버 없이 동작. 학생 보고서(JSON)를 가져오거나, 구글 폼 응답 시트를 CSV로 게시한 URL을 넣으면
-  반별 결과가 누적 집계됩니다. 데이터는 이 브라우저(localStorage)에만 저장됩니다.
+  교사 대시보드 — 효소반응속도 워크북 · 식탁 문제 해결단
+  서버 없이 동작. 학생 보고서·결과 파일(JSON)을 가져오면 활동을 알아서 가려 누적 집계합니다.
+  효소 워크북은 구글 폼 응답 시트를 CSV로 게시한 URL도 읽습니다. 엔소 등 다른 활동 기록은 건너뜁니다.
+  데이터는 이 브라우저(localStorage)에만 저장됩니다(효소: mm_teacher_records, 식탁: mm_teacher_meal_records).
   같은 GitHub Pages 사이트의 /teacher.html 로 배포됩니다.
 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>교사 대시보드 · 효소반응속도 워크북</title>
+<title>교사 대시보드 · 통합과학</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230e1626'/%3E%3Cpath d='M8 24V15M16 24V9M24 24V18' fill='none' stroke='%2345d3d8' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
 <style>
   :root{
@@ -107,27 +108,39 @@
     background:#0e2733; border:1px solid var(--cyandim); color:#dffbff; padding:11px 18px; border-radius:10px; font-size:13.5px; transition:.25s; z-index:60}
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
   .toast.err{background:#2a1216; border-color:#5a2530; color:#ffd7dc}
+  .acts{display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap}
+  .act{font-size:14px; font-weight:700; padding:10px 16px; border-radius:11px; border:1px solid var(--line2); background:#0b1424; color:var(--muted); cursor:pointer}
+  .act.active{border-color:var(--amber); color:var(--txt); background:rgba(242,193,78,.1)}
+  .act small{display:block; font-weight:500; font-size:11.5px; color:var(--faint); margin-top:2px}
+  .mcard{border:1px solid var(--line); border-radius:11px; padding:12px 14px; margin:8px 0; background:#0b1424}
+  .mcard b{font-size:14px} .mcard dl{margin:6px 0 0; display:grid; grid-template-columns:64px 1fr; gap:3px 10px; font-size:13px}
+  .mcard dt{color:var(--faint)} .mcard dd{margin:0; line-height:1.5}
+  .note{border-left:3px solid var(--amber); background:rgba(242,193,78,.06); padding:9px 13px; border-radius:0 9px 9px 0; font-size:12.5px; color:var(--muted); line-height:1.6; margin:10px 0}
 </style>
 
 <header class="top">
-  <div class="brand"><b>Vmax</b> · TEACHER DASHBOARD</div>
-  <div class="title">효소반응속도 <span>교사 대시보드</span></div>
+  <div class="brand"><b>통합과학</b> · TEACHER DASHBOARD</div>
+  <div class="title"><span id="hAct">효소반응속도</span> 교사 대시보드</div>
   <div class="top-right">누적 제출 <b id="hCount">0</b>명</div>
 </header>
 
 <div class="wrap">
+  <div class="acts" id="acts" role="tablist" aria-label="활동 고르기">
+    <button class="act" data-a="enzyme">효소반응속도 워크북<small id="nEnzyme">0명</small></button>
+    <button class="act" data-a="meal">식탁 문제 해결단<small id="nMeal">0명</small></button>
+  </div>
   <div class="src">
     <div class="src-grid">
       <div>
         <h3>① 파일 가져오기 · 설정 불필요</h3>
         <div class="drop" id="drop">
-          학생 보고서 <b>.json</b> 파일을 끌어다 놓거나 클릭해 선택<br>
-          <span style="font-size:12px;color:var(--faint)">여러 개 한 번에 가능 · 브라우저에 누적 저장</span>
+          학생 보고서·결과 파일 <b>.json</b>을 끌어다 놓거나 클릭해 선택<br>
+          <span style="font-size:12px;color:var(--faint)">여러 개 한 번에 가능 · 활동을 알아서 가려 브라우저에 누적 저장</span>
         </div>
         <input id="fileInput" type="file" accept=".json,application/json" multiple hidden>
       </div>
       <div>
-        <h3>② 구글 시트 CSV · 구글 폼 제출용</h3>
+        <h3>② 구글 시트 CSV · 구글 폼 제출용 (효소 워크북만)</h3>
         <div class="csvrow">
           <input id="csvUrl" placeholder="게시된 CSV URL (…/pub?output=csv)">
           <button class="btn btn-cyan" id="csvLoad">불러오기</button>
@@ -146,12 +159,7 @@
     </div>
   </div>
 
-  <div class="tabs" id="tabs">
-    <button class="tab active" data-t="overview">개요</button>
-    <button class="tab" data-t="roster">학생 명단</button>
-    <button class="tab" data-t="items">문항 분석</button>
-    <button class="tab" data-t="essays">서술형</button>
-  </div>
+  <div class="tabs" id="tabs"></div>
   <div id="view"></div>
 </div>
 
@@ -180,13 +188,17 @@ const BANK = {
   essay:["낮은/높은 기질 농도에서 반응 차수가 달라지는 이유","경쟁적·비경쟁적 억제제의 Km·Vmax·이중역수 변화"]
 };
 
-const LS="mm_teacher_records";
+const LS="mm_teacher_records", LS_M="mm_teacher_meal_records", LS_ACT="mm_teacher_activity";
+const ACTS={ enzyme:{ name:"효소반응속도", tabs:[["overview","개요"],["roster","학생 명단"],["items","문항 분석"],["essays","서술형"]] },
+             meal:{ name:"식탁 문제 해결단", tabs:[["overview","개요"],["roster","학생 명단"],["items","문항 분석"],["cards","주장 카드"]] } };
 const $=s=>document.querySelector(s);
-let records=loadRecs();
-let tab="overview", detailKey=null, sortKey="name", sortDir=1;
+let records=loadRecs(LS), meals=loadRecs(LS_M);
+let act=(()=>{ try{ const a=localStorage.getItem(LS_ACT); return ACTS[a]?a:"enzyme"; }catch(e){ return "enzyme"; } })();
+let tab="overview", detailKey=null, sortKey="name", sortDir=1, mSortKey="name", mSortDir=1;
 
-function loadRecs(){ try{return JSON.parse(localStorage.getItem(LS)||"[]");}catch(e){return [];} }
-function persist(){ localStorage.setItem(LS, JSON.stringify(records)); }
+function loadRecs(key){ try{ const v=JSON.parse(localStorage.getItem(key)||"[]"); return Array.isArray(v)?v:[]; }catch(e){return [];} }
+function persist(){ try{ localStorage.setItem(LS, JSON.stringify(records)); localStorage.setItem(LS_M, JSON.stringify(meals)); }catch(e){ toast("브라우저 저장 공간에 쓰지 못했습니다.",true); } }
+function setAct(a){ if(!ACTS[a]) return; if(a!==act){ act=a; tab="overview"; detailKey=null; } try{ localStorage.setItem(LS_ACT,a); }catch(e){} }
 function keyOf(r){ return (r.name||"?")+"|"+(r.studentId||"")+"|"+(r.timestamp||""); }
 function toNum(v){ if(typeof v==="number")return v; if(v==null)return null; const m=String(v).match(/-?\d+(\.\d+)?/); return m?parseFloat(m[0]):null; }
 function normalize(r){
@@ -209,19 +221,29 @@ function reviewLine(r,k){
     : `<span class="pill">예시답안 미열람</span>`);
   return `<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">${parts.join("")}</div>`;
 }
-// 이 대시보드는 효소 워크북 전용 — 다른 활동(activityId/topic)의 기록은 오집계하지 않도록 건너뜀
+// 기록 분류: 식탁 문제 해결단 → 효소 워크북 → 그 밖(엔소 등)은 오집계하지 않도록 건너뜀
 let lastSkipped=0;
+function isMealRecord(r){ return !!r && typeof r==="object" && (r.activityId==="meal-lab" || (String(r.앱||"").startsWith("식탁 문제 해결단") && Array.isArray(r.카드))); }
 function isEnzymeRecord(r){
   if(r.activityId!=null && r.activityId!=="") return r.activityId==="enzyme" || r.activityId==="enzyme-kinetics";
   if(r.topic!=null && r.topic!=="") return r.topic==="michaelis-menten";
-  return true;
+  // activityId·topic이 없는 예전 보고서나 CSV 행: 효소 워크북의 필드가 하나라도 있어야 받는다
+  return !!(r.name||r.studentId||r.check||r.quiz||r.checkScore!=null||r.quizScore!=null||r.essay);
 }
-function skipNote(){ return lastSkipped ? " · 효소 워크북이 아닌 활동 기록 "+lastSkipped+"건은 건너뜀(다활동 대시보드는 다음 단계)" : ""; }
+function mealKey(r){ return (r.이름||"?")+"|"+(r.모둠||"")+"|"+(r.작성||""); }
 function addRecords(list){
-  const seen=new Set(records.map(keyOf)); let added=0; lastSkipped=0;
-  list.filter(Boolean).filter(r=>{ if(isEnzymeRecord(r)) return true; lastSkipped++; return false; })
-    .map(normalize).forEach(r=>{ const k=keyOf(r); if(!seen.has(k)){ seen.add(k); records.push(r); added++; } });
-  persist(); render(); return added;
+  const seen=new Set(records.map(keyOf)), seenM=new Set(meals.map(mealKey)); let e=0, m=0; lastSkipped=0;
+  list.filter(Boolean).forEach(r=>{
+    if(isMealRecord(r)){ const k=mealKey(r); if(!seenM.has(k)){ seenM.add(k); meals.push(r); m++; } return; }
+    if(!isEnzymeRecord(r)){ lastSkipped++; return; }
+    const n=normalize(r), k=keyOf(n); if(!seen.has(k)){ seen.add(k); records.push(n); e++; }
+  });
+  if(m && !e) setAct("meal"); else if(e && !m) setAct("enzyme");
+  persist(); render(); return {e, m};
+}
+function addMsg(res){
+  const parts=[]; if(res.e) parts.push("효소 워크북 "+res.e+"명"); if(res.m) parts.push("식탁 문제 해결단 "+res.m+"명");
+  return (parts.length? parts.join(" · ")+" 추가됨" : "새로 추가된 기록 없음")+" (중복 제외)"+(lastSkipped? " · 다른 활동 기록 "+lastSkipped+"건은 건너뜀" : "");
 }
 
 /* ── 파일 가져오기 ── */
@@ -239,9 +261,9 @@ function handleFiles(files){
     rd.onload=()=>{
       try{ const j=JSON.parse(rd.result); Array.isArray(j)?batch.push(...j):batch.push(j); }
       catch(e){ toast("JSON 파싱 실패: "+f.name, true); }
-      if(--pending===0){ const n=addRecords(batch); toast(n+"명 추가됨 (중복 제외)"+skipNote()); }
+      if(--pending===0) toast(addMsg(addRecords(batch)));
     };
-    rd.onerror=()=>{ if(--pending===0){ const n=addRecords(batch); toast(n+"명 추가됨"+skipNote()); } };
+    rd.onerror=()=>{ if(--pending===0) toast(addMsg(addRecords(batch))); };
     rd.readAsText(f);
   });
 }
@@ -253,7 +275,7 @@ $("#csvLoad").onclick=async ()=>{
     const r=await fetch(url); if(!r.ok) throw new Error("HTTP "+r.status);
     const text=await r.text(); const recs=recordsFromCSV(text);
     if(!recs.length){ toast("행을 찾지 못했습니다. 게시 형식을 확인하세요.",true); return; }
-    const n=addRecords(recs); toast(n+"명 추가됨 (중복 제외)"+skipNote());
+    toast(addMsg(addRecords(recs)));
   }catch(err){ toast("불러오기 실패: "+(err.message||err),true); }
 };
 function parseCSV(text){
@@ -293,8 +315,13 @@ function recordsFromCSV(text){
   return out;
 }
 
-$("#clearAll").onclick=()=>{ if(records.length && confirm("누적된 "+records.length+"명 데이터를 모두 지울까요?")){ records=[]; persist(); detailKey=null; render(); toast("모두 지웠습니다."); } };
+$("#clearAll").onclick=()=>{
+  const list=act==="meal"?meals:records, nm=ACTS[act].name;
+  if(!list.length){ toast(nm+" 기록이 없습니다.",true); return; }
+  if(confirm(nm+"의 누적 기록 "+list.length+"명을 모두 지울까요? 다른 활동의 기록은 그대로 둡니다.")){
+    if(act==="meal") meals=[]; else records=[]; persist(); detailKey=null; render(); toast(nm+" 기록을 모두 지웠습니다."); } };
 $("#exportCsv").onclick=()=>{
+  if(act==="meal") return mealCsv();
   if(!records.length){ toast("내보낼 데이터가 없습니다.",true); return; }
   const head=["제출시각","이름","학번","유도확인","형성평가","예시답안 열람"];
   const esc=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
@@ -306,9 +333,12 @@ $("#exportCsv").onclick=()=>{
   setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 };
 
-/* ── 탭 ── */
-document.querySelectorAll("#tabs .tab").forEach(b=>b.onclick=()=>{ tab=b.dataset.t;
-  document.querySelectorAll("#tabs .tab").forEach(x=>x.classList.toggle("active",x===b)); render(); });
+/* ── 활동 전환과 탭 ── */
+document.querySelectorAll("#acts .act").forEach(b=>b.onclick=()=>{ setAct(b.dataset.a); render(); });
+function renderTabs(){
+  $("#tabs").innerHTML=ACTS[act].tabs.map(([k,l])=>`<button class="tab ${tab===k?"active":""}" data-t="${k}">${l}</button>`).join("");
+  document.querySelectorAll("#tabs .tab").forEach(b=>b.onclick=()=>{ tab=b.dataset.t; detailKey=null; render(); });
+}
 
 /* ── 집계 ── */
 function mean(a){ return a.length? a.reduce((s,x)=>s+x,0)/a.length : 0; }
@@ -331,8 +361,14 @@ function ratePill(r){ if(r==null) return ''; const c=r>=.7?"g":r>=.4?"a":"r"; re
 
 /* ── 렌더 ── */
 function render(){
-  $("#count").textContent=records.length; $("#hCount").textContent=records.length;
+  const n=act==="meal"?meals.length:records.length;
+  $("#count").textContent=n; $("#hCount").textContent=n; $("#hAct").textContent=ACTS[act].name;
+  $("#nEnzyme").textContent=records.length+"명"; $("#nMeal").textContent=meals.length+"명";
+  document.querySelectorAll("#acts .act").forEach(b=>b.classList.toggle("active",b.dataset.a===act));
+  if(!ACTS[act].tabs.some(t=>t[0]===tab)) tab="overview";
+  renderTabs();
   const view=$("#view");
+  if(act==="meal"){ view.innerHTML=renderMeal(); bindMeal(); return; }
   if(!records.length){ view.innerHTML=`<div class="empty"><div class="big">📊</div>
     아직 데이터가 없습니다.<br>위에서 학생 보고서 파일을 가져오거나 구글 시트 CSV 를 불러오세요.</div>`; return; }
   if(tab==="overview") view.innerHTML=renderOverview();
@@ -438,6 +474,191 @@ function renderEssays(){
       <div class="dline"><span class="lab">서술1</span><div class="dessay">${esc(r.essay.s1||"—")}</div>${reviewLine(r,"s1")}</div>
       <div class="dline"><span class="lab">서술2</span><div class="dessay">${esc(r.essay.s2||"—")}</div>${reviewLine(r,"s2")}</div></div>`).join("")}
     <p class="csub" style="margin-top:12px">키워드 점검은 학생 화면의 자동 점검(참고용)을 최종 답안으로 다시 계산한 값입니다. 예시답안 열람 표시는 학생이 모범답안을 연 시각과 그때의 답안 길이입니다.</p></div>`;
+}
+
+/* ════════════════ 식탁 문제 해결단 (activities/meal-lab.html 결과 파일) ════════════════ */
+/* 문항 메타 — activities/meal-intro.html(NUM·AI)과 activities/meal-lab.html(함정)을 바꾸면 함께 갱신 */
+const MEAL_BANK={
+  intro:[
+    {id:"n1", q:"컵라면 A 나트륨 1,800 mg은 1일 기준치의 몇 %", lo:89.5, hi:90.5, ans:"90%"},
+    {id:"n2", q:"탄산음료 B 한 병(500 mL)의 당류는 몇 g (라벨은 100 mL당)", lo:54.5, hi:55.5, ans:"55 g"},
+    {id:"n3", q:"그 당류 55 g은 1일 기준치의 몇 %", lo:54.5, hi:55.5, ans:"55%"},
+    {id:"n4", q:"가공우유 C 칼슘 230 mg은 1일 기준치의 몇 %", lo:32.5, hi:33.5, ans:"33%"},
+    {id:"n5", q:"같은 230 mg은 15~18세 여자 권장섭취량(800 mg)의 몇 %", lo:28.5, hi:29.5, ans:"29%"},
+    {id:"n6", q:"예시 체중 55 kg 청소년의 카페인 최대 일일섭취권고량", lo:137, hi:138, ans:"137.5 mg"},
+    {id:"n7", q:"에너지음료 D + 커피우유 E의 카페인은 권고량의 몇 %", lo:126.5, hi:127.5, ans:"127%"}],
+  ai:[
+    {s:"탄산음료 B 한 병의 당류는 55 g으로 기준치의 절반이 넘는다", a:"수용"},
+    {s:"가공우유 C 하나면 15~18세의 하루 칼슘을 다 채운다", a:"거부"},
+    {s:"청소년 카페인은 하루 체중 1 kg당 2.5 mg 이하로 권고된다", a:"수용"},
+    {s:"컵라면 국물을 남기면 나트륨이 0이 된다", a:"수정"},
+    {s:"급식 데이터에 나트륨이 있으니 학교 순위를 매긴다", a:"거부"},
+    {s:"여름에 수박이 자주 나오는 것은 학생들이 가장 좋아해서다", a:"수정"}],
+  traps:[
+    {t:"세로축이 어디서 시작하나", opts:["두 그래프의 값이 다르다","값은 같고 A는 축이 잘렸다","B는 표본이 더 크다"], a:2},
+    {t:"횟수인가 비율인가", opts:["횟수(A)가 많으면 자주 나온 것","시군마다 n이 달라 비율(B)로 견준다","어느 쪽이든 순위가 같다"], a:2},
+    {t:"끼니 수가 적은 달", opts:["막대가 가장 높으니 그렇다","작은 n이라 신뢰구간이 넓어 단정 어렵다","귤은 여름 과일이다"], a:2},
+    {t:"기간을 골라내면", opts:["아홉 달 꾸준히 올랐으니 된다","계절 패턴이라 기간을 고르면 추세처럼 보인다","표본이 커서 된다"], a:2}]
+};
+const PICKS=["수용","수정","거부"];
+const nz=v=>typeof v==="number"&&!isNaN(v);
+const avgOf=a=>{ const v=(a||[]).filter(nz); return v.length? v.reduce((s,x)=>s+x,0)/v.length : null; };
+const f1=v=>v==null?"—":v.toFixed(1);
+function mOwn(r){ return (r.카드||[]).filter(c=>c&&!c.from); }
+function mIntro(r){ const d=r.도입; if(!d||!d.num) return null;
+  const num=d.num||{}, ai=d.ai||{};
+  const ok=MEAL_BANK.intro.filter(it=>nz(num[it.id])&&num[it.id]>=it.lo&&num[it.id]<=it.hi).length;
+  const done=MEAL_BANK.ai.map((it,i)=>ai[i]&&ai[i].checked?ai[i]:null);
+  return { ok, answered:MEAL_BANK.intro.filter(it=>nz(num[it.id])).length, aiDone:done.filter(Boolean).length,
+    aiSame:done.filter((x,i)=>x&&x.pick===MEAL_BANK.ai[i].a).length }; }
+function mTraps(r){ const t=Array.isArray(r.그래프함정)?r.그래프함정:[]; const done=t.filter(x=>x&&x.고른답!=null);
+  return done.length? { n:done.length, ok:done.filter(x=>x.고른답===x.제안답).length } : null; }
+function mSurvey(r){ const s=r.설문; if(!s||!Array.isArray(s.문항)) return null; return { pre:avgOf(s.사전), post:avgOf(s.사후) }; }
+function mClean(r){ const c=r.정제기록||{}; return { rules:(c.규칙||[]).length, dec:Object.values(c.열량처리||{}).filter(x=>x&&x.a).length, ca:len(c.칼슘판단)>=20 }; }
+function len(s){ return String(s||"").trim().length; }
+function barRow(label, n, total, color, mark, val){
+  const w=total? Math.round(n/total*100) : 0;
+  return `<div class="bar-wrap"><div class="bar-lab">${mark!=null?`<span class="mark ${mark}">${mark==="correct"?"✓":""}</span>`:""}${label}</div>
+    <div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${color}"></div></div><div class="bar-val">${val!=null?val:`${n}명 (${w}%)`}</div></div>`;
+}
+/* 문항별 통계: 도입 계산 · AI 판정 · 그래프 함정 */
+function mItemStats(){
+  const intro=MEAL_BANK.intro.map((it,qi)=>{ let answered=0, correct=0;
+    meals.forEach(r=>{ const v=r.도입&&r.도입.num?r.도입.num[it.id]:undefined; if(nz(v)){ answered++; if(v>=it.lo&&v<=it.hi) correct++; } });
+    return { src:"도입 계산", n:qi+1, q:it.q, answered, correct, rate:answered?correct/answered:null }; });
+  const ai=MEAL_BANK.ai.map((it,qi)=>{ const dist={수용:0,수정:0,거부:0}; let answered=0;
+    meals.forEach(r=>{ const x=r.도입&&r.도입.ai?r.도입.ai[qi]:null; if(x&&x.checked&&dist[x.pick]!=null){ answered++; dist[x.pick]++; } });
+    return { src:"AI 판정", n:qi+1, q:it.s, a:it.a, dist, answered, correct:dist[it.a], rate:answered?dist[it.a]/answered:null }; });
+  const traps=MEAL_BANK.traps.map((it,qi)=>{ const dist=[0,0,0]; let answered=0, correct=0;
+    meals.forEach(r=>{ const x=Array.isArray(r.그래프함정)?r.그래프함정[qi]:null; if(x&&x.고른답!=null&&x.고른답>=1&&x.고른답<=3){ answered++; dist[x.고른답-1]++; if(x.고른답===(x.제안답||it.a)) correct++; } });
+    return { src:"그래프 함정", n:qi+1, q:it.t, opts:it.opts, a:it.a, dist, answered, correct, rate:answered?correct/answered:null }; });
+  return { intro, ai, traps };
+}
+function mSurveyStats(){
+  const ds=meals.map(r=>r.설문).filter(s=>s&&Array.isArray(s.문항));
+  if(!ds.length) return null;
+  return ds[0].문항.map((q,i)=>{ const pairs=ds.filter(s=>nz((s.사전||[])[i])&&nz((s.사후||[])[i]));
+    return { q, n:pairs.length, pre:avgOf(pairs.map(s=>s.사전[i])), post:avgOf(pairs.map(s=>s.사후[i])) }; });
+}
+function renderMeal(){
+  if(!meals.length) return `<div class="empty"><div class="big">🍱</div>아직 식탁 문제 해결단 결과가 없습니다.<br>
+    학생이 6단계 '데이터 이야기'에서 내려받은 결과 파일(<code>siktak-lab_날짜시각.json</code>)을 위에 끌어다 놓으세요.</div>`;
+  if(tab==="roster") return mRoster();
+  if(tab==="items") return mItems();
+  if(tab==="cards") return mCards();
+  return mOverview();
+}
+function mOverview(){
+  const teams=new Set(meals.map(r=>r.모둠||"(모둠 없음)")), own=meals.reduce((s,r)=>s+mOwn(r).length,0), prop=meals.filter(r=>len(r.제안)>=20).length;
+  const its=meals.map(mIntro).filter(Boolean), trs=meals.map(mTraps).filter(Boolean);
+  const pairs=meals.map(mSurvey).filter(x=>x&&x.pre!=null&&x.post!=null);
+  const trOk=trs.reduce((s,x)=>s+x.ok,0), trN=trs.reduce((s,x)=>s+x.n,0);
+  const st=mItemStats(), hard=[...st.intro,...st.ai,...st.traps].filter(x=>x.rate!=null).sort((a,b)=>a.rate-b.rate).slice(0,3);
+  return `<div class="stats">
+    <div class="stat"><div class="k">제출 인원</div><div class="v">${meals.length}<small> 명</small></div></div>
+    <div class="stat"><div class="k">모둠</div><div class="v">${teams.size}<small> 개</small></div></div>
+    <div class="stat"><div class="k">주장 카드(본인 작성)</div><div class="v" style="color:var(--cyan2)">${own}<small> 장 · 1인 ${(own/meals.length).toFixed(1)}</small></div></div>
+    <div class="stat"><div class="k">제안 작성</div><div class="v">${prop}<small> / ${meals.length}</small></div></div>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="k">도입 계산 평균</div><div class="v" style="color:var(--cyan2)">${its.length?f1(avgOf(its.map(x=>x.ok))):"—"}<small> / ${MEAL_BANK.intro.length} · ${its.length}명</small></div></div>
+    <div class="stat"><div class="k">AI 판정 · 제안 답과 같음</div><div class="v" style="color:var(--cyan2)">${its.length?f1(avgOf(its.map(x=>x.aiSame))):"—"}<small> / ${MEAL_BANK.ai.length}</small></div></div>
+    <div class="stat"><div class="k">그래프 함정 정답률</div><div class="v">${trN?Math.round(trOk/trN*100):"—"}<small>${trN?" % · "+trs.length+"명":""}</small></div></div>
+    <div class="stat"><div class="k">자기 평가 사전→사후</div><div class="v">${pairs.length?f1(avgOf(pairs.map(x=>x.pre)))+"→"+f1(avgOf(pairs.map(x=>x.post))):"—"}<small>${pairs.length?" · 짝 "+pairs.length+"명":""}</small></div></div>
+  </div>
+  <div class="card"><h2>가장 많이 막힌 문항</h2><p class="csub">도입 계산·AI 판정·그래프 함정에서 제안 답과 같은 비율이 가장 낮은 세 문항입니다. 다음 수업에서 다시 다룰 지점입니다.</p>
+    ${hard.length?hard.map(h=>`<div class="bar-wrap"><div class="bar-lab" style="flex-basis:140px"><span class="pill ${h.rate>=.7?'g':h.rate>=.4?'a':'r'}">${h.src} ${h.n}</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(h.rate*100)}%;background:${rateColor(h.rate)}"></div></div>
+      <div class="bar-val">${Math.round(h.rate*100)}% (${h.correct}/${h.answered})</div></div>
+      <div style="font-size:12.5px;color:var(--muted);margin:2px 0 14px 148px">${esc(h.q)}</div>`).join(""):'<p class="csub">도입 미션이나 그래프 함정 기록이 있는 결과 파일이 없습니다(v0.5 파일에는 없음).</p>'}
+    <p class="csub" style="margin-top:6px">AI 판정은 제안 답과 달라도 이유가 타당하면 인정합니다. 점수는 가중치 없이 같은 판정의 개수만 셉니다.</p></div>`;
+}
+function mRoster(){
+  const rows=meals.map(r=>{ const it=mIntro(r), tr=mTraps(r), sv=mSurvey(r), cl=mClean(r), own=mOwn(r).length;
+    return { key:mealKey(r), r, name:r.이름||"(이름 없음)", team:r.모둠||"", q:(r.질문&&r.질문.text)||"", it, tr, sv, cl, own, imp:(r.카드||[]).length-own, prop:len(r.제안)>=20, ts:r.작성||"" }; });
+  const val={ name:x=>x.name, team:x=>x.team, intro:x=>x.it?x.it.ok:-1, trap:x=>x.tr?x.tr.ok:-1, cards:x=>x.own, ts:x=>x.ts };
+  rows.sort((a,b)=>{ const A=val[mSortKey](a), B=val[mSortKey](b); return (A>B?1:A<B?-1:0)*mSortDir; });
+  const arrow=k=>mSortKey===k?(mSortDir>0?" ▲":" ▼"):"";
+  const pill=(ok,n)=>{ if(n==null) return '<span class="no">—</span>'; const r=n?ok/n:0; return `<span class="pill ${r>=.7?"g":r>=.4?"a":"r"}">${ok}/${n}</span>`; };
+  let html=`<div class="card"><h2>학생 명단</h2><p class="csub">행을 누르면 질문·제안·카드·도입 답·함정 선택·자기 평가가 펼쳐집니다. 열 제목을 눌러 정렬.</p>
+    <div style="overflow-x:auto"><table><thead><tr>
+      <th data-ms="name">이름${arrow("name")}</th><th data-ms="team">모둠${arrow("team")}</th><th>하위 질문</th>
+      <th data-ms="intro">도입 계산·AI${arrow("intro")}</th><th>정제(규칙·열량·칼슘)</th><th data-ms="trap">함정${arrow("trap")}</th>
+      <th data-ms="cards">카드 본인/가져옴${arrow("cards")}</th><th>제안</th><th>자기 평가</th><th data-ms="ts">제출${arrow("ts")}</th></tr></thead><tbody>`;
+  rows.forEach(x=>{
+    html+=`<tr data-mk="${encodeURIComponent(x.key)}"><td>${esc(x.name)}</td><td>${esc(x.team)}</td><td style="font-size:12.5px;max-width:220px">${esc(x.q)||'<span class="no">—</span>'}</td>
+      <td>${x.it?pill(x.it.ok,MEAL_BANK.intro.length)+" "+pill(x.it.aiSame,MEAL_BANK.ai.length):'<span class="no">—</span>'}</td>
+      <td class="mono" style="font-size:12px">${x.cl.rules}/4 · ${x.cl.dec}건 · ${x.cl.ca?'<span class="yes">●</span>':'<span class="no">○</span>'}</td>
+      <td>${x.tr?pill(x.tr.ok,x.tr.n):'<span class="no">—</span>'}</td><td class="mono">${x.own} / ${x.imp}</td>
+      <td>${x.prop?'<span class="yes">●</span>':'<span class="no">○</span>'}</td>
+      <td class="mono" style="font-size:12px">${x.sv&&(x.sv.pre!=null||x.sv.post!=null)?f1(x.sv.pre)+"→"+f1(x.sv.post):'—'}</td>
+      <td style="color:var(--muted);font-size:12px">${fmtTime(x.ts)}</td></tr>`;
+    if(detailKey===x.key) html+=`<tr><td colspan="10">${mDetail(x.r)}</td></tr>`;
+  });
+  return html+`</tbody></table></div><p class="csub" style="margin-top:10px">정제: 미션 A에서 켠 규칙 수 · 미션 C에서 판단한 열량 끼니 수 · 미션 D 칼슘 판단(20자 이상) 작성 여부. '—'는 그 기록이 없는 결과 파일(예: v0.5)입니다.</p></div>`;
+}
+function mCardHTML(c){ return `<div class="mcard"><b>${esc(c.claim)}</b><dl><dt>근거</dt><dd>${esc(c.evid)}</dd><dt>추론</dt><dd>${esc(c.reason)}</dd>
+  <dt>한계</dt><dd>${esc(c.limit)}</dd><dt>그래프</dt><dd style="color:var(--muted);font-size:12px">${esc(c.graph||"—")}</dd></dl></div>`; }
+function mDetail(r){
+  const d=r.도입||{}, num=d.num||{}, ai=d.ai||{}, t=Array.isArray(r.그래프함정)?r.그래프함정:[], s=r.설문;
+  const intro=d.num?MEAL_BANK.intro.map((it,i)=>{ const v=num[it.id], ok=nz(v)&&v>=it.lo&&v<=it.hi;
+    return `<div class="dline"><span class="lab">${i+1}</span>${esc(it.q)} → ${nz(v)?`<span style="color:${ok?"var(--green)":"var(--red)"}">${esc(v)} ${ok?"✓":"✗"}</span>`:'<span class="no">(미응답)</span>'} <span style="color:var(--faint)">정답 ${esc(it.ans)}</span></div>`; }).join("")
+    + MEAL_BANK.ai.map((it,i)=>{ const x=ai[i]; return `<div class="dline"><span class="lab">AI${i+1}</span>${esc(it.s)} → ${x&&x.checked?`<b style="color:${x.pick===it.a?"var(--green)":"var(--amber)"}">${esc(x.pick)}</b>`:'<span class="no">(판정 안 함)</span>'} <span style="color:var(--faint)">제안 ${it.a}</span>${x&&x.why?`<div class="dessay">${esc(x.why)}</div>`:""}</div>`; }).join("")
+    : '<div class="dline"><span class="no">도입 미션 기록 없음</span></div>';
+  const traps=t.length?t.map((x,i)=>`<div class="dline"><span class="lab">함정${i+1}</span>${esc(x.함정||MEAL_BANK.traps[i]&&MEAL_BANK.traps[i].t)} → ${x.고른답!=null?`<span style="color:${x.고른답===x.제안답?"var(--green)":"var(--red)"}">${esc(x.고른답)}번</span>`:'<span class="no">(미응답)</span>'} <span style="color:var(--faint)">제안 ${esc(x.제안답)}번</span></div>`).join(""):'<div class="dline"><span class="no">그래프 함정 기록 없음</span></div>';
+  const sv=s&&Array.isArray(s.문항)?s.문항.map((q,i)=>`<div class="dline"><span class="lab">${i+1}</span>${esc(q)} → 사전 ${nz((s.사전||[])[i])?s.사전[i]:"—"} · 사후 ${nz((s.사후||[])[i])?s.사후[i]:"—"}</div>`).join(""):'<div class="dline"><span class="no">자기 평가 기록 없음</span></div>';
+  const own=mOwn(r);
+  return `<div class="detail"><h4>질문과 제안</h4>
+    <div class="dline"><span class="lab">질문</span>${esc((r.질문&&r.질문.text)||"—")}${r.질문&&r.질문.guess?`<br><span class="lab">예상</span>${esc(r.질문.guess)}`:""}</div>
+    <div class="dline"><span class="lab">청중</span>${esc(r.청중||"—")}</div><div class="dline"><span class="lab">제안</span><div class="dessay">${esc(r.제안||"—")}</div></div>
+    <h4 style="margin-top:14px">주장 카드 (본인 ${own.length}장)</h4>${own.length?own.map(mCardHTML).join(""):'<div class="dline"><span class="no">없음</span></div>'}
+    <h4 style="margin-top:14px">도입 미션</h4>${intro}
+    <h4 style="margin-top:14px">그래프 함정</h4>${traps}
+    <h4 style="margin-top:14px">자기 평가(1~5)</h4>${sv}</div>`;
+}
+function mItems(){
+  const st=mItemStats(), sv=mSurveyStats();
+  const introBlock=`<div class="card"><h2>도입 미션 · 계산 문제</h2><p class="csub">문항별로 답한 학생 가운데 정답 범위에 든 비율입니다.</p>
+    ${st.intro.map(s=>`<div class="item"><div class="q"><span class="qn">${s.n}</span>${esc(s.q)} ${ratePill(s.rate)} <span style="color:var(--faint);font-size:12px;margin-left:6px">응답 ${s.answered}명 · 정답 ${esc(MEAL_BANK.intro[s.n-1].ans)}</span></div>
+      ${barRow("정답 범위", s.correct, s.answered, "var(--green)", "correct")}</div>`).join("")}</div>`;
+  const aiBlock=`<div class="card"><h2>도입 미션 · AI 추천 판정</h2><p class="csub">수용·수정·거부 분포입니다. 초록은 제안 답입니다. 다른 판정도 이유가 타당하면 인정합니다(이유는 학생 명단의 상세에서 봅니다).</p>
+    ${st.ai.map(s=>`<div class="item"><div class="q"><span class="qn">AI${s.n}</span>${esc(s.q)} ${ratePill(s.rate)} <span style="color:var(--faint);font-size:12px;margin-left:6px">판정 ${s.answered}명</span></div>
+      ${PICKS.map(p=>barRow(p, s.dist[p], s.answered, p===s.a?"var(--green)":"#33506e", p===s.a?"correct":"")).join("")}</div>`).join("")}</div>`;
+  const trapBlock=`<div class="card"><h2>그래프 함정 찾기</h2><p class="csub">함정마다 고른 답의 분포입니다. 초록은 제안 답입니다.</p>
+    ${st.traps.map(s=>`<div class="item"><div class="q"><span class="qn">함정${s.n}</span>${esc(s.q)} ${ratePill(s.rate)} <span style="color:var(--faint);font-size:12px;margin-left:6px">응답 ${s.answered}명</span></div>
+      ${s.opts.map((o,oi)=>barRow((oi+1)+". "+esc(o), s.dist[oi], s.answered, oi+1===s.a?"var(--green)":"#33506e", oi+1===s.a?"correct":"")).join("")}</div>`).join("")}</div>`;
+  const svBlock=`<div class="card"><h2>사전·사후 자기 평가</h2><p class="csub">두 번 다 답한 학생만 짝지어 평균을 냈습니다(1~5). 교사가 만든 자기 보고 문항이고 타당화하지 않았으며, 비교 집단이 없으므로 변화를 수업 효과로 단정할 수 없습니다. 짝 인원이 적으면(예: 10명 미만) 해석하지 마세요.</p>
+    ${sv?sv.map((x,i)=>`<div class="item"><div class="q"><span class="qn">${i+1}</span>${esc(x.q)} <span style="color:var(--faint);font-size:12px;margin-left:6px">짝 ${x.n}명</span></div>
+      ${barRow("사전", x.pre||0, 5, "#33506e", null, f1(x.pre))}${barRow("사후", x.post||0, 5, "var(--cyan)", null, f1(x.post))}</div>`).join(""):'<p class="csub">자기 평가 기록이 있는 결과 파일이 없습니다.</p>'}</div>`;
+  return introBlock+aiBlock+trapBlock+svBlock;
+}
+function mCards(){
+  const by={}; meals.forEach(r=>{ const t=r.모둠||"(모둠 없음)"; (by[t]=by[t]||[]).push(r); });
+  const teams=Object.keys(by).sort((a,b)=>a.localeCompare(b,"ko"));
+  return `<div class="card"><h2>주장 카드 — 모둠별</h2><p class="csub">각 학생이 직접 쓴 카드만 모았습니다(모둠원 파일에서 가져온 카드는 원래 작성자의 파일에서 한 번만 보입니다).
+    루브릭 채점은 <a href="activities/meal-lab-teacher.html#collect">교사용 안내 9절 '결과 모아 보기'</a>에서 합니다.</p>
+    ${teams.map(t=>{ const rs=by[t], n=rs.reduce((s,r)=>s+mOwn(r).length,0);
+      return `<h3 style="margin:18px 0 6px;font-size:15px;color:var(--amber)">${esc(t)} <span style="color:var(--faint);font-size:12px">${rs.length}명 · 카드 ${n}장</span></h3>
+        ${rs.map(r=>{ const own=mOwn(r); return own.length?`<div style="font-size:12.5px;color:var(--muted);margin-top:8px">${esc(r.이름||"(이름 없음)")} — 질문: ${esc((r.질문&&r.질문.text)||"—")}</div>${own.map(mCardHTML).join("")}`:""; }).join("")}`; }).join("")}</div>`;
+}
+function bindMeal(){
+  document.querySelectorAll("th[data-ms]").forEach(th=>th.onclick=()=>{ const k=th.dataset.ms; if(mSortKey===k) mSortDir*=-1; else{ mSortKey=k; mSortDir=1; } render(); });
+  document.querySelectorAll("tbody tr[data-mk]").forEach(tr=>tr.onclick=()=>{ const k=decodeURIComponent(tr.dataset.mk); detailKey=detailKey===k?null:k; render(); });
+}
+function mealCsv(){
+  if(!meals.length){ toast("내보낼 식탁 문제 해결단 기록이 없습니다.",true); return; }
+  const nq=Math.max(5, ...meals.map(r=>r.설문&&Array.isArray(r.설문.문항)?r.설문.문항.length:0));
+  const head=["제출시각","이름","모둠","하위 질문","도입 계산(/7)","AI 판정 제안 답과 같음(/6)","그래프 함정 맞음","그래프 함정 답함","정제 규칙(/4)","열량 처리 건수","칼슘 판단 작성","본인 카드","가져온 카드","제안 작성","자기 평가 사전 평균","자기 평가 사후 평균"];
+  for(let i=1;i<=nq;i++) head.push("사전 "+i,"사후 "+i);
+  const q=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
+  const lines=[head.map(q).join(",")];
+  meals.forEach(r=>{ const it=mIntro(r), tr=mTraps(r), sv=mSurvey(r), cl=mClean(r), own=mOwn(r).length, s=r.설문||{};
+    const row=[r.작성, r.이름, r.모둠, r.질문&&r.질문.text, it?it.ok:"", it?it.aiSame:"", tr?tr.ok:"", tr?tr.n:"", cl.rules, cl.dec, cl.ca?"예":"아니오",
+      own, (r.카드||[]).length-own, len(r.제안)>=20?"예":"아니오", sv&&sv.pre!=null?sv.pre.toFixed(2):"", sv&&sv.post!=null?sv.post.toFixed(2):""];
+    for(let i=0;i<nq;i++) row.push(nz((s.사전||[])[i])?s.사전[i]:"", nz((s.사후||[])[i])?s.사후[i]:"");
+    lines.push(row.map(q).join(",")); });
+  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob(["﻿"+lines.join("\n")],{type:"text/csv;charset=utf-8"}));
+  a.download="siktak-lab_dashboard.csv"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
 
 /* ── 유틸 ── */

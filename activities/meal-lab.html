@@ -1063,7 +1063,7 @@ $("#sProp").addEventListener("input", e => { state.story.prop = e.target.value; 
 $("#sPrint").addEventListener("click", () => window.print());
 $("#sDown").addEventListener("click", () => {
   const sv = k => SURVEY.map((_, i) => state.survey[k] && state.survey[k][i] != null ? state.survey[k][i] : null);
-  const out = { 앱: "식탁 문제 해결단 v1.0", 작성: new Date().toISOString(), 이름: state.name, 모둠: state.team, 질문: state.q, 청중: state.story.aud,
+  const out = { 앱: "식탁 문제 해결단 v1.0", activityId: "meal-lab", 작성: new Date().toISOString(), 이름: state.name, 모둠: state.team, 질문: state.q, 청중: state.story.aud,
     카드: state.story.order.map(i => state.cards[i]), 제안: state.story.prop, 정제기록: { 규칙: state.clean.rules, 묶기: state.clean.merged, 묶기메모: state.clean.mergeNote,
     열량처리: state.clean.decisions, 칼슘판단: state.clean.caAns }, 재료사전: state.dict,
     설문: { 문항: SURVEY, 척도: "1 전혀 아니다 ~ 5 매우 그렇다(교사 제작, 타당화하지 않은 자기 보고)", 사전: sv("pre"), 사후: sv("post") },
