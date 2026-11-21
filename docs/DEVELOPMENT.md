@@ -10,7 +10,7 @@
 index.html                                  교과서 홈(목차 네비게이션)
 activities/enzyme-kinetics.html             효소반응속도 워크북(UI + 로직 + 시뮬레이터 + 서술형 자가 점검)
 activities/enso.html                        엘니뇨·라니냐 워크북(시뮬레이터 + ONI·실시간 수온 + GRASPS 자가 점검·자기평가)
-activities/nutrition-clinic.html            식탁 상담소(영양·식생활 탐구, 의뢰인 3명 · 5단계 · 앱 안 교사용 안내)
+activities/nutrition-clinic.html            식탁 상담소(영양·식생활 탐구, 의뢰인 3명 · 6단계 · 시작 전·마무리 점검 · 앱 안 교사용 안내)
 activities/student-ui.css                   학생 화면 공용 디자인('밝은 탐구 노트형', 어두운 모드 포함). 식탁 상담소와 식탁 문제 해결단이 씀
 activities/meal-intro.html                  예전 도입 미션 주소. 식탁 상담소로 이동하는 안내 페이지
 activities/meal-lab.html                    식탁 문제 해결단(급식 데이터 PBL)
@@ -85,4 +85,9 @@ GRASPS 활동은 앞으로 만들 때 슬롯별로 따로 생성하지 않고 Ro
   - 의뢰인 사례: `P.A`·`P.B`·`P.C`(대사, 라벨, 문항 `s1`·`s2`, AI 알림 `ai`). 공통 문항은 `TRAP_Q`, 공통 AI 알림은 `COMMON_AI`
   - 식단 판정: `judge()`(기준 9개, 충족·근접·미달). 논증 최소 글자 수: `CER_MIN`
   - 결과 파일 필드: `download()`. `activityId: "nutrition-clinic"`. 교사 대시보드 `teacher.html`의 `n*` 함수가 이 필드를 읽음
+  - 단계: `STAGES`·`BADGES`(6개), 마지막 단계 번호 `LAST`. 6단계 화면은 `s6()`, 실천 목표는 `GOALS`(더하기형, 기본)·`GOALS_LESS`(줄이기형)
+  - 학생 단위 상태: `S.plan`(실천 계획, `share`일 때만 결과 파일 `실천`에 내용이 들어감), `S.measure`(점검: `order` "AB"/"BA", `pre`, `post`, `skipped`, `late`). 의뢰인별 진행은 `S.cases[id]`
+  - 점검 문항: `MEASURE.A`·`MEASURE.B`(평행형, 단위 맞추기·%의 뜻·추천 판단), 자신감 문항 `EFF`. 숫자를 바꾸면 1일 영양성분 기준치로 다시 계산해 정답 선택지를 맞춤
+  - 식품군: `FG_NAMES`, `FG`(음식 id → 식품군 번호), `groups(tray)`. 판정(`judge()`)에는 넣지 않는 참고 정보
+  - 결과 파일 v1.1 필드: `식단.식품군`, `실천`(`포함` false면 내용 없음), `환경제안`, `측정`(`순서`, `건너뜀`, `늦은시작`, `사전`·`사후`의 `형`·`정답`·`고른답`·`효능감`). 예전(v1.0) 파일에는 없으며 대시보드는 없어도 읽음
 - 시뮬레이터 파라미터 범위: `S_MAX`, 슬라이더 `min/max`, `computeApparent()`(억제 모델)

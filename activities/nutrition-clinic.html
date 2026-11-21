@@ -1,7 +1,10 @@
 <!--
-  식탁 상담소 · 영양·식생활 탐구 (v1.0) — 프로토타입 v0.1(의뢰인 게임)을 독립 앱으로 재구성
+  식탁 상담소 · 영양·식생활 탐구 (v1.1) — 프로토타입 v0.1(의뢰인 게임)을 독립 앱으로 재구성
   단일 파일 정적 페이지(공용 디자인 student-ui.css 외 라이브러리 없음). 진행 상황은 이 브라우저(localStorage "nutri_clinic_v1")에만 저장.
-  흐름: 홈(의뢰인 고르기) → 1 문제 발견(영양표시) → 2 자료 해석(7일 기록) → 3 해결책 설계(식단 다시 짜기) → 4 기술 검증(AI 추천 판정) → 5 논증 → 완료(보고서·결과 파일)
+  흐름: 홈(의뢰인 고르기) → (처음 한 번) 시작 전 점검 → 1 문제 발견(영양표시) → 2 자료 해석(7일 기록) → 3 해결책 설계(식단 다시 짜기)
+    → 4 기술 검증(AI 추천 판정) → 5 논증 → 6 나에게 옮기기(실행 의도·환경 제안·마무리 점검) → 완료(보고서·결과 파일)
+  v1.1: 영양교육의 '실행'·'환경' 요소(Contento, 2008)를 보강. 실천 계획은 학생이 고를 때만 결과 파일에 들어간다.
+    사전·사후 점검은 평행형 A·B를 무작위 순서로 쓴다(수업용, 타당도 검증 전). 식품군 표시는 판정에 넣지 않는 참고 정보.
   v0.1에서 바꾼 것: 기준값을 2025 한국인 영양소 섭취기준으로 교체(칼슘·식이섬유가 낮아짐), 근거 없는 배점·등급을 없애고 기준 체크리스트로,
     사례의 숫자(문항·7일 그래프의 '어제'·현재 식단 합계)를 서로 일치시킴, 키보드·화면 낭독기·어두운 모드 지원.
   기준값 출처와 확인 상태: school-meal-gg/VERIFICATION.md. 의뢰인·7일 기록은 가상이고, 음식의 영양 값과 가격은 수업용 근삿값이다.
@@ -25,8 +28,11 @@
   .client .who{display:flex; gap:12px; align-items:center}
   .client .ava{width:56px; height:56px; border-radius:18px; display:grid; place-items:center; font-size:30px; flex:none}
   .client .name{font-family:var(--display); font-size:22px} .client .meta{font-size:13.5px; color:var(--muted)}
-  .flow{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px}
-  @media(max-width:760px){ .flow{grid-template-columns:repeat(2,minmax(0,1fr))} }
+  .flow{display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:10px}
+  @media(max-width:1000px){ .flow{grid-template-columns:repeat(3,minmax(0,1fr))} }
+  @media(max-width:560px){ .flow{grid-template-columns:repeat(2,minmax(0,1fr))} }
+  .scale{display:flex; flex-wrap:wrap; gap:6px; align-items:center} .scale .su-chip{min-width:44px; justify-content:center}
+  .mrow td,.mrow th{vertical-align:top}
   .flow div{border-radius:16px; padding:12px; font-size:14px; line-height:1.5} .flow b{display:block; font-family:var(--display); font-weight:400; font-size:17px}
   /* 영양성분표: 실제 라벨처럼 흑백 */
   .label{background:#fff; color:#111; border:3px solid #111; border-radius:10px; padding:12px 14px; font-size:15px; max-width:360px}
@@ -114,7 +120,14 @@ const FOODS = [
   ['bubble','🧋','흑당 버블티','d',4500,400,4,80,45,60,0,40],
   ['water','💧','물·보리차','d',0,0,0,0,0,0,0,0]
 ].map(a => ({ id: a[0], e: a[1], n: a[2], c: a[3], won: a[4], kcal: a[5], pro: a[6], na: a[7], sug: a[8], ca: a[9], fib: a[10], caf: a[11] }));
+/* 식품군: 식품구성자전거의 6개 식품군 가운데 유지·당류를 뺀 5개(수업용 분류, 영양교사 검수 대상).
+   2025 섭취기준의 식사구성안은 '활용편'으로 따로 나올 예정이라 그 전까지 기존 분류를 따른다. 판정에는 넣지 않는다. */
+const FG_NAMES = ["곡류", "고기·생선·달걀·콩류", "채소류", "과일류", "우유·유제품류"];
+const FG = { lunch: [0, 1, 2], home: [0, 1, 2], dosirak: [0, 1], ramen: [0], tri: [0, 1], gimbap: [0, 1, 2], tteok: [0], burger: [0, 1], chicken: [1],
+  sand: [0, 1, 2], salad: [1, 2], hotbar: [1], eggs: [1], yog: [4], banana: [3], apple: [3], goguma: [0], milk: [4], cmilk: [4] };
+FOODS.forEach(f => { f.g = FG[f.id] || []; });
 const F = Object.fromEntries(FOODS.map(f => [f.id, f]));
+function groups(tray) { const g = new Set(); for (const id in tray) if (tray[id] && F[id]) F[id].g.forEach(x => g.add(x)); return [...g].sort(); }
 const KEYS = ["won", "kcal", "pro", "na", "sug", "ca", "fib", "caf"];
 function totals(tray) { const t = { n: 0 }; KEYS.forEach(k => t[k] = 0);
   for (const id in tray) { const f = F[id], k = tray[id]; if (!f || !k) continue; t.n += k; KEYS.forEach(x => t[x] += f[x] * k); } return t; }
@@ -216,9 +229,30 @@ const TRAP_Q = { q: "공통 문제 · 탄산음료 라벨에 '100 mL당 당류 1
 
 /* ═══════════════ 상태 ═══════════════ */
 const LS = "nutri_clinic_v1";
-const STAGES = [["🔍", "문제 발견", "mint"], ["📈", "자료 해석", "sky"], ["🍱", "해결책 설계", "lemon"], ["🤖", "기술 검증", "coral"], ["✍️", "논증", "lav"]];
-const BADGES = ["라벨 해독가", "자료 탐정", "식단 설계가", "AI 검증관", "논증가"];
-let S = { view: "home", pid: null, name: "", team: "", cases: {} };
+const STAGES = [["🔍", "문제 발견", "mint"], ["📈", "자료 해석", "sky"], ["🍱", "해결책 설계", "lemon"], ["🤖", "기술 검증", "coral"], ["✍️", "논증", "lav"], ["🌱", "나에게 옮기기", "mint"]];
+const BADGES = ["라벨 해독가", "자료 탐정", "식단 설계가", "AI 검증관", "논증가", "실천 설계가"];
+const LAST = STAGES.length - 1;
+/* 6단계 실천 목표: 더하기형이 기본(실행 의도는 건강한 음식을 더할 때 효과가 더 컸다: Adriaanse et al., 2011, d=.51 vs .29) */
+const GOALS = [["water", "💧", "물 더 마시기"], ["fruit", "🍎", "과일 하나 더하기"], ["veg", "🥬", "채소 반찬 한 번 더 먹기"], ["milk", "🥛", "흰 우유 한 잔 더하기"], ["bfast", "🍳", "아침 먹기"]];
+const GOALS_LESS = [["swap", "🔄", "단 음료 한 번 다른 음료로 바꾸기"], ["soup", "🍜", "국물 반만 먹기"]];
+const goalName = id => { const g = [...GOALS, ...GOALS_LESS].find(x => x[0] === id); return g ? g[2] : ""; };
+/* 시작 전·마무리 점검: 평행형 A·B(문항 구조는 같고 제품과 숫자가 다름). 학생마다 순서를 무작위로 정한다. 수업용 문항, 타당도 검증 전 */
+const MTYPE = ["단위 맞추기", "%의 뜻", "추천 판단"];
+const MEASURE = {
+  A: [{ q: "요구르트 음료 라벨에 '100 mL당 당류 9 g (9%)'라고 쓰여 있고, 총 내용량은 280 mL입니다. 한 병을 다 마시면 당류는 약 몇 g인가요?", o: ["9 g", "약 18 g", "약 25 g", "28 g"], a: 2,
+      why: "9 g × (280 ÷ 100) = 25.2 g. 라벨의 9 g과 9%는 100 mL만 마셨을 때의 값입니다." },
+    { q: "시리얼바 1개(30 g)의 라벨에 '나트륨 120 mg (6%)'라고 쓰여 있습니다. 이 6%는 무엇에 대한 비율인가요?", o: ["나트륨의 1일 영양성분 기준치(2,000 mg)", "시리얼바의 무게(30 g)", "15~18세의 나트륨 섭취기준", "하루에 먹어도 되는 시리얼바 개수"], a: 0,
+      why: "120 ÷ 2,000 × 100 = 6%. 라벨의 %는 모든 제품에 똑같이 쓰는 1일 기준치에 대한 비율입니다." },
+    { q: "한 식단 앱이 '이 비타민 젤리를 하루 3개 먹으면 피로가 사라져요!'라고 추천했습니다. 이 추천을 믿기 전에 가장 먼저 확인할 것은?", o: ["앱 화면이 얼마나 깔끔한지", "추천의 근거와 출처, 그리고 광고인지", "앱을 내려받은 사람 수", "친구도 이 젤리를 먹는지"], a: 1,
+      why: "근거와 출처가 없거나 판매와 이어진 추천은 광고일 수 있습니다. 인기나 디자인은 근거가 아닙니다." }],
+  B: [{ q: "이온음료 라벨에 '100 mL당 당류 6 g (6%)'라고 쓰여 있고, 총 내용량은 500 mL입니다. 한 병을 다 마시면 당류는 몇 g인가요?", o: ["6 g", "12 g", "30 g", "50 g"], a: 2,
+      why: "6 g × (500 ÷ 100) = 30 g. 라벨의 6 g과 6%는 100 mL만 마셨을 때의 값입니다." },
+    { q: "크래커 1봉(40 g)의 라벨에 '포화지방 3 g (20%)'라고 쓰여 있습니다. 이 20%는 무엇에 대한 비율인가요?", o: ["크래커의 무게(40 g)", "포화지방의 1일 영양성분 기준치(15 g)", "15~18세의 지방 섭취기준", "크래커 한 봉에 든 지방 전체"], a: 1,
+      why: "3 ÷ 15 × 100 = 20%. 라벨의 %는 모든 제품에 똑같이 쓰는 1일 기준치에 대한 비율입니다." },
+    { q: "한 식단 앱이 '이 단백질 바를 먹으면 근육이 2배 빨리 붙어요!'라고 추천했습니다. 이 추천을 믿기 전에 가장 먼저 확인할 것은?", o: ["추천의 근거와 출처, 그리고 광고인지", "앱의 별점", "단백질 바 포장의 색", "유명인이 광고하는지"], a: 0,
+      why: "근거와 출처가 없거나 판매와 이어진 추천은 광고일 수 있습니다. 별점이나 유명인은 근거가 아닙니다." }] };
+const EFF = ["나는 영양표시를 보고 제품을 비교할 수 있다.", "나는 식단 앱이나 광고의 추천이 믿을 만한지 따져 볼 수 있다.", "나는 내 상황에 맞는 작은 식습관 변화를 계획할 수 있다."];
+let S = { view: "home", pid: null, name: "", team: "", cases: {}, measure: null, plan: null };
 try { const s = JSON.parse(localStorage.getItem(LS) || "null"); if (s && s.cases) S = Object.assign(S, s); } catch (e) {}
 function save() { try { localStorage.setItem(LS, JSON.stringify(S)); } catch (e) {} }
 function C() { const id = S.pid; if (!S.cases[id]) S.cases[id] = { stage: 0, q: { s1: [], s2: [] }, tray: {}, cat: "all", sub: null, subs: 0, note: "", ai: [], cer: { claim: "", ev: "", why: "", rebut: "" }, check: {}, done: false, at: "" }; return S.cases[id]; }
@@ -281,7 +315,7 @@ function quiz(key, list) {
 const quizDone = (key, n) => { const a = C().q[key] || []; return a.filter(x => x && x.done).length === n; };
 function nav(ok, hint) {
   const c = C(); return `<div class="su-row su-noprint" style="margin-top:20px">${c.stage > 0 ? `<button class="su-btn ghost" data-act="prev">← 이전 단계</button>` : `<button class="su-btn ghost" data-act="home">← 의뢰인 고르기</button>`}
-    <button class="su-btn" data-act="next" ${ok ? "" : "disabled"}>${c.stage === 4 ? "보고서 완성 ✨" : "다음 단계 →"}</button>${ok ? "" : `<span class="su-small su-muted">${esc(hint || "이 단계의 과제를 마치면 넘어갈 수 있어요.")}</span>`}</div>`;
+    <button class="su-btn" data-act="next" ${ok ? "" : "disabled"}>${c.stage === LAST ? "보고서 완성 ✨" : "다음 단계 →"}</button>${ok ? "" : `<span class="su-small su-muted">${esc(hint || "이 단계의 과제를 마치면 넘어갈 수 있어요.")}</span>`}</div>`;
 }
 function head(i, title, lead) { const s = STAGES[i];
   return `<div class="su-stack"><span class="su-kicker ${s[2]}">${s[0]} ${i + 1}단계 · ${s[1]}</span><h1 class="su-h1">${title}</h1>${lead ? `<p class="su-lead" style="margin:0">${lead}</p>` : ""}</div>`; }
@@ -296,7 +330,7 @@ function home() {
   <div class="su-card hero"><div class="su-stack">
     <span class="su-kicker">🥗 통합과학2 · 과학탐구실험2 · 영양·식생활</span>
     <h1 class="su-h1">친구의 식탁 고민, 숫자로 풀어 볼까요?</h1>
-    <p class="su-lead" style="margin:0">의뢰인 한 명을 맡아 <b>영양표시를 읽고</b>, <b>7일 기록에서 경향을 찾고</b>, <b>하루 식단을 다시 짜고</b>, <b>AI 앱의 추천을 판정</b>한 뒤, 과학기술의 쓸모와 한계를 <b>논증</b>합니다.</p>
+    <p class="su-lead" style="margin:0">의뢰인 한 명을 맡아 <b>영양표시를 읽고</b>, <b>7일 기록에서 경향을 찾고</b>, <b>하루 식단을 다시 짜고</b>, <b>AI 앱의 추천을 판정</b>한 뒤, 과학기술의 쓸모와 한계를 <b>논증</b>합니다. 마지막에는 <b>내 식탁의 작은 실천 하나</b>를 계획합니다.</p>
     <div class="who-in"><div class="su-field"><label for="inName">이름(별칭도 괜찮아요)</label><input type="text" id="inName" value="${esc(S.name)}" autocomplete="off" placeholder="예: 하늘"></div>
       <div class="su-field"><label for="inTeam">모둠</label><input type="text" id="inTeam" value="${esc(S.team)}" autocomplete="off" placeholder="예: 3모둠"></div></div>
     <p class="su-tiny su-muted" style="margin:0">입력과 진행 상황은 이 기기의 브라우저에만 저장됩니다. 키·몸무게·실제로 먹은 음식은 묻지 않습니다.</p>
@@ -308,8 +342,8 @@ function home() {
       <div class="su-bubble su-small">“${esc(p.quote)}”</div>
       <div class="su-row"><span class="su-tag">고민: ${esc(p.issue)}</span>${c ? `<span class="su-tag ${c.done ? "good" : "warn"}">${c.done ? "✓ 완료" : `진행 중 · ${c.stage + 1}단계`}</span>` : ""}</div></button>`; }).join("")}</div>
   <h2 class="su-h2" style="margin-top:26px">탐구는 이렇게 진행돼요</h2>
-  <div class="flow">${STAGES.map((s, i) => `<div style="background:var(--${s[2]})"><b>${s[0]} ${i + 1}. ${s[1]}</b>${["영양표시의 숫자를 기준과 비교해 고민을 문제로 바꿔요", "7일 기록 그래프에서 경향을 찾고 해석의 한계를 따져요", "예산 안에서 아홉 가지 기준을 맞추는 하루 식단을 짜요", "AI 식단 앱의 알림 다섯 개를 수용·보완·거부로 판정해요", "주장–근거–추론–반박으로 설득하는 글을 써요"][i]}</div>`).join("")}</div>
-  <p class="su-small su-muted">점수나 등급은 없습니다. 단계를 마칠 때마다 배지를 받고, 마지막에 탐구 보고서를 내려받아 선생님께 냅니다.${any ? " 맡았던 의뢰인을 다시 누르면 이어서 할 수 있어요." : ""}</p>
+  <div class="flow">${STAGES.map((s, i) => `<div style="background:var(--${s[2]})"><b>${s[0]} ${i + 1}. ${s[1]}</b>${["영양표시의 숫자를 기준과 비교해 고민을 문제로 바꿔요", "7일 기록 그래프에서 경향을 찾고 해석의 한계를 따져요", "예산 안에서 아홉 가지 기준을 맞추는 하루 식단을 짜요", "AI 식단 앱의 알림 다섯 개를 수용·보완·거부로 판정해요", "주장–근거–추론–반박으로 설득하는 글을 써요", "의뢰인에게 했던 것처럼 내 식탁의 작은 실천 하나를 계획해요"][i]}</div>`).join("")}</div>
+  <p class="su-small su-muted">점수나 등급은 없습니다. 처음 시작할 때 3분짜리 점검을 한 번 하고, 6단계에서 다시 풀어 비교합니다. 단계를 마칠 때마다 배지를 받고, 마지막에 탐구 보고서를 내려받아 선생님께 냅니다.${any ? " 맡았던 의뢰인을 다시 누르면 이어서 할 수 있어요." : ""}</p>
   </section>`;
 }
 function lesson() {
@@ -331,12 +365,15 @@ function critRows(d) {
     return `<span class="ic" aria-hidden="true">${ICON[x.st]}</span><b>${x.l}</b><div class="bar" role="img" aria-label="${x.l} ${WORD[x.st]}"><b class="${x.st === "ok" ? "" : x.st}" style="width:${w}%"></b><u></u></div>
       <span class="v" role="listitem">${WORD[x.st]} · ${x.k === "fav" ? (x.v ? x.v + "개 담음" : "없음") : `${fmt(x.v)} / ${fmt(x.T)} ${x.u} (${Math.round(x.r * 100)}%)`} · ${esc(x.note)}</span>`; }).join("")}</div>`;
 }
+function fgLine(tray) { const g = groups(tray), miss = FG_NAMES.filter((_, i) => !g.includes(i));
+  return `<p class="su-small" style="margin:0">🧺 <b>식품군 ${g.length} / 5</b> · ${g.length ? g.map(i => FG_NAMES[i]).join(" · ") : "아직 없음"}${miss.length && g.length ? ` <span class="su-muted">(빠진 것: ${miss.join(" · ")})</span>` : ""}</p>
+    <p class="su-tiny su-muted" style="margin:0">식품군은 판정에 넣지 않는 참고 정보입니다. 식품구성자전거의 분류(유지·당류 제외)를 따른 수업용 분류예요.</p>`; }
 function s3(p) {
   const c = C(), d = judge(p, c.tray), t = d.t, over = t.won > BUDGET, can = t.n >= 4 && !over, base = judge(p, p.now);
   const list = FOODS.filter(f => c.cat === "all" || f.c === c.cat);
   const res = c.sub ? (() => { const sd = judge(p, c.sub.tray);
     return `<div class="su-card tint-mint su-stack"><h3 class="su-h3">📋 제출한 식단 (${c.subs}번째 제출)</h3>
-      <p style="margin:0">기준 아홉 가지 중 <b>${sd.met}개 충족</b> · 어제 식단은 ${base.met}개 → ${sd.met - base.met >= 0 ? "+" : ""}${sd.met - base.met}개</p>
+      <p style="margin:0">기준 아홉 가지 중 <b>${sd.met}개 충족</b> · 어제 식단은 ${base.met}개 → ${sd.met - base.met >= 0 ? "+" : ""}${sd.met - base.met}개 · 식품군 어제 ${groups(p.now).length}/5 → 새 식단 ${groups(c.sub.tray).length}/5</p>
       <div class="su-scroll"><table class="su-table"><tr><th>기준</th><th>어제</th><th>새 식단</th></tr>${sd.rows.map((x, i) => `<tr><td>${x.l}</td><td>${ICON[base.rows[i].st]} ${WORD[base.rows[i].st]}</td><td>${ICON[x.st]} ${WORD[x.st]}</td></tr>`).join("")}</table></div>
       <p class="su-small" style="margin:0">모든 기준을 한꺼번에 맞추기는 어렵습니다. 무엇을 먼저 챙겼고 무엇을 양보했는지가 5단계 논증의 근거가 됩니다.</p></div>`; })() : "";
   return `${head(2, `${esc(p.name)}의 하루 식단 다시 짜기`, `예산 ${fmt(BUDGET)}원 안에서 하루치 음식을 담으세요. 초록 카드는 ${esc(p.name)}가 좋아하는 음식입니다.`)}
@@ -351,6 +388,8 @@ function s3(p) {
     <div class="tray">${t.n ? Object.keys(c.tray).map(id => `<button data-act="rem" data-id="${id}" data-fk="rem-${id}" aria-label="${esc(F[id].n)} 하나 빼기">${F[id].e} ${esc(F[id].n)}${c.tray[id] > 1 ? " ×" + c.tray[id] : ""} ✕</button>`).join("") : `<span class="su-small su-muted">왼쪽에서 음식을 눌러 담으세요. 식판의 음식을 누르면 하나씩 빠집니다.</span>`}</div>
     <p class="su-small" style="margin:0"><b>기준 ${d.met} / 9 충족</b> <span class="su-muted">· 막대의 세로선이 기준(100%)</span></p>
     ${critRows(d)}
+    ${fgLine(c.tray)}
+    <p class="su-tiny su-muted" style="margin:0">열량과 영양소 숫자는 식단을 비교하는 도구예요. 매일 세며 먹으라는 뜻이 아니에요.</p>
     <div class="su-row"><button class="su-btn" data-act="submit3" data-fk="submit3" ${can ? "" : "disabled"}>설계 제출</button><button class="su-btn ghost sm" data-act="cur" data-fk="cur">어제 식단 불러오기</button><button class="su-btn ghost sm" data-act="clear" data-fk="clear">비우기</button></div>
     <p class="su-small su-muted" style="margin:0">${over ? "예산을 넘었어요." : t.n < 4 ? "음식을 4개 이상 담으면 제출할 수 있어요." : "여러 번 제출할 수 있어요. 마지막 제출안이 보고서에 들어갑니다."}</p>
     <div class="su-field"><label for="s3note">무엇을 먼저 챙기고 무엇을 양보했나요? (선택)</label><textarea id="s3note" data-in="note" placeholder="예: 나트륨을 줄이려고 컵라면 대신 김밥을 넣었지만, 좋아하는 콜라는 하나 남겼다">${esc(c.note)}</textarea></div>
@@ -370,7 +409,7 @@ function evidence(p) { const c = C(), l = [];
   l.push(`영양표시: ${p.s1[p.s1.length - 1].why}`);
   l.push(`7일 기록: ${p.s2.qs[0].why}`);
   if (c.sub) { const sd = judge(p, c.sub.tray), b = judge(p, p.now), g = k => sd.rows.find(x => x.k === k);
-    l.push(`식단 재설계: 기준 아홉 가지 중 어제 ${b.met}개 → 새 식단 ${sd.met}개 충족. 새 식단의 나트륨 ${fmt(g("na").v)} mg, 첨가당 ${fmt(g("sug").v)} g, 칼슘 ${fmt(g("ca").v)} mg, 식이섬유 ${fmt(g("fib").v)} g, 카페인 ${fmt(g("caf").v)} mg, 비용 ${fmt(g("won").v)}원.`); }
+    l.push(`식단 재설계: 기준 아홉 가지 중 어제 ${b.met}개 → 새 식단 ${sd.met}개 충족. 식품군 어제 ${groups(p.now).length}/5 → 새 식단 ${groups(c.sub.tray).length}/5. 새 식단의 나트륨 ${fmt(g("na").v)} mg, 첨가당 ${fmt(g("sug").v)} g, 칼슘 ${fmt(g("ca").v)} mg, 식이섬유 ${fmt(g("fib").v)} g, 카페인 ${fmt(g("caf").v)} mg, 비용 ${fmt(g("won").v)}원.`); }
   if (c.note) l.push(`설계에서 양보한 것: ${c.note}`);
   const cards = [...p.ai, ...COMMON_AI], acc = cards.filter((x, i) => c.ai[i] && c.ai[i].checked && c.ai[i].pick === 0).length;
   l.push(`AI 알림 5개 중 내가 그대로 수용한 것 ${acc}개, 검증·보완하거나 거부한 것 ${5 - acc}개.`);
@@ -390,7 +429,58 @@ function s5(p) { const c = C();
     ${box("rebut", "예상 반론과 재반박", "\"앱이 다 계산해 주는데 왜 배워야 하나?\" 또는 \"오차와 광고가 있는 기술은 쓸모없다\" 중 하나에 답해 보세요.")}
   </div><div class="su-stack su-sticky"><div class="su-card su-stack"><b>📂 내 탐구 자료</b><ul class="su-small" style="margin:0;padding-left:18px">${evidence(p).map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>
     <div class="su-card su-stack"><b>☑️ 제출 전 자기 점검</b>${checks.map((x, i) => `<label class="su-small" style="display:flex;gap:8px;align-items:flex-start;font-weight:400"><input type="checkbox" data-in="chk" data-i="${i}" ${c.check[i] ? "checked" : ""}> ${x}</label>`).join("")}</div></div></div>
-  ${nav(cerOk(), "네 칸을 모두 채우면(칸마다 최소 글자 수) 보고서를 완성할 수 있어요.")}`; }
+  ${nav(cerOk(), "네 칸을 모두 채우면(칸마다 최소 글자 수) 마지막 단계로 넘어갈 수 있어요.")}`; }
+/* ── 점검(사전·사후) */
+function newMeasure() { const started = Object.values(S.cases).some(c => c.stage > 0 || c.done || (c.q && c.q.s1 && c.q.s1.length));
+  return { order: Math.random() < .5 ? "AB" : "BA", pre: null, post: null, skipped: started, late: started }; }
+const mForm = ph => ph === "pre" ? S.measure.order[0] : S.measure.order[1];
+const mGet = ph => S.measure[ph] || (S.measure[ph] = { form: mForm(ph), ans: [null, null, null], eff: [null, null, null], done: false });
+const mScore = x => x.ans.filter((j, i) => j === MEASURE[x.form][i].a).length;
+const mFull = x => x.ans.every(v => v != null) && x.eff.every(v => v != null);
+const needPost = () => { const m = S.measure; return !!(m && m.pre && m.pre.done && !(m.post && m.post.done)); };
+function mBlock(ph) { const x = mGet(ph), items = MEASURE[x.form];
+  return `${items.map((q, i) => `<div class="su-card"><p style="margin:0 0 10px;font-weight:800">${i + 1}. ${esc(q.q)}</p><div class="su-opts" role="group" aria-label="점검 ${i + 1}">${q.o.map((o, j) =>
+      `<button class="su-opt" aria-pressed="${x.ans[i] === j}" data-act="mq" data-ph="${ph}" data-i="${i}" data-j="${j}" data-fk="mq-${ph}-${i}-${j}"><span class="k">${"①②③④"[j]}</span><span>${esc(o)}</span></button>`).join("")}</div></div>`).join("")}
+  <div class="su-card su-stack"><b>얼마나 자신 있나요?</b><p class="su-tiny su-muted" style="margin:0">1 전혀 아니다 · 2 아니다 · 3 보통 · 4 그렇다 · 5 매우 그렇다</p>
+    ${EFF.map((t, i) => `<div class="su-stack" style="gap:6px"><span class="su-small">${i + 4}. ${esc(t)}</span><div class="scale" role="group" aria-label="${esc(t)}">${[1, 2, 3, 4, 5].map(v =>
+      `<button class="su-chip" aria-pressed="${x.eff[i] === v}" aria-label="${v}점" data-act="me" data-ph="${ph}" data-i="${i}" data-j="${v}" data-fk="me-${ph}-${i}-${v}">${v}</button>`).join("")}</div></div>`).join("")}</div>
+  <div class="su-row"><button class="su-btn" data-act="msub" data-ph="${ph}" data-fk="msub-${ph}" ${mFull(x) ? "" : "disabled"}>${ph === "pre" ? "점검 마치고 시작하기" : "마무리 점검 제출"}</button>
+    ${mFull(x) ? "" : `<span class="su-small su-muted">여섯 문항에 모두 답하면 제출할 수 있어요.</span>`}</div>`; }
+function preView(p) {
+  return `<section class="su-stack"><span class="su-kicker sky">🧭 시작 전 점검 · 약 3분</span><h1 class="su-h1">지금 나는 얼마나 할 수 있을까?</h1>
+  <p class="su-lead" style="margin:0">정답은 지금 알려 주지 않아요. 6단계에서 비슷한 문제를 다시 풀고, 두 번의 답을 함께 비교해요. 점수나 성적에 들어가지 않아요.</p>
+  ${mBlock("pre")}
+  <p class="su-small su-muted">선생님이 점검을 하지 않기로 했다면 <button class="su-btn ghost sm" data-act="mskip" data-fk="mskip">건너뛰기</button></p></section>`; }
+function mCompare() { const m = S.measure, a = m.pre, b = m.post, A = MEASURE[a.form], B = MEASURE[b.form];
+  const mark = (x, i, L) => x.ans[i] === L[i].a ? "✅ 맞음" : "❌ 다시 보기";
+  return `<div class="su-card su-stack tint-sky"><b>🧭 두 번의 점검 비교</b>
+    <p style="margin:0">정답 ${mScore(a)}/3 → <b>${mScore(b)}/3</b> · 자신감 평균 ${(a.eff.reduce((s, v) => s + v, 0) / 3).toFixed(1)} → <b>${(b.eff.reduce((s, v) => s + v, 0) / 3).toFixed(1)}</b></p>
+    <div class="su-scroll"><table class="su-table mrow"><tr><th>문항</th><th>시작 전</th><th>마무리</th></tr>${MTYPE.map((t, i) => `<tr><td>${t}</td><td>${mark(a, i, A)}</td><td>${mark(b, i, B)}</td></tr>`).join("")}
+      ${EFF.map((t, i) => `<tr><td>${esc(t)}</td><td>${a.eff[i]}점</td><td>${b.eff[i]}점</td></tr>`).join("")}</table></div>
+    <details><summary class="su-small">해설 보기</summary><ul class="su-small" style="margin:8px 0 0;padding-left:18px">${MTYPE.map((t, i) => `<li><b>${t}</b> — 시작 전: ${esc(A[i].why)} / 마무리: ${esc(B[i].why)}</li>`).join("")}</ul></details>
+    <p class="su-tiny su-muted" style="margin:0">같은 수업 안에서 두 번 푼 결과라 연습 효과가 섞여 있어요. 생활 습관이 바뀌었다는 뜻은 아니에요.</p></div>`; }
+/* ── 6단계: 나에게 옮기기 */
+const plan = () => S.plan || (S.plan = { goal: null, when: "", then: "", barrier: "", alt: "", env: "", share: false, at: "" });
+const s6ok = () => { const pl = S.plan || {}; return !!pl.goal && String(pl.then || "").trim().length >= 4 && !needPost(); };
+function s6(p) { const pl = plan(), m = S.measure;
+  const chip = g => `<button class="su-chip" aria-pressed="${pl.goal === g[0]}" data-act="goal" data-g="${g[0]}" data-fk="goal-${g[0]}">${g[1]} ${g[2]}</button>`;
+  const fld = (k, lab, ph) => `<div class="su-field"><label for="pl-${k}">${lab}</label><input type="text" id="pl-${k}" data-in="plan" data-k="${k}" value="${esc(pl[k])}" placeholder="${esc(ph)}" autocomplete="off"></div>`;
+  return `${head(5, "나에게 옮기기", `${esc(p.name)}에게 했던 것처럼, 내 식탁에서 작은 것 하나를 골라 봐요. 정답도 점수도 없어요.`)}
+  <div class="su-stack">
+    <div class="su-card su-stack"><b>① 해 볼 만한 것 하나 고르기</b><div class="su-row" role="group" aria-label="실천 목표">${GOALS.map(chip).join("")}</div>
+      <details ${GOALS_LESS.some(g => g[0] === pl.goal) ? "open" : ""}><summary class="su-small">줄이는 목표 더 보기</summary><div class="su-row" style="margin-top:8px">${GOALS_LESS.map(chip).join("")}</div></details>
+      <p class="su-tiny su-muted" style="margin:0">무언가를 빼는 계획보다 더하는 계획이 지키기 쉬운 경우가 많아요.</p></div>
+    <div class="su-card su-stack"><b>② "만약 ~하면, ~하겠다"로 쓰기</b>
+      ${fld("when", "만약 (언제·어디서)", "예: 학원 가기 전에 편의점에 들르면")}${fld("then", "그러면 (무엇을)", "예: 탄산음료 대신 물을 고르겠다")}</div>
+    <div class="su-card su-stack"><b>③ 막힐 때를 미리 생각하기</b>
+      ${fld("barrier", "방해가 될 만한 것", "예: 친구들이 모두 콜라를 산다")}${fld("alt", "그때의 대안", "예: 보리차를 사서 같이 마신다")}</div>
+    <div class="su-card su-stack tint-sky"><b>④ 환경 바꾸기</b>${fld("env", "우리 학교나 집에서 무엇이 바뀌면 더 쉬워질까?", "예: 매점 앞쪽에 생수와 흰 우유 두기")}
+      <p class="su-tiny" style="margin:0">이 제안은 <a href="meal-lab.html">식탁 문제 해결단</a>에서 데이터로 뒷받침하는 '제안'으로 발전시킬 수 있어요.</p></div>
+    <label class="su-card su-small" style="display:flex;gap:10px;align-items:flex-start;font-weight:400"><input type="checkbox" data-in="share" ${pl.share ? "checked" : ""}>
+      <span><b>①~③의 계획을 보고서와 결과 파일에 넣기</b><br>체크하지 않으면 계획은 이 기기에만 저장되고 선생님께 가지 않아요. ④의 환경 제안은 늘 보고서에 들어가요.</span></label>
+    ${needPost() ? `<h2 class="su-h2" style="margin-top:10px">🧭 마무리 점검</h2><p class="su-small su-muted" style="margin:0">시작할 때와 비슷한 문제예요. 다 풀고 나면 두 번의 답을 비교해 보여 줘요.</p>${mBlock("post")}`
+      : m && m.post && m.post.done ? mCompare() : ""}
+  </div>${nav(s6ok(), needPost() ? "목표를 고르고 '그러면' 칸을 4자 이상 쓴 뒤 마무리 점검을 마치면 보고서를 완성할 수 있어요." : "목표를 고르고 '그러면' 칸을 4자 이상 쓰면 보고서를 완성할 수 있어요.")}`; }
 function reportText(p) { const c = C(), sd = c.sub ? judge(p, c.sub.tray) : null;
   return `[식탁 상담소 탐구 보고서]
 탐구자: ${S.name || "이름 없음"}${S.team ? " · " + S.team : ""} / 의뢰인: ${p.name}(${p.tag}, 가상 인물) / 고민: ${p.issue}
@@ -410,10 +500,20 @@ ${[...p.ai, ...COMMON_AI].map((x, i) => { const st = c.ai[i] || {}; return `- ${
 주장: ${String(c.cer.claim).trim()}
 근거: ${String(c.cer.ev).trim()}
 추론: ${String(c.cer.why).trim()}
-예상 반론과 재반박: ${String(c.cer.rebut).trim()}`; }
+예상 반론과 재반박: ${String(c.cer.rebut).trim()}
+
+5. 나에게 옮기기
+${S.plan && S.plan.goal ? (S.plan.share ? `실천 목표: ${goalName(S.plan.goal)}
+만약 ${String(S.plan.when).trim() || "-"}, ${String(S.plan.then).trim()}
+방해가 될 만한 것: ${String(S.plan.barrier).trim() || "-"} → 대안: ${String(S.plan.alt).trim() || "-"}` : "실천 계획: 보고서에 넣지 않기로 함") : "실천 계획: 아직 없음"}
+학교·집에서 바뀌면 좋을 것: ${S.plan && String(S.plan.env).trim() ? String(S.plan.env).trim() : "-"}${S.measure && S.measure.post && S.measure.post.done ? `
+
+6. 시작 전·마무리 점검
+정답 ${mScore(S.measure.pre)}/3 → ${mScore(S.measure.post)}/3 · 자신감 평균 ${(S.measure.pre.eff.reduce((s, v) => s + v, 0) / 3).toFixed(1)} → ${(S.measure.post.eff.reduce((s, v) => s + v, 0) / 3).toFixed(1)} (같은 수업 안의 변화)` : ""}`; }
 function done(p) { const c = C();
   return `<section class="su-stack"><span class="su-kicker">🎉 탐구 완료</span><h1 class="su-h1">${esc(p.name)}의 고민을 끝까지 따라갔어요!</h1>
-  <div class="su-row" style="gap:12px">${STAGES.map((s, i) => `<div class="su-badge got"><span class="e" aria-hidden="true">${s[0]}</span>${BADGES[i]}</div>`).join("")}</div>
+  <div class="su-row" style="gap:12px">${STAGES.map((s, i) => `<div class="su-badge ${i < LAST || (S.plan && S.plan.goal) ? "got" : ""}"><span class="e" aria-hidden="true">${s[0]}</span>${BADGES[i]}</div>`).join("")}</div>
+  ${S.plan && S.plan.goal ? "" : `<div class="su-card tint-mint su-row" style="justify-content:space-between"><span><b>새로 생긴 6단계</b> — 의뢰인에게 했던 것처럼 내 식탁의 작은 실천 하나를 계획해 봐요.</span><button class="su-btn sm" data-act="go6" data-fk="go6">6단계 해 보기</button></div>`}
   <p class="su-small su-muted">점수와 등급은 없습니다. 논증 글은 친구·선생님과 서로 읽고 평가하세요.</p>
   <div class="su-card su-stack"><b>📄 탐구 보고서</b><pre class="report" id="rep">${esc(reportText(p))}</pre>
     <div class="su-row su-noprint"><button class="su-btn" data-act="down" data-fk="down">결과 파일 내려받기(.json)</button><button class="su-btn ghost" data-act="copy" data-fk="copy">보고서 복사</button><button class="su-btn ghost" data-act="print">인쇄</button><button class="su-btn ghost" data-act="home">다른 의뢰인 맡기</button></div>
@@ -426,10 +526,11 @@ function teacher() {
     <tr><td>2 자료 해석</td><td>[10통과2-03-02] 빅데이터를 과학기술사회에서 사용하고 있는 사례를 조사하고, 빅데이터 활용의 장점과 문제점을 추론할 수 있다.</td><td>웨어러블·식단 앱 자료의 경향, 상관과 인과, 측정 오차, 표본의 한계.</td></tr>
     <tr><td>3 해결책 설계</td><td>[10과탐2-01-03] 과학 개념을 적용하여 실생활 문제의 해결방안을 창의적으로 고안하고, 필요한 도구를 설계⋅제작할 수 있다.</td><td>예산·기호라는 제약 아래 여러 기준을 함께 맞추고 절충한다.</td></tr>
     <tr><td>4 기술 검증</td><td>[10통과2-03-03] 인공지능 로봇, 사물인터넷 등과 같이 과학기술의 발전을 인간 삶과 환경 개선에 활용하는 사례를 찾고, 이러한 과학기술의 발전이 미래 사회에 미치는 유용성과 한계를 예측할 수 있다. · [10과탐2-02-03](과학 윤리)</td><td>AI 추천의 근거, 학습 데이터의 치우침, 광고, 개인정보.</td></tr>
-    <tr><td>5 논증</td><td>[10통과2-03-04] 과학기술의 발전 과정에서 발생할 수 있는 과학 관련 사회적 쟁점(SSI)과 과학기술 이용에서 과학 윤리의 중요성에 대해 논증할 수 있다.</td><td>주장–근거–추론–반박 구조의 설득하는 글쓰기.</td></tr></table></div>
+    <tr><td>5 논증</td><td>[10통과2-03-04] 과학기술의 발전 과정에서 발생할 수 있는 과학 관련 사회적 쟁점(SSI)과 과학기술 이용에서 과학 윤리의 중요성에 대해 논증할 수 있다.</td><td>주장–근거–추론–반박 구조의 설득하는 글쓰기.</td></tr>
+    <tr><td>6 나에게 옮기기</td><td>성취기준 밖(영양교육 보강). 학생이 고른 실천 계획은 평가하지 않는다.</td><td>실행 의도("만약 ~하면 ~하겠다"), 장애물과 대안, 학교·가정 환경 제안.</td></tr></table></div>
   <div class="su-grid"><div class="su-card su-stack"><b>2차시 운영안</b><ul class="su-small" style="margin:0;padding-left:18px">
-      <li>1차시: 모둠마다 다른 의뢰인을 맡아 1~3단계. 3단계는 '어제 식단 불러오기'로 기준선을 먼저 확인하게 한다.</li>
-      <li>2차시: 4단계 판정을 모둠 토의로 진행하고, 5단계는 개인 글쓰기. 결과 파일을 걷어 교사 대시보드에서 모아 본다.</li>
+      <li>1차시: 시작 전 점검(3분, 처음 한 번). 모둠마다 다른 의뢰인을 맡아 1~3단계. 3단계는 '어제 식단 불러오기'로 기준선을 먼저 확인하게 한다.</li>
+      <li>2차시: 4단계 판정을 모둠 토의로 진행하고, 5단계는 개인 글쓰기. 6단계(나에게 옮기기)와 마무리 점검으로 끝낸다. 결과 파일을 걷어 교사 대시보드에서 모아 본다.</li>
       <li>급식 데이터 탐구(식탁 문제 해결단) 앞에 두면, 기준을 확인하고 단위를 맞추는 습관을 먼저 다질 수 있다.</li></ul></div>
     <div class="su-card su-stack"><b>논증 글 평가 예시</b><ul class="su-small" style="margin:0;padding-left:18px">
       <li>상: 수치 근거를 기준과 견주어 인용하고, 쓸모와 한계를 조건과 함께 밝히며, 반론에 근거로 답한다.</li>
@@ -438,12 +539,46 @@ function teacher() {
     <div class="su-card su-stack"><b>안전과 윤리</b><ul class="su-small" style="margin:0;padding-left:18px">
       <li>체중 감량을 목표로 제시하지 않는다. 열량은 모자라도 '미달'로 표시한다. 극단적 제한 추천은 거부가 제안 판정이다.</li>
       <li>학생의 키·몸무게·실제 섭취 기록을 묻지 않는다. 체중은 가상 의뢰인의 카페인 권고량 계산에만 쓴다.</li>
-      <li>의뢰인이 좋아하는 음식을 '나쁜 음식'으로 부르지 않는다. 양과 빈도의 문제로 다룬다.</li></ul></div></div>
+      <li>의뢰인이 좋아하는 음식을 '나쁜 음식'으로 부르지 않는다. 양과 빈도의 문제로 다룬다.</li>
+      <li>열량이나 영양소를 매일 세는 습관을 권하지 않는다. 숫자는 식단을 비교하는 도구로만 쓴다(열량 추적 앱 사용과 섭식 문제 증상의 관련: Simpson & Mazzeo, 2017, 상관연구).</li>
+      <li>섭식 문제가 걱정되는 학생은 보건교사, Wee클래스와 연계한다. 6단계 계획은 학생이 고를 때만 제출되며, 내용을 평가하지 않는다.</li></ul></div></div>
+  <div class="su-card su-scroll"><b>이 앱이 하는 것과 하지 않는 것</b><table class="su-table" style="margin-top:8px"><tr><th>하는 것</th><th>하지 않는 것</th></tr>
+    <tr><td>영양표시 해석, 7일 기록 해석, AI·광고 추천 판정, 논증, 작은 실천 계획(실행 의도)과 환경 제안</td><td>조리·시식 같은 음식 경험, 개인 영양 진단, 장기 행동 변화의 보장, 체중 관리</td></tr></table>
+    <p class="su-small" style="margin:8px 0 0">영양교육은 동기·실행·환경의 세 요소를 갖출 때, 지식보다 행동에 초점을 둘 때 효과적이다(Contento, 2008). 영양 지식은 행동 변화의 필요조건이지만 충분조건은 아니다(Worsley, 2002). 이 앱은 푸드 리터러시 네 영역(계획·관리, 선택, 준비, 섭취) 가운데 주로 '선택'을 다룬다(Vidgen & Gallegos, 2014). 따라서 이 앱 하나로 '영양교육 효과'를 주장하기보다, 아래처럼 영양교사와 함께 학기 단위로 잇는 편이 정직하다.</p></div>
+  <div class="su-grid"><div class="su-card su-stack"><b>영양교사와 함께하기</b><ul class="su-small" style="margin:0;padding-left:18px">
+      <li>영양교사: 음식 27가지의 값과 식품군 분류 검수, 1차시 공동 수업(라벨과 기준), 급식 식단과 연계</li>
+      <li>과학교사: 자료 해석, AI 추천 판정, 논증 지도</li>
+      <li>근거: 영양교사의 직무에는 식생활 지도, 정보 제공, 영양상담이 있다(학교급식법 시행령 제8조, 2차 자료로 확인).</li></ul></div>
+    <div class="su-card su-stack"><b>학기 단위 연계안</b><ol class="su-small" style="margin:0;padding-left:18px">
+      <li>식탁 상담소(2차시)</li><li>식탁 문제 해결단: 급식 데이터 탐구(6차시)</li>
+      <li>2주 뒤 실천 되돌아보기(자기 점검 3문항: 해 봤나, 무엇이 막았나, 다음엔 무엇을 바꿀까. 기록은 걷지 않음)</li>
+      <li>학생회·영양교사에게 환경 제안 전달</li></ol>
+      <p class="su-tiny su-muted" style="margin:0">효과가 있었던 영양교육 중재는 5개월 이상, 목표 3개 이하, 이론 기반이라는 특징을 보였다(Murimi et al., 2017). 이 연계안도 기간 조건에는 못 미친다. 청소년 대상에서는 교직원·보호자 참여와 학교 식품 환경의 변화가 효과와 관련됐다(Meiklejohn et al., 2016).</p></div>
+    <div class="su-card su-stack"><b>사전·사후 점검 읽는 법</b><ul class="su-small" style="margin:0;padding-left:18px">
+      <li>평행형 A·B(단위 맞추기, %의 뜻, 추천 판단) 3문항과 자신감 3문항(5점). 학생마다 A·B 순서를 무작위로 정해 두 형의 난이도 차이를 상쇄한다.</li>
+      <li>타당도를 검증하지 않은 수업용 문항이다. 같은 수업 안의 변화는 단기 지식·자신감 변화이며 연습 효과가 섞여 있다. 행동 변화의 근거로 쓰지 않는다.</li>
+      <li>이 업데이트 전에 이미 의뢰인을 시작한 학생은 사전 점검을 건너뛴 것으로 기록된다.</li></ul></div></div>
+  <div class="su-card su-stack"><b>보호자 안내문 예시</b><pre class="report" id="letter">[가정 안내] 과학 시간에 「식탁 상담소」 활동을 합니다.
+- 목적: 영양표시를 읽고, 식단 앱과 광고의 추천을 근거로 따져 보고, 생활 속 작은 실천 하나를 스스로 계획합니다.
+- 묻지 않는 것: 학생의 키, 몸무게, 실제로 먹은 음식은 묻지 않습니다. 활동 기록은 학생 기기의 브라우저에만 저장되며, 실천 계획은 학생이 원할 때만 선생님께 제출됩니다.
+- 가정에서 도와주실 일: 자녀가 세운 작은 계획(예: 물 더 마시기, 과일 하나 더하기)을 물어봐 주시고, 장보기나 식탁에서 함께 실천할 수 있게 도와주세요. 체중이나 외모보다 '무엇을 더 먹을지'를 이야기해 주시면 좋습니다.
+- 문의: 과학 담당 교사, 영양교사</pre>
+    <div class="su-row su-noprint"><button class="su-btn ghost sm" data-act="copyletter" data-fk="copyletter">안내문 복사</button></div></div>
   <div class="su-card su-stack"><b>수치의 출처와 확인 상태</b><ul class="su-small" style="margin:0;padding-left:18px">
     <li>15~18세 에너지필요추정량(남 2,700·여 2,000 kcal), 단백질 권장섭취량(65·55 g), 칼슘 권장섭취량(800·700 mg), 식이섬유 충분섭취량(25·20 g), 나트륨 만성질환위험감소섭취량(2,300 mg), 첨가당(총 에너지의 10% 이내): 보건복지부·한국영양학회 「2025 한국인 영양소 섭취기준」 요약표에서 확인. 2020년판보다 칼슘·식이섬유가 낮아졌다.</li>
     <li>1일 영양성분 기준치와 비율 계산법: 「식품 등의 표시·광고에 관한 법률 시행규칙」[별표 5], 식약처 영양표시 가이드라인(2024.12)에서 확인.</li>
     <li>카페인 체중 1 kg당 2.5 mg 이하: 식품의약품안전처(2차 자료로 확인). 건강정보가 민감정보라는 점: 개인정보 보호법 제23조(2차 자료로 확인).</li>
-    <li>음식별 영양 값·가격, 의뢰인, 7일 기록은 수업용 근삿값과 가상 자료이며 영양교사 검수 전이다. 전체 목록: <code>school-meal-gg/VERIFICATION.md</code></li></ul></div>
+    <li>음식별 영양 값·가격, 의뢰인, 7일 기록은 수업용 근삿값과 가상 자료이며 영양교사 검수 전이다. 전체 목록: <code>school-meal-gg/VERIFICATION.md</code></li>
+    <li>식품군: 식품구성자전거의 6개 식품군 가운데 유지·당류를 뺀 5개(수업용 분류, 검수 전). 2025 섭취기준의 식사구성안은 '활용편'으로 따로 나올 예정이다.</li></ul></div>
+  <div class="su-card su-stack"><b>영양교육 관점의 참고문헌(PubMed에서 서지·초록 확인)</b><ul class="su-small" style="margin:0;padding-left:18px">
+    <li>Adriaanse, M. A., et al. (2011). Do implementation intentions help to eat a healthy diet? <i>Appetite, 56</i>(1), 183–193. <a href="https://doi.org/10.1016/j.appet.2010.10.012">doi</a></li>
+    <li>Contento, I. R. (2008). Nutrition education: linking research, theory, and practice. <i>Asia Pac J Clin Nutr, 17</i>(Suppl 1), 176–179.</li>
+    <li>Meiklejohn, S., Ryan, L., & Palermo, C. (2016). <i>J Nutr Educ Behav, 48</i>(9), 631–646. <a href="https://doi.org/10.1016/j.jneb.2016.07.015">doi</a></li>
+    <li>Murimi, M. W., et al. (2017). Factors influencing efficacy of nutrition education interventions. <i>J Nutr Educ Behav, 49</i>(2), 142–165. <a href="https://doi.org/10.1016/j.jneb.2016.09.003">doi</a></li>
+    <li>Simpson, C. C., & Mazzeo, S. E. (2017). Calorie counting and fitness tracking technology. <i>Eat Behav, 26</i>, 89–92. <a href="https://doi.org/10.1016/j.eatbeh.2017.02.002">doi</a></li>
+    <li>Vidgen, H. A., & Gallegos, D. (2014). Defining food literacy and its components. <i>Appetite, 76</i>, 50–59. <a href="https://doi.org/10.1016/j.appet.2014.01.010">doi</a></li>
+    <li>Worsley, A. (2002). Nutrition knowledge and food consumption. <i>Asia Pac J Clin Nutr, 11</i>(Suppl 3), S579–S585. <a href="https://doi.org/10.1046/j.1440-6047.11.supp3.7.x">doi</a></li>
+    <li>보건복지부·농림축산식품부·식품의약품안전처(2021). 「한국인을 위한 식생활지침」(보도자료로 확인).</li></ul></div>
   <div class="su-row"><button class="su-btn" data-act="home">돌아가기</button><a class="su-btn ghost" href="../teacher.html">교사 대시보드 →</a></div></section>`; }
 
 /* ═══════════════ 그리기 ═══════════════ */
@@ -453,7 +588,8 @@ function render(focusTop) {
   const fk = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.fk : null;
   let h; const p = P[S.pid];
   if (S.view === "teacher") h = teacher();
-  else if (S.view === "case" && p) { const c = C(); h = c.done ? done(p) : [s1, s2, s3, s4, s5][c.stage](p); }
+  else if (S.view === "pre" && p && S.measure) h = preView(p);
+  else if (S.view === "case" && p) { const c = C(); h = c.done ? done(p) : [s1, s2, s3, s4, s5, s6][c.stage](p); }
   else h = home();
   $("#app").innerHTML = h; renderProg();
   if (focusTop) { window.scrollTo(0, 0); $("#app").focus({ preventScroll: true }); }
@@ -463,13 +599,22 @@ document.addEventListener("click", e => {
   const b = e.target.closest("[data-act]"); if (!b || b.disabled) return; const a = b.dataset.act, p = P[S.pid];
   if (a === "home") { S.view = "home"; save(); return render(true); }
   if (a === "teacher") { S.view = "teacher"; save(); return render(true); }
-  if (a === "pick") { S.pid = b.dataset.id; S.view = "case"; C(); save(); return render(true); }
+  if (a === "pick") { if (!S.measure) S.measure = newMeasure(); S.pid = b.dataset.id; C(); const m = S.measure;
+    S.view = !m.skipped && !(m.pre && m.pre.done) ? "pre" : "case"; save(); return render(true); }
+  if (a === "copyletter") { const t = $("#letter").textContent; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => say("안내문을 복사했어요."), () => say("복사가 막혀 있어요. 글 상자를 직접 선택해 복사하세요.")); return; }
+  if (a === "mq" || a === "me") { if (!S.measure) return; const x = mGet(b.dataset.ph); if (x.done) return;
+    (a === "mq" ? x.ans : x.eff)[+b.dataset.i] = +b.dataset.j; save(); return render(); }
+  if (a === "msub") { if (!S.measure) return; const ph = b.dataset.ph, x = mGet(ph); if (!mFull(x)) return; x.done = true; x.at = new Date().toISOString();
+    if (ph === "pre") { S.view = "case"; save(); return render(true); } save(); say("점검을 마쳤어요. 두 번의 답을 비교해 보세요."); return render(); }
+  if (a === "mskip") { if (!S.measure) return; S.measure.skipped = true; S.view = "case"; save(); return render(true); }
   if (!p) return; const c = C();
+  if (a === "goal") { plan().goal = b.dataset.g; save(); return render(); }
+  if (a === "go6") { c.done = false; c.stage = LAST; save(); return render(true); }
   if (a === "ans") { const key = b.dataset.key, i = +b.dataset.i, j = +b.dataset.j, list = key === "s1" ? [...p.s1, TRAP_Q] : p.s2.qs, q = list[i];
     const st = c.q[key][i] || (c.q[key][i] = { tried: [], done: false, first: false });
     if (st.done) return; st.tried.push(j); if (j === q.a) { st.done = true; st.first = st.tried.length === 1; say("정답입니다. " + q.why); } else say("다시 생각해 보세요.");
     save(); return render(); }
-  if (a === "next") { if (c.stage < 4) { c.stage++; save(); return render(true); } c.done = true; c.at = new Date().toISOString(); save(); return render(true); }
+  if (a === "next") { if (c.stage < LAST) { c.stage++; save(); return render(true); } if (!s6ok()) return; plan().at = new Date().toISOString(); c.done = true; c.at = new Date().toISOString(); save(); return render(true); }
   if (a === "prev") { if (c.stage > 0) c.stage--; save(); return render(true); }
   if (a === "cat") { c.cat = b.dataset.c; save(); return render(); }
   if (a === "add") { const id = b.dataset.id, t = totals(c.tray); if ((c.tray[id] || 0) >= MAXEACH) return say("같은 음식은 3개까지 담을 수 있어요."); if (t.n >= MAXITEMS) return say("모두 14개까지 담을 수 있어요.");
@@ -492,17 +637,27 @@ document.addEventListener("input", e => { const el = e.target, k = el.dataset.in
   if (k === "cer") { c.cer[el.dataset.k] = el.value; const n = el.value.trim().length, m = CER_MIN[el.dataset.k], tag = $("#cnt-" + el.dataset.k);
     if (tag) { tag.textContent = `${n}/${m}자`; tag.classList.toggle("good", n >= m); } const nx = document.querySelector('[data-act="next"]'); if (nx) nx.disabled = !cerOk(); }
   if (k === "chk") c.check[+el.dataset.i] = el.checked;
+  if (k === "plan") { plan()[el.dataset.k] = el.value; const nx = document.querySelector('[data-act="next"]'); if (nx) nx.disabled = !s6ok(); }
+  if (k === "share") plan().share = el.checked;
   save(); });
 document.addEventListener("input", e => { if (e.target.id === "inName") { S.name = e.target.value.trim(); save(); } if (e.target.id === "inTeam") { S.team = e.target.value.trim(); save(); } });
-document.addEventListener("change", e => { if (e.target.dataset && e.target.dataset.in === "chk") { const c = C(); c.check[+e.target.dataset.i] = e.target.checked; save(); } });
+document.addEventListener("change", e => { if (!e.target.dataset) return; if (e.target.dataset.in === "chk") { const c = C(); c.check[+e.target.dataset.i] = e.target.checked; save(); }
+  if (e.target.dataset.in === "share") { plan().share = e.target.checked; save(); } });
 function download(p) { const c = C(), cards = [...p.ai, ...COMMON_AI], list1 = [...p.s1, TRAP_Q], sd = c.sub ? judge(p, c.sub.tray) : null, base = judge(p, p.now);
   const q = (list, key) => list.map((x, i) => { const st = (c.q[key] || [])[i] || {}; return { 문항: x.q, 첫시도정답: !!st.first, 시도: (st.tried || []).length, 완료: !!st.done }; });
-  const out = { 앱: "식탁 상담소 v1.0", activityId: "nutrition-clinic", 작성: new Date().toISOString(), 이름: S.name, 모둠: S.team,
+  const mPack = x => x && x.done ? { 형: x.form, 정답: x.ans.map((j, i) => j === MEASURE[x.form][i].a ? 1 : 0), 고른답: x.ans, 효능감: x.eff, 시각: x.at } : null;
+  const pl = S.plan || {}, gr = c.sub ? groups(c.sub.tray) : null;
+  const out = { 앱: "식탁 상담소 v1.1", activityId: "nutrition-clinic", 작성: new Date().toISOString(), 이름: S.name, 모둠: S.team,
     의뢰인: { id: p.id, 이름: p.name, 고민: p.issue }, 문제발견: q(list1, "s1"), 자료해석: q(p.s2.qs, "s2"),
     식단: { 어제충족: base.met, 설계충족: sd ? sd.met : null, 제출횟수: c.subs || 0, 식판: c.sub ? c.sub.tray : null,
-      기준: sd ? sd.rows.map(x => ({ 기준: x.l, 값: Math.round(x.v), 기준값: x.T, 단위: x.u, 판정: WORD[x.st] })) : null, 양보: c.note },
+      기준: sd ? sd.rows.map(x => ({ 기준: x.l, 값: Math.round(x.v), 기준값: x.T, 단위: x.u, 판정: WORD[x.st] })) : null, 양보: c.note,
+      식품군: { 어제: groups(p.now).length, 설계: gr ? gr.length : null, 설계식품군: gr ? gr.map(i => FG_NAMES[i]) : null } },
     AI판정: cards.map((x, i) => { const st = c.ai[i] || {}; return { 알림: x.msg, 고른판정: st.pick != null ? CH[st.pick] : null, 제안판정: CH[x.a], 일리있는다른판정: x.ok >= 0 ? CH[x.ok] : null, 이유: st.why || "" }; }),
-    논증: { 논제: p.prompt, 주장: c.cer.claim, 근거: c.cer.ev, 추론: c.cer.why, 반박: c.cer.rebut }, 자기점검: c.check, 완료: !!c.done };
+    논증: { 논제: p.prompt, 주장: c.cer.claim, 근거: c.cer.ev, 추론: c.cer.why, 반박: c.cer.rebut }, 자기점검: c.check,
+    실천: pl.goal && pl.share ? { 포함: true, 목표id: pl.goal, 목표: goalName(pl.goal), 만약: pl.when, 그러면: pl.then, 장애물: pl.barrier, 대안: pl.alt } : { 포함: false },
+    환경제안: pl.env || "",
+    측정: S.measure ? { 순서: S.measure.order, 건너뜀: !!S.measure.skipped, 늦은시작: !!S.measure.late, 사전: mPack(S.measure.pre), 사후: mPack(S.measure.post) } : null,
+    완료: !!c.done };
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 2)], { type: "application/json" }));
   a.download = `nutri-clinic_${p.id}_${new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "")}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
