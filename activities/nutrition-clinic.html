@@ -1,0 +1,512 @@
+<!--
+  식탁 상담소 · 영양·식생활 탐구 (v1.0) — 프로토타입 v0.1(의뢰인 게임)을 독립 앱으로 재구성
+  단일 파일 정적 페이지(공용 디자인 student-ui.css 외 라이브러리 없음). 진행 상황은 이 브라우저(localStorage "nutri_clinic_v1")에만 저장.
+  흐름: 홈(의뢰인 고르기) → 1 문제 발견(영양표시) → 2 자료 해석(7일 기록) → 3 해결책 설계(식단 다시 짜기) → 4 기술 검증(AI 추천 판정) → 5 논증 → 완료(보고서·결과 파일)
+  v0.1에서 바꾼 것: 기준값을 2025 한국인 영양소 섭취기준으로 교체(칼슘·식이섬유가 낮아짐), 근거 없는 배점·등급을 없애고 기준 체크리스트로,
+    사례의 숫자(문항·7일 그래프의 '어제'·현재 식단 합계)를 서로 일치시킴, 키보드·화면 낭독기·어두운 모드 지원.
+  기준값 출처와 확인 상태: school-meal-gg/VERIFICATION.md. 의뢰인·7일 기록은 가상이고, 음식의 영양 값과 가격은 수업용 근삿값이다.
+-->
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>식탁 상담소 · 영양·식생활 탐구</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23E2F4EE'/%3E%3Ctext x='16' y='23' font-size='18' text-anchor='middle'%3E%F0%9F%A5%97%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gothic+A1:wght@400;700;800&display=swap">
+<link rel="stylesheet" href="student-ui.css">
+<style>
+  .hero{display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:18px; align-items:center}
+  @media(max-width:760px){ .hero{grid-template-columns:minmax(0,1fr)} }
+  .hero .big{font-size:64px; line-height:1}
+  .client{display:flex; flex-direction:column; gap:12px; text-align:left; cursor:pointer; border:2px solid var(--line); background:var(--paper); border-radius:var(--radius); padding:18px; box-shadow:var(--shadow); width:100%}
+  .client:hover{border-color:var(--brand); transform:translateY(-2px)} .client{transition:transform .12s}
+  .client .who{display:flex; gap:12px; align-items:center}
+  .client .ava{width:56px; height:56px; border-radius:18px; display:grid; place-items:center; font-size:30px; flex:none}
+  .client .name{font-family:var(--display); font-size:22px} .client .meta{font-size:13.5px; color:var(--muted)}
+  .flow{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px}
+  @media(max-width:760px){ .flow{grid-template-columns:repeat(2,minmax(0,1fr))} }
+  .flow div{border-radius:16px; padding:12px; font-size:14px; line-height:1.5} .flow b{display:block; font-family:var(--display); font-weight:400; font-size:17px}
+  /* 영양성분표: 실제 라벨처럼 흑백 */
+  .label{background:#fff; color:#111; border:3px solid #111; border-radius:10px; padding:12px 14px; font-size:15px; max-width:360px}
+  .label h3{font-family:var(--body); font-weight:800; font-size:20px; margin:0} .label .sub{font-size:13px; color:#333}
+  .label .thick{height:8px; background:#111; margin:6px 0}
+  .label table{width:100%; border-collapse:collapse} .label td{border-bottom:1px solid #999; padding:4px 2px} .label td:last-child{text-align:right; white-space:nowrap}
+  .label tr.hl td{background:#FFF1A8; font-weight:800}
+  .label .warnline{font-size:12px; color:#333; margin-top:6px}
+  .mini th,.mini td{padding:6px 8px}
+  /* 7일 그래프 */
+  .chart svg{width:100%; height:auto; display:block}
+  .chart .ax{stroke:var(--chart-axis)} .chart .gd{stroke:var(--chart-grid)} .chart .t{fill:var(--chart-title); font-size:13px; font-weight:700}
+  .chart .m{fill:var(--chart-label); font-size:12px} .chart .ok{fill:var(--chart-bar)} .chart .over{fill:var(--chart-ref)} .chart .under{fill:var(--chart-hi)}
+  .chart .ref{stroke:var(--chart-title); stroke-width:2; stroke-dasharray:6 4} .chart .yest{stroke:var(--chart-title); stroke-width:2.5; fill:none}
+  /* 식판 */
+  .shelf{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px}
+  .food{position:relative; display:flex; flex-direction:column; gap:2px; text-align:left; padding:10px 12px; border-radius:14px; border:2px solid var(--line); background:var(--paper); cursor:pointer; font-size:14px; line-height:1.4}
+  .food:hover{border-color:var(--brand)} .food .e{font-size:26px} .food .n{font-weight:800} .food .d{font-size:12px; color:var(--muted)}
+  .food.fav{border-color:var(--mint-d); background:var(--mint)} .food .favtag{font-size:11px; font-weight:800; color:var(--mint-d)}
+  .food .cnt{position:absolute; top:6px; right:8px; min-width:26px; height:26px; border-radius:99px; background:var(--brand); color:var(--brand-ink); display:grid; place-items:center; font-weight:800; font-size:14px}
+  .tray{display:flex; flex-wrap:wrap; gap:6px; min-height:42px}
+  .tray button{border:2px solid var(--line); background:var(--soft); border-radius:999px; padding:5px 11px; font-size:14px; cursor:pointer}
+  .crit{display:grid; grid-template-columns:28px minmax(84px,auto) minmax(0,1fr); gap:6px 10px; align-items:center; font-size:14.5px}
+  .crit .ic{font-size:18px; text-align:center} .crit .bar{height:12px; border-radius:99px; background:var(--soft); border:1px solid var(--line); position:relative; overflow:hidden}
+  .crit .bar b{position:absolute; left:0; top:0; bottom:0; border-radius:99px; background:var(--chart-bar)} .crit .bar b.near{background:var(--chart-hi)} .crit .bar b.miss{background:var(--chart-ref)}
+  .crit .bar u{position:absolute; top:-2px; bottom:-2px; width:2px; background:var(--ink); left:66.6%}
+  .crit .v{grid-column:2 / 4; font-size:12.5px; color:var(--muted); margin:-4px 0 4px}
+  /* AI 알림 */
+  .bot{display:flex; gap:10px; align-items:flex-start} .bot .av{flex:none; width:40px; height:40px; border-radius:13px; background:var(--sky); display:grid; place-items:center; font-size:22px}
+  .bot .msg{background:var(--sky); border-radius:4px 16px 16px 16px; padding:11px 14px; font-size:16.5px; font-weight:700}
+  .ctx{font-size:14px; color:var(--muted); margin:6px 0 0 50px}
+  .judge{margin-left:50px} @media(max-width:560px){ .judge,.ctx{margin-left:0} }
+  .report{white-space:pre-wrap; background:var(--soft); border-radius:14px; padding:14px 16px; font-size:14.5px; line-height:1.7; max-height:420px; overflow:auto}
+  .lesson summary{cursor:pointer; font-weight:800}
+  .who-in{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px}
+</style>
+</head>
+<body>
+<header class="su-top"><div class="su-in">
+  <button class="su-logo" data-act="home" aria-label="식탁 상담소 처음 화면"><span class="ico" aria-hidden="true">🥗</span><span>식탁 상담소<small>영양·식생활 탐구</small></span></button>
+  <ol class="su-progress" id="prog" aria-label="탐구 단계"></ol>
+  <div class="su-right"><a class="su-link" href="meal-lab.html">급식 데이터 탐구 →</a><button class="su-link" data-act="teacher">교사용 안내</button><a class="su-link" href="../index.html">교과서 홈</a></div>
+</div></header>
+<main class="su-wrap" id="app" tabindex="-1"></main>
+<div class="su-sr" aria-live="polite" id="live"></div>
+
+<script>
+"use strict";
+/* ═══════════════ 기준값 (출처: school-meal-gg/VERIFICATION.md) ═══════════════
+   · 15~18세 에너지필요추정량·단백질 권장섭취량·칼슘 권장섭취량·식이섬유 충분섭취량·나트륨 만성질환위험감소섭취량, 첨가당 10%:
+     보건복지부·한국영양학회 「2025 한국인 영양소 섭취기준」 요약표
+   · 1일 영양성분 기준치: 「식품 등의 표시·광고에 관한 법률 시행규칙」[별표 5](식약처 영양표시 가이드라인 2024.12)
+   · 카페인: 식품의약품안전처 어린이·청소년 최대 일일섭취권고량 체중 1 kg당 2.5 mg 이하 */
+const DRV = { kcal: null, carb: 324, sug: 100, pro: 55, fat: 54, sfat: 15, na: 2000, ca: 700, fib: 25 }; // 1일 영양성분 기준치
+const KDRI = { 남: { eer: 2700, pro: 65, ca: 800, fib: 25 }, 여: { eer: 2000, pro: 55, ca: 700, fib: 20 }, naCDRR: 2300, sugPct: 0.10, cafPerKg: 2.5 };
+const BUDGET = 15000, MAXEACH = 3, MAXITEMS = 14;
+
+/* 음식: 수업용 근삿값(1회 제공량, 가격 포함). id, 이모지, 이름, 분류(m 식사 s 간식 d 음료), 원, kcal, 단백질 g, 나트륨 mg, 첨가당 g, 칼슘 mg, 식이섬유 g, 카페인 mg */
+const FOODS = [
+  ['lunch','🍚','학교 급식 한 끼','m',0,720,30,900,5,200,9,0],
+  ['home','🏠','집밥(현미밥·된장국·달걀말이·나물)','m',3500,620,26,800,3,180,8,0],
+  ['dosirak','🍱','편의점 도시락(제육)','m',5000,780,28,1400,10,80,5,0],
+  ['ramen','🍜','컵라면(큰컵)','m',1500,480,10,1700,3,100,2,0],
+  ['tri','🍙','삼각김밥(참치마요)','m',1300,210,5,450,2,15,1,0],
+  ['gimbap','🥢','김밥 한 줄','m',3500,450,13,1000,4,50,4,0],
+  ['tteok','🌶️','떡볶이 1인분','m',4000,480,10,1300,15,60,3,0],
+  ['burger','🍔','햄버거 세트(감자튀김·콜라)','m',7500,1050,28,1300,42,150,5,25],
+  ['chicken','🍗','후라이드 치킨 반 마리','m',9000,900,60,1300,2,50,1,0],
+  ['sand','🥪','통밀 샌드위치(달걀·채소)','m',3800,360,17,680,4,110,5,0],
+  ['salad','🥗','닭가슴살 샐러드','m',5500,280,28,520,4,70,5,0],
+  ['hotbar','🌭','소시지 핫바','s',2000,200,8,500,3,20,0,0],
+  ['eggs','🥚','삶은 달걀 2개','s',1800,150,13,140,0,50,0,0],
+  ['yog','🥣','무가당 요거트+견과','s',2500,220,12,60,0,150,3,0],
+  ['banana','🍌','바나나 1개','s',800,95,1,1,0,6,2.5,0],
+  ['apple','🍎','사과 1개','s',1200,130,0,0,0,10,4,0],
+  ['goguma','🍠','군고구마 1개','s',2000,180,2,15,0,35,4,0],
+  ['chips','🥔','감자칩 한 봉지','s',1700,330,3,300,1,10,2,0],
+  ['choco','🍫','초코바','s',1500,250,4,80,24,50,1,0],
+  ['shake','🥤','단백질 셰이크(1회분)','d',3000,150,25,150,2,60,1,0],
+  ['milk','🥛','흰 우유 200 mL','d',1100,130,6,100,0,200,0,0],
+  ['cmilk','🧃','커피우유 300 mL','d',1800,190,8,150,20,250,0,70],
+  ['energy','⚡','에너지음료 355 mL','d',2000,160,0,110,38,0,0,100],
+  ['cola','🥤','콜라 355 mL','d',1500,152,0,15,38,0,0,34],
+  ['ame','☕','아이스 아메리카노','d',2500,10,0,5,0,5,0,150],
+  ['bubble','🧋','흑당 버블티','d',4500,400,4,80,45,60,0,40],
+  ['water','💧','물·보리차','d',0,0,0,0,0,0,0,0]
+].map(a => ({ id: a[0], e: a[1], n: a[2], c: a[3], won: a[4], kcal: a[5], pro: a[6], na: a[7], sug: a[8], ca: a[9], fib: a[10], caf: a[11] }));
+const F = Object.fromEntries(FOODS.map(f => [f.id, f]));
+const KEYS = ["won", "kcal", "pro", "na", "sug", "ca", "fib", "caf"];
+function totals(tray) { const t = { n: 0 }; KEYS.forEach(k => t[k] = 0);
+  for (const id in tray) { const f = F[id], k = tray[id]; if (!f || !k) continue; t.n += k; KEYS.forEach(x => t[x] += f[x] * k); } return t; }
+
+/* 공통 AI 알림 (모든 의뢰인) — a: 제안 판정, ok: 일리 있는 다른 판정(-1이면 없음). 0 수용, 1 검증·보완 후 사용, 2 거부 */
+const CH = ["수용", "검증·보완 후 사용", "거부"];
+const COMMON_AI = [
+  { msg: "📷 사진 분석 완료: \"샐러드, 150 kcal\"", ctx: "실제 음식은 크림 드레싱과 튀긴 치킨 토핑이 올라간 샐러드였다.", a: 1, ok: -1,
+    why: "사진 인식은 음식 종류는 맞혀도 양, 조리법, 드레싱처럼 보이지 않는 재료에서 오차가 큽니다. 기록하는 수고를 덜어 주는 장점은 살리되, 사람이 값을 확인하고 고쳐야 합니다." },
+  { msg: "🚀 \"2주 집중 플랜\": 하루 900 kcal만 먹으면 목표를 가장 빨리 이룰 수 있어요!", ctx: "앱의 목표가 '빠른 변화'로 설정되어 있다.", a: 2, ok: -1,
+    why: "900 kcal는 15~18세 에너지필요추정량(남 2,700, 여 2,000 kcal)의 33~45%에 그칩니다. 성장기의 극단적인 제한은 영양 결핍과 섭식 문제의 위험을 키웁니다. AI는 주어진 목표 하나만 좇을 수 있고, 그 목표가 건강한지는 사람이 판단해야 합니다." },
+  { msg: "🎁 식단·심박·수면 기록을 제휴 광고사에 제공하는 데 '전체 동의'하면 프리미엄 1개월 무료!", ctx: "약관은 4,000자이고, 제공 기간은 '서비스 종료 시까지'다.", a: 2, ok: 1,
+    why: "건강에 관한 정보는 개인정보 보호법에서 민감정보로 다루며, 따로 동의를 받아야 합니다. 빅데이터는 많은 사람의 기록이 모일 때 쓸모가 커지지만, 목적·범위·기간이 불분명한 전체 동의는 거부하거나, 무엇을 누구에게 언제까지 주는지 확인한 뒤 결정해야 합니다." }];
+
+/* 의뢰인(가상). 체중(kg)은 카페인 권고량 계산에만 쓴다. now: 어제 먹은 것(현재 식단) — 문항·그래프의 '어제' 값과 같아야 한다 */
+const P = {
+  A: { id: "A", name: "준서", ava: "🧑‍🎓", tint: "sky", sex: "남", grade: "고2", kg: 62, tag: "고2 · 시험 2주 전", issue: "카페인·첨가당",
+    quote: "에너지음료 없으면 못 버텨요. 그런데 요즘 심장이 두근거리고 새벽 3시까지 잠이 안 와요.",
+    facts: ["학원이 밤 10시에 끝나고, 집 앞 편의점에서 저녁을 해결", "어제: 에너지음료 2캔, 커피우유 1개, 아침은 거르고 야식으로 컵라면", "오후 수업 시간에 두통과 졸림"],
+    favs: ["ramen", "energy", "cmilk", "gimbap"], now: { energy: 2, cmilk: 1, lunch: 1, ramen: 1, gimbap: 1, choco: 1 },
+    label: { name: "에너지음료", serv: "1캔 355 mL", rows: [["열량", "160 kcal"], ["나트륨", "110 mg (6%)"], ["탄수화물", "40 g (12%)"], ["당류", "38 g (38%)", 1], ["지방", "0 g (0%)"], ["단백질", "0 g (0%)"], ["카페인", "100 mg", 1]],
+      warn: "%는 1일 영양성분 기준치에 대한 비율 · 고카페인 함유(수업용 가상 라벨)" },
+    s1: [
+      { q: "식품의약품안전처는 어린이·청소년의 카페인 최대 일일섭취권고량을 체중 1 kg당 2.5 mg 이하로 안내합니다. 체중 62 kg인 준서의 하루 권고량은?", o: ["100 mg", "155 mg", "250 mg", "400 mg"], a: 1,
+        why: "2.5 mg × 62 = 155 mg. (400 mg은 성인 권고량입니다.)" },
+      { q: "어제 준서는 에너지음료 2캔(각 100 mg)과 커피우유 1개(70 mg)를 마셨습니다. 권고량의 약 몇 %인가요?", o: ["약 65%", "약 100%", "약 174%", "약 270%"], a: 2,
+        why: "270 mg ÷ 155 mg ≈ 1.74 → 약 174%. 권고량의 1.7배를 마셨습니다." },
+      { q: "에너지음료 2캔의 당류는 76 g입니다. 준서의 첨가당 기준(에너지필요추정량 2,700 kcal의 10% ÷ 당 1 g당 4 kcal = 약 68 g)과 비교하면?", o: ["기준의 절반쯤이다", "기준과 거의 같다", "기준을 넘는다(약 112%)", "기준의 세 배가 넘는다"], a: 2,
+        why: "76 ÷ 68 ≈ 1.12. 음료 두 캔만으로 하루 첨가당 기준을 넘습니다(2025 한국인 영양소 섭취기준: 첨가당은 총 에너지의 10% 이내)." }],
+    s2: { intro: "준서의 스마트워치와 식단 기록 앱에서 내려받은 7일 자료입니다. 막대는 하루 카페인 섭취량, 아래 줄은 그날 밤 잠잔 시간입니다.",
+      chart: { vals: [80, 170, 340, 100, 270, 60, "now"], key: "caf", ref: 155, refLabel: "권고량 155 mg", unit: "mg", sub: ["7.2시간", "6.1시간", "4.2시간", "6.9시간", "5.0시간", "7.5시간", "4.8시간"], subLabel: "잠", type: "max", top: 400 },
+      qs: [
+        { q: "카페인 섭취량과 잠잔 시간 사이에 어떤 경향이 보이나요?", o: ["카페인이 많은 날 잠이 짧다", "카페인이 많은 날 잠이 길다", "두 값은 아무 관계가 없다", "잠은 7일 내내 같다"], a: 0,
+          why: "카페인이 가장 많은 3일차(340 mg)와 7일차(어제, 270 mg)에 잠이 가장 짧고(4.2시간, 4.8시간), 적은 날(60 mg)에 가장 깁니다. 두 값은 반대로 움직입니다." },
+        { q: "이 자료만으로 \"카페인이 준서의 잠을 줄였다\"고 결론 내릴 수 있을까요?", o: ["있다. 7일 모두 경향이 맞기 때문이다", "없다. 늦게까지 공부하려고 카페인을 마셨을 수도 있으니, 마신 시각 같은 다른 자료가 더 필요하다", "있다. 스마트워치 자료는 정확하기 때문이다", "없다. 카페인은 잠과 관계가 없기 때문이다"], a: 1,
+          why: "함께 변한다(상관)고 해서 한쪽이 다른 쪽의 원인(인과)이라고 단정할 수 없습니다. 시험 공부로 늦게 자는 날에 카페인을 더 마셨을 수도 있습니다. 마신 시각과 잠든 시각을 함께 기록해 비교하면 판단이 쉬워집니다." }] },
+    ai: [
+      { msg: "💊 [스폰서] 카페인 음료 대신 '집중력 부스터(과라나 추출물)'를 추천합니다.", ctx: "추천 문구 옆에 작은 글씨로 '광고'라고 쓰여 있다.", a: 2, ok: -1,
+        why: "광고입니다. 과라나는 카페인이 들어 있는 식물이라, 이름만 바꾼 카페인 음료일 수 있습니다. 성분표에서 카페인 함량을 확인하지 않고 받아들이면 안 됩니다." },
+      { msg: "🕑 카페인 음료는 오후 2시 전에만 드세요. 졸릴 땐 10~20분 낮잠이나 스트레칭을 해 보세요.", ctx: "근거로 '카페인이 몸에서 줄어드는 데 여러 시간이 걸린다(반감기)'는 자료를 함께 보여 주었다.", a: 0, ok: 1,
+        why: "근거를 함께 제시했고, 준서가 지금 생활에서 실천할 수 있는 조언입니다. 다만 카페인에 대한 민감도는 사람마다 다르므로, 두근거림이 계속되면 양을 더 줄여야 합니다." }],
+    prompt: "영양 표시, 7일 기록 자료, AI 추천은 준서의 카페인 문제를 해결하는 데 유용한가?" },
+  B: { id: "B", name: "하윤", ava: "🏐", tint: "coral", sex: "여", grade: "고1", kg: 54, tag: "고1 · 배구부", issue: "식이섬유·칼슘 부족",
+    quote: "근육 키우려면 단백질만 많이 먹으면 된다던데요? 그런데 자꾸 피곤하고 화장실 가기가 힘들어요.",
+    facts: ["훈련이 저녁 8시에 끝나 편의점에서 끼니를 해결", "어제: 단백질 셰이크 3번, 닭가슴살 샐러드, 삶은 달걀, 삼각김밥 2개, 버블티", "영상 속 '식단 전문가'의 조언을 따르는 중"],
+    favs: ["shake", "salad", "eggs", "tteok"], now: { shake: 3, salad: 1, eggs: 1, tri: 2, bubble: 1 },
+    label: { name: "단백질 보충제", serv: "1회분 35 g", rows: [["열량", "150 kcal"], ["나트륨", "150 mg (8%)"], ["탄수화물", "6 g (2%)"], ["당류", "2 g (2%)"], ["지방", "2 g (4%)"], ["단백질", "25 g (45%)", 1], ["식이섬유", "1 g (4%)"], ["칼슘", "60 mg (9%)"]],
+      warn: "%는 1일 영양성분 기준치에 대한 비율(수업용 가상 라벨)" },
+    s1: [
+      { q: "라벨의 '단백질 25 g (45%)'에서 45%는 무엇에 대한 비율인가요?", o: ["하윤에게 하루에 필요한 양", "1일 영양성분 기준치(단백질 55 g)", "한 끼에 먹어야 하는 양", "근육을 키우는 데 필요한 양"], a: 1,
+        why: "25 ÷ 55 ≈ 0.45. 라벨의 %는 모든 제품에 같은 '1일 영양성분 기준치'에 대한 비율입니다. 사람마다 필요한 양(권장섭취량)과는 다를 수 있습니다." },
+      { q: "어제 하윤은 셰이크 3번(25 g씩)과 식사·간식으로 단백질 55 g을 더 먹었습니다. 모두 130 g은 15~18세 여자 권장섭취량(55 g)의 약 몇 배인가요?", o: ["약 0.9배", "약 1.4배", "약 2.4배", "약 4.5배"], a: 2,
+        why: "75 + 55 = 130 g, 130 ÷ 55 ≈ 2.4배. 단백질은 이미 충분합니다." },
+      { q: "어제 하윤의 식이섬유는 모두 10 g이었습니다. 15~18세 여자 식이섬유 충분섭취량(20 g)의 몇 %인가요?", o: ["10%", "25%", "50%", "90%"], a: 2,
+        why: "10 ÷ 20 = 0.5 → 50%. 문제는 단백질이 아니라 식이섬유와 칼슘이 부족한 것일 수 있습니다." }],
+    s2: { intro: "하윤의 식단 기록 앱은 식판 사진을 AI로 인식해 영양소를 추정합니다. 막대는 하루 칼슘 섭취량, 아래 줄은 그날 유제품(우유·요거트)을 먹은 횟수입니다.",
+      chart: { vals: [310, 280, 590, 260, 300, 790, "now"], key: "ca", ref: 700, refLabel: "권장섭취량 700 mg", unit: "mg", sub: ["0회", "0회", "1회", "0회", "0회", "2회", "0회"], subLabel: "유제품", type: "min", top: 900 },
+      qs: [
+        { q: "7일 중 칼슘 권장섭취량(700 mg)을 채운 날은 며칠인가요?", o: ["0일", "1일", "4일", "7일"], a: 1,
+          why: "유제품을 두 번 먹은 6일차(790 mg)만 기준을 넘었습니다. 유제품을 먹은 날(3일차, 6일차)에 값이 크게 오릅니다." },
+        { q: "이 값은 사진을 AI가 인식해 추정한 것입니다. 가장 알맞은 해석은?", o: ["mg 단위까지 정확한 측정값으로 본다", "양과 보이지 않는 재료에서 오차가 있는 추정값으로 보고, '계속 낮다'는 경향 위주로 읽는다", "추정값이므로 아무 의미가 없다", "AI가 계산했으므로 사람보다 정확하다"], a: 1,
+          why: "추정값에는 오차가 있지만, 7일 내내 비슷하게 낮다는 경향은 믿을 만한 정보입니다. 숫자 하나보다 반복되는 경향을 근거로 씁니다." }] },
+    ai: [
+      { msg: "💪 근육 성장을 위해 체중 1 kg당 단백질 3 g(하루 162 g)을 권장합니다.", ctx: "도움말을 보니 이 모델은 주로 성인 남성 보디빌더의 식단 기록으로 학습되었다.", a: 1, ok: 2,
+        why: "학습 데이터가 특정 집단(성인 남성 보디빌더)에 치우쳐 있어 청소년 운동선수에게 그대로 맞는다고 보기 어렵습니다. 162 g은 15~18세 여자 권장섭취량(55 g)의 약 3배입니다. 청소년 기준으로 검증하고 보완해야 하며, 그대로는 받아들이지 않는 편이 안전합니다(거부도 타당)." },
+      { msg: "🥬 우유가 불편하면 두부, 뼈째 먹는 생선, 짙은 녹색 채소, 칼슘 강화 두유로 칼슘을 채워 보세요.", ctx: "출처로 한국인 영양소 섭취기준의 칼슘 급원 식품 목록을 표시했다.", a: 0, ok: 1,
+        why: "공신력 있는 출처를 밝혔고, 하윤의 기호(유제품을 잘 안 먹음)를 고려한 대안을 줍니다. 실천 가능한 조언입니다." }],
+    prompt: "영양 표시, 7일 기록 자료, AI 추천은 하윤의 영양 불균형 문제를 해결하는 데 유용한가?" },
+  C: { id: "C", name: "민재", ava: "🌙", tint: "lav", sex: "남", grade: "고2", kg: 68, tag: "고2 · 저녁은 편의점", issue: "나트륨 과다",
+    quote: "부모님이 늦게 오셔서 저녁은 거의 편의점이에요. 아침마다 얼굴이 붓고 물을 엄청 마셔요.",
+    facts: ["부모님 퇴근이 늦어 저녁은 혼자 편의점에서", "어제: 급식, 저녁에 컵라면 + 삼각김밥 + 소시지 핫바, 간식으로 콜라와 감자칩", "용돈은 하루 15,000원, 국물까지 다 마심"],
+    favs: ["ramen", "tri", "dosirak", "cola"], now: { lunch: 1, ramen: 1, tri: 1, hotbar: 1, cola: 1, chips: 1 },
+    label: { name: "컵라면(큰컵)", serv: "1개 110 g", rows: [["열량", "480 kcal"], ["나트륨", "1,700 mg (85%)", 1], ["탄수화물", "70 g (22%)"], ["당류", "5 g (5%)"], ["지방", "17 g (31%)"], ["포화지방", "8 g (53%)"], ["단백질", "10 g (18%)"]],
+      warn: "%는 1일 영양성분 기준치(나트륨 2,000 mg)에 대한 비율(수업용 가상 라벨)" },
+    s1: [
+      { q: "영양성분표에서 컵라면 1개의 나트륨은 1일 영양성분 기준치(2,000 mg)의 몇 %인가요?", o: ["17%", "53%", "85%", "170%"], a: 2,
+        why: "1,700 ÷ 2,000 = 0.85. 표의 괄호 안 숫자가 바로 이 비율입니다. 한 개로 하루 기준치의 85%를 채웁니다." },
+      { q: "어제 민재의 저녁은 컵라면(1,700 mg) + 삼각김밥(450 mg) + 소시지 핫바(500 mg)였습니다. 이 한 끼의 나트륨은 15~18세 만성질환위험감소섭취량(2,300 mg)의 약 몇 %인가요?", o: ["약 58%", "약 85%", "약 115%", "약 265%"], a: 2,
+        why: "합계 2,650 mg ÷ 2,300 mg ≈ 1.15. 저녁 한 끼만으로 하루 기준을 넘습니다." },
+      { q: "급식과 간식까지 더한 어제 하루 나트륨은 3,865 mg입니다. 만성질환위험감소섭취량(2,300 mg)의 약 몇 배인가요?", o: ["약 0.6배", "약 1.2배", "약 1.7배", "약 3.9배"], a: 2,
+        why: "3,865 ÷ 2,300 ≈ 1.68 → 약 1.7배. 저녁을 바꾸는 것이 가장 큰 효과를 냅니다." }],
+    s2: { intro: "민재의 식단 기록 앱 7일 자료입니다. 막대는 하루 나트륨 섭취량, 아래 줄은 그날 저녁을 먹은 곳입니다.",
+      chart: { vals: [3900, 4200, 2400, 4100, 3800, 2600, "now"], key: "na", ref: 2300, refLabel: "기준 2,300 mg", unit: "mg", sub: ["편의점", "편의점", "집", "편의점", "편의점", "집", "편의점"], subLabel: "저녁", type: "max", top: 5000 },
+      qs: [
+        { q: "편의점에서 저녁을 먹은 날과 집에서 먹은 날의 하루 나트륨 평균 차이는 약 얼마인가요?", o: ["약 400 mg", "약 1,500 mg", "약 2,500 mg", "약 4,000 mg"], a: 1,
+          why: "편의점 5일 평균 약 3,970 mg, 집 2일 평균 2,500 mg으로, 차이는 약 1,470 mg입니다." },
+        { q: "이 결과로 \"편의점 음식은 모두 짜다\"고 말할 수 있을까요?", o: ["있다. 차이가 1,000 mg 이상으로 크기 때문이다", "없다. 한 사람이 7일 동안 고른 메뉴의 결과라서, 무엇을 골랐는지가 더 큰 변인일 수 있다", "있다. 앱 자료는 객관적이기 때문이다", "없다. 나트륨은 건강과 관계가 없기 때문이다"], a: 1,
+          why: "표본은 한 명, 7일, 민재가 고른 메뉴뿐입니다. 장소가 아니라 메뉴 선택이 원인일 수 있습니다. 그렇다면 해결책도 '편의점 금지'가 아니라 '편의점에서 다르게 고르기'가 됩니다." }] },
+    ai: [
+      { msg: "🏷️ 근처 편의점에서 컵라면 2+1 행사 중! 쿠폰을 받으시겠어요?", ctx: "민재가 앱에 정해 둔 목표는 '나트륨 줄이기'다.", a: 2, ok: -1,
+        why: "사용자의 목표와 정면으로 충돌하는 상업적 추천입니다. 위치·구매 기록을 이용한 맞춤 광고는 빅데이터 활용의 대표적인 문제점입니다." },
+      { msg: "🥣 라면 국물은 남기고, 채소나 과일을 함께 드세요.", ctx: "근거로 '라면 나트륨의 상당 부분이 국물에 있고, 채소·과일의 칼륨이 나트륨 배출을 돕는다'는 설명을 제시했다.", a: 0, ok: 1,
+        why: "나트륨 줄이기 안내와 같은 방향이고, 민재가 편의점을 계속 이용하면서도 실천할 수 있습니다. 실천할 수 있어야 좋은 해결책입니다." }],
+    prompt: "영양 표시, 7일 기록 자료, AI 추천은 민재의 나트륨 문제를 해결하는 데 유용한가?" }
+};
+/* 모든 의뢰인 공통: 라벨의 단위 함정(1단계 마지막 문항) */
+const TRAP_Q = { q: "공통 문제 · 탄산음료 라벨에 '100 mL당 당류 11 g (11%)'이라고 적혀 있고, 총 내용량은 500 mL입니다. 한 병을 다 마시면 당류는 몇 g인가요?", o: ["11 g", "50 g", "55 g", "110 g"], a: 2,
+  why: "11 g × (500 ÷ 100) = 55 g. 라벨의 11%는 100 mL만 마셨을 때의 값입니다. 한 병이면 1일 기준치(100 g)의 55%입니다." };
+
+/* ═══════════════ 상태 ═══════════════ */
+const LS = "nutri_clinic_v1";
+const STAGES = [["🔍", "문제 발견", "mint"], ["📈", "자료 해석", "sky"], ["🍱", "해결책 설계", "lemon"], ["🤖", "기술 검증", "coral"], ["✍️", "논증", "lav"]];
+const BADGES = ["라벨 해독가", "자료 탐정", "식단 설계가", "AI 검증관", "논증가"];
+let S = { view: "home", pid: null, name: "", team: "", cases: {} };
+try { const s = JSON.parse(localStorage.getItem(LS) || "null"); if (s && s.cases) S = Object.assign(S, s); } catch (e) {}
+function save() { try { localStorage.setItem(LS, JSON.stringify(S)); } catch (e) {} }
+function C() { const id = S.pid; if (!S.cases[id]) S.cases[id] = { stage: 0, q: { s1: [], s2: [] }, tray: {}, cat: "all", sub: null, subs: 0, note: "", ai: [], cer: { claim: "", ev: "", why: "", rebut: "" }, check: {}, done: false, at: "" }; return S.cases[id]; }
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fmt = n => Math.round(n).toLocaleString("ko-KR");
+const say = t => { $("#live").textContent = ""; setTimeout(() => { $("#live").textContent = t; }, 30); };
+
+/* ═══════════════ 기준과 판정 ═══════════════ */
+function targets(p) { const k = KDRI[p.sex]; return { eer: k.eer, pro: k.pro, ca: k.ca, fib: k.fib, na: KDRI.naCDRR, sug: Math.round(k.eer * KDRI.sugPct / 4), caf: Math.round(KDRI.cafPerKg * p.kg) }; }
+function judge(p, tray) {
+  const t = totals(tray), T = targets(p), who = `15~18세 ${p.sex}자`;
+  const st = (r, kind) => kind === "band" ? (r >= .9 && r <= 1.1 ? "ok" : (r >= .8 && r <= 1.2 ? "near" : "miss"))
+    : kind === "min" ? (r >= 1 ? "ok" : r >= .8 ? "near" : "miss") : (r <= 1 ? "ok" : r <= 1.2 ? "near" : "miss");
+  const rows = [
+    { k: "kcal", l: "열량", v: t.kcal, T: T.eer, u: "kcal", kind: "band", note: `${who} 에너지필요추정량의 90~110%` },
+    { k: "pro", l: "단백질", v: t.pro, T: T.pro, u: "g", kind: "min", note: `${who} 권장섭취량 이상` },
+    { k: "ca", l: "칼슘", v: t.ca, T: T.ca, u: "mg", kind: "min", note: `${who} 권장섭취량 이상` },
+    { k: "fib", l: "식이섬유", v: t.fib, T: T.fib, u: "g", kind: "min", note: `${who} 충분섭취량 이상` },
+    { k: "na", l: "나트륨", v: t.na, T: T.na, u: "mg", kind: "max", note: "만성질환위험감소섭취량 이하" },
+    { k: "sug", l: "첨가당", v: t.sug, T: T.sug, u: "g", kind: "max", note: "총 에너지의 10% 이하" },
+    { k: "caf", l: "카페인", v: t.caf, T: T.caf, u: "mg", kind: "max", note: "체중 1 kg당 2.5 mg 이하" }];
+  rows.forEach(x => { x.r = x.T ? x.v / x.T : 0; x.st = st(x.r, x.kind); });
+  rows.push({ k: "won", l: "예산", v: t.won, T: BUDGET, u: "원", kind: "max", r: t.won / BUDGET, st: t.won <= BUDGET ? "ok" : "miss", note: "하루 15,000원 이하" });
+  const fav = p.favs.filter(id => tray[id]);
+  rows.push({ k: "fav", l: "좋아하는 음식", v: fav.length, T: 1, u: "개", kind: "min", r: fav.length ? 1 : 0, st: fav.length ? "ok" : "miss", note: `${p.name}가 좋아하는 음식 1개 이상(지킬 수 있는 식단)` });
+  return { t, rows, met: rows.filter(x => x.st === "ok").length };
+}
+const ICON = { ok: "✅", near: "🔶", miss: "❌" }, WORD = { ok: "충족", near: "근접", miss: "미달" };
+
+/* ═══════════════ 화면 조각 ═══════════════ */
+function labelCard(L) { return `<div class="label" role="table" aria-label="${esc(L.name)} 영양정보"><h3>영양정보</h3><div class="sub">${esc(L.name)} · ${esc(L.serv)}</div><div class="thick"></div>
+  <table>${L.rows.map(r => `<tr class="${r[2] ? "hl" : ""}"><td>${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join("")}</table><div class="warnline">${esc(L.warn)}</div></div>`; }
+function chartVals(p) { const c = p.s2.chart, now = totals(p.now)[c.key]; return c.vals.map(v => v === "now" ? now : v); }
+function chart(p) {
+  const c = p.s2.chart, vals = chartVals(p), W = 600, H = 270, L = 48, R = 14, T = 22, B = 62, pw = (W - L - R) / 7, ph = H - T - B, y = v => T + ph * (1 - Math.min(v, c.top) / c.top);
+  const days = ["1일", "2일", "3일", "4일", "5일", "6일", "어제"]; let g = "";
+  for (let i = 0; i <= 4; i++) { const v = c.top * i / 4; g += `<line class="gd" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="m" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${fmt(v)}</text>`; }
+  vals.forEach((v, i) => { const bad = c.type === "max" ? v > c.ref : v < c.ref, x = L + pw * i + pw * .18, w = pw * .64;
+    g += `<rect class="${bad ? (c.type === "max" ? "over" : "under") : "ok"}" x="${x}" y="${y(v)}" width="${w}" height="${T + ph - y(v)}" rx="5"><title>${days[i]} ${fmt(v)} ${c.unit}</title></rect>
+      ${i === 6 ? `<rect class="yest" x="${x - 3}" y="${y(v) - 3}" width="${w + 6}" height="${T + ph - y(v) + 3}" rx="7"/>` : ""}
+      <text class="t" x="${x + w / 2}" y="${y(v) - 7}" text-anchor="middle">${fmt(v)}</text>
+      <text class="m" x="${x + w / 2}" y="${H - B + 18}" text-anchor="middle">${days[i]}</text>
+      <text class="t" x="${x + w / 2}" y="${H - B + 40}" text-anchor="middle">${esc(c.sub[i])}</text>`; });
+  g += `<line class="ref" x1="${L}" x2="${W - R}" y1="${y(c.ref)}" y2="${y(c.ref)}"/><text class="t" x="${W - R - 4}" y="${y(c.ref) - 7}" text-anchor="end">${esc(c.refLabel)}</text>
+    <text class="m" x="${L - 6}" y="${H - B + 40}" text-anchor="end">${esc(c.subLabel)}</text><text class="m" x="${L - 6}" y="${T - 8}" text-anchor="end">${c.unit}</text>`;
+  const desc = vals.map((v, i) => `${days[i]} ${fmt(v)}${c.unit}(${c.sub[i]})`).join(", ");
+  return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="7일 기록 막대그래프: ${esc(desc)}. 기준선 ${esc(c.refLabel)}">${g}</svg></div>
+    <p class="su-tiny su-muted">막대 위 숫자가 그날의 값입니다. 점선은 기준선, 테두리가 굵은 막대는 '어제'(현재 식단)입니다. 기록은 수업용 가상 자료입니다.</p>`;
+}
+function quiz(key, list) {
+  const c = C(); c.q[key] = c.q[key] || [];
+  return list.map((q, i) => { const st = c.q[key][i];
+    return `<div class="su-card"><p style="margin:0 0 10px;font-weight:800">${i + 1}. ${esc(q.q)}</p><div class="su-opts">${q.o.map((o, j) => {
+      let cl = "su-opt"; if (st) { if (st.done && j === q.a) cl += " right"; else if (st.tried.includes(j)) cl += " wrong"; }
+      return `<button class="${cl}" data-act="ans" data-key="${key}" data-i="${i}" data-j="${j}" data-fk="ans-${key}-${i}-${j}" ${st && st.done ? "disabled" : ""}><span class="k">${"①②③④"[j]}</span><span>${esc(o)}</span></button>`; }).join("")}</div>
+      ${st && st.done ? `<div class="su-fb good" style="margin-top:10px"><span><b>${st.first ? "첫 시도에 맞혔어요!" : "정답을 찾았어요."}</b> ${esc(q.why)}</span></div>`
+        : st ? `<div class="su-fb bad" style="margin-top:10px"><span><b>다시 생각해 봐요.</b> 표의 숫자를 식으로 옮겨 적으면 보입니다.</span></div>` : ""}</div>`; }).join("");
+}
+const quizDone = (key, n) => { const a = C().q[key] || []; return a.filter(x => x && x.done).length === n; };
+function nav(ok, hint) {
+  const c = C(); return `<div class="su-row su-noprint" style="margin-top:20px">${c.stage > 0 ? `<button class="su-btn ghost" data-act="prev">← 이전 단계</button>` : `<button class="su-btn ghost" data-act="home">← 의뢰인 고르기</button>`}
+    <button class="su-btn" data-act="next" ${ok ? "" : "disabled"}>${c.stage === 4 ? "보고서 완성 ✨" : "다음 단계 →"}</button>${ok ? "" : `<span class="su-small su-muted">${esc(hint || "이 단계의 과제를 마치면 넘어갈 수 있어요.")}</span>`}</div>`;
+}
+function head(i, title, lead) { const s = STAGES[i];
+  return `<div class="su-stack"><span class="su-kicker ${s[2]}">${s[0]} ${i + 1}단계 · ${s[1]}</span><h1 class="su-h1">${title}</h1>${lead ? `<p class="su-lead" style="margin:0">${lead}</p>` : ""}</div>`; }
+function clientStrip(p) { return `<div class="su-card tint-${p.tint}"><div class="su-row" style="align-items:flex-start;gap:14px"><div style="font-size:42px;line-height:1">${p.ava}</div>
+  <div style="flex:1;min-width:220px"><div class="su-bubble">“${esc(p.quote)}”</div><ul class="su-small" style="margin:14px 0 0;padding-left:18px">${p.facts.map(f => `<li>${esc(f)}</li>`).join("")}</ul></div></div>
+  <p class="su-tiny su-muted" style="margin:8px 0 0">${esc(p.name)}(${esc(p.tag)})은 수업용 가상 인물입니다.</p></div>`; }
+
+/* ═══════════════ 화면 ═══════════════ */
+function home() {
+  const any = Object.keys(S.cases).length;
+  return `<section class="su-stack">
+  <div class="su-card hero"><div class="su-stack">
+    <span class="su-kicker">🥗 통합과학2 · 과학탐구실험2 · 영양·식생활</span>
+    <h1 class="su-h1">친구의 식탁 고민, 숫자로 풀어 볼까요?</h1>
+    <p class="su-lead" style="margin:0">의뢰인 한 명을 맡아 <b>영양표시를 읽고</b>, <b>7일 기록에서 경향을 찾고</b>, <b>하루 식단을 다시 짜고</b>, <b>AI 앱의 추천을 판정</b>한 뒤, 과학기술의 쓸모와 한계를 <b>논증</b>합니다.</p>
+    <div class="who-in"><div class="su-field"><label for="inName">이름(별칭도 괜찮아요)</label><input type="text" id="inName" value="${esc(S.name)}" autocomplete="off" placeholder="예: 하늘"></div>
+      <div class="su-field"><label for="inTeam">모둠</label><input type="text" id="inTeam" value="${esc(S.team)}" autocomplete="off" placeholder="예: 3모둠"></div></div>
+    <p class="su-tiny su-muted" style="margin:0">입력과 진행 상황은 이 기기의 브라우저에만 저장됩니다. 키·몸무게·실제로 먹은 음식은 묻지 않습니다.</p>
+  </div><div class="big" aria-hidden="true" style="text-align:center">🍱🔍📈<br>🤖✍️</div></div>
+  <h2 class="su-h2" style="margin-top:26px">의뢰인을 골라 주세요</h2>
+  <div class="su-grid">${Object.values(P).map(p => { const c = S.cases[p.id];
+    return `<button class="client" data-act="pick" data-id="${p.id}" data-fk="pick-${p.id}"><div class="who"><div class="ava" style="background:var(--${p.tint})">${p.ava}</div>
+      <div><div class="name">${esc(p.name)}</div><div class="meta">${esc(p.tag)}</div></div></div>
+      <div class="su-bubble su-small">“${esc(p.quote)}”</div>
+      <div class="su-row"><span class="su-tag">고민: ${esc(p.issue)}</span>${c ? `<span class="su-tag ${c.done ? "good" : "warn"}">${c.done ? "✓ 완료" : `진행 중 · ${c.stage + 1}단계`}</span>` : ""}</div></button>`; }).join("")}</div>
+  <h2 class="su-h2" style="margin-top:26px">탐구는 이렇게 진행돼요</h2>
+  <div class="flow">${STAGES.map((s, i) => `<div style="background:var(--${s[2]})"><b>${s[0]} ${i + 1}. ${s[1]}</b>${["영양표시의 숫자를 기준과 비교해 고민을 문제로 바꿔요", "7일 기록 그래프에서 경향을 찾고 해석의 한계를 따져요", "예산 안에서 아홉 가지 기준을 맞추는 하루 식단을 짜요", "AI 식단 앱의 알림 다섯 개를 수용·보완·거부로 판정해요", "주장–근거–추론–반박으로 설득하는 글을 써요"][i]}</div>`).join("")}</div>
+  <p class="su-small su-muted">점수나 등급은 없습니다. 단계를 마칠 때마다 배지를 받고, 마지막에 탐구 보고서를 내려받아 선생님께 냅니다.${any ? " 맡았던 의뢰인을 다시 누르면 이어서 할 수 있어요." : ""}</p>
+  </section>`;
+}
+function lesson() {
+  return `<details class="su-card lesson"><summary>📘 먼저 알아 두기: 라벨의 %와 내 기준은 다를 수 있어요</summary>
+    <p>영양성분표의 %는 <b>1일 영양성분 기준치</b>에 대한 비율입니다. <b>비율(%) = 표시 함량 ÷ 그 영양성분의 1일 기준치 × 100</b> (반올림해 정수)</p>
+    <div class="su-scroll"><table class="su-table mini"><tr><th>영양성분</th><th class="num">1일 기준치</th><th>영양성분</th><th class="num">1일 기준치</th></tr>
+      <tr><td>탄수화물</td><td class="num">324 g</td><td>나트륨</td><td class="num">2,000 mg</td></tr><tr><td>당류</td><td class="num">100 g</td><td>칼슘</td><td class="num">700 mg</td></tr>
+      <tr><td>단백질</td><td class="num">55 g</td><td>식이섬유</td><td class="num">25 g</td></tr><tr><td>지방</td><td class="num">54 g</td><td>포화지방</td><td class="num">15 g</td></tr></table></div>
+    <p class="su-small">기준치는 모든 제품에 똑같이 쓰는 <b>표시용 값</b>입니다. 사람에게 필요한 양은 성별·나이마다 다릅니다. 예를 들어 15~18세 칼슘 권장섭취량은 남 800 mg, 여 700 mg, 식이섬유 충분섭취량은 남 25 g, 여 20 g입니다(2025 한국인 영양소 섭취기준). 권장섭취량은 그 집단 사람들의 약 97~98%가 필요량을 채우는 양입니다.</p>
+    <p class="su-tiny su-muted">출처: 식품의약품안전처 「한눈에 보는 영양표시 가이드라인」(2024.12) · 보건복지부·한국영양학회 「2025 한국인 영양소 섭취기준」</p></details>`;
+}
+function s1(p) { const list = [...p.s1, TRAP_Q];
+  return `${head(0, `${esc(p.name)}의 고민을 숫자로 바꾸기`, "라벨과 기준을 견주면 막연한 고민이 확인할 수 있는 문제가 됩니다. 틀려도 괜찮아요. 맞힐 때까지 다시 고를 수 있어요.")}
+  ${clientStrip(p)}<div class="su-two"><div class="su-stack">${quiz("s1", list)}</div><div class="su-stack su-sticky">${labelCard(p.label)}${lesson()}</div></div>${nav(quizDone("s1", list.length))}`; }
+function s2(p) {
+  return `${head(1, "7일 기록에서 경향 찾기", esc(p.s2.intro))}<div class="su-card">${chart(p)}</div><div class="su-stack">${quiz("s2", p.s2.qs)}</div>${nav(quizDone("s2", p.s2.qs.length))}`; }
+function critRows(d) {
+  return `<div class="crit" role="list">${d.rows.map(x => { const w = Math.min(x.r, 1.5) / 1.5 * 100;
+    return `<span class="ic" aria-hidden="true">${ICON[x.st]}</span><b>${x.l}</b><div class="bar" role="img" aria-label="${x.l} ${WORD[x.st]}"><b class="${x.st === "ok" ? "" : x.st}" style="width:${w}%"></b><u></u></div>
+      <span class="v" role="listitem">${WORD[x.st]} · ${x.k === "fav" ? (x.v ? x.v + "개 담음" : "없음") : `${fmt(x.v)} / ${fmt(x.T)} ${x.u} (${Math.round(x.r * 100)}%)`} · ${esc(x.note)}</span>`; }).join("")}</div>`;
+}
+function s3(p) {
+  const c = C(), d = judge(p, c.tray), t = d.t, over = t.won > BUDGET, can = t.n >= 4 && !over, base = judge(p, p.now);
+  const list = FOODS.filter(f => c.cat === "all" || f.c === c.cat);
+  const res = c.sub ? (() => { const sd = judge(p, c.sub.tray);
+    return `<div class="su-card tint-mint su-stack"><h3 class="su-h3">📋 제출한 식단 (${c.subs}번째 제출)</h3>
+      <p style="margin:0">기준 아홉 가지 중 <b>${sd.met}개 충족</b> · 어제 식단은 ${base.met}개 → ${sd.met - base.met >= 0 ? "+" : ""}${sd.met - base.met}개</p>
+      <div class="su-scroll"><table class="su-table"><tr><th>기준</th><th>어제</th><th>새 식단</th></tr>${sd.rows.map((x, i) => `<tr><td>${x.l}</td><td>${ICON[base.rows[i].st]} ${WORD[base.rows[i].st]}</td><td>${ICON[x.st]} ${WORD[x.st]}</td></tr>`).join("")}</table></div>
+      <p class="su-small" style="margin:0">모든 기준을 한꺼번에 맞추기는 어렵습니다. 무엇을 먼저 챙겼고 무엇을 양보했는지가 5단계 논증의 근거가 됩니다.</p></div>`; })() : "";
+  return `${head(2, `${esc(p.name)}의 하루 식단 다시 짜기`, `예산 ${fmt(BUDGET)}원 안에서 하루치 음식을 담으세요. 초록 카드는 ${esc(p.name)}가 좋아하는 음식입니다.`)}
+  <div class="su-two"><div class="su-stack">
+    <div class="su-row" role="group" aria-label="음식 분류">${[["all", "전체"], ["m", "식사"], ["s", "간식"], ["d", "음료"]].map(x => `<button class="su-chip" aria-pressed="${c.cat === x[0]}" data-act="cat" data-c="${x[0]}" data-fk="cat-${x[0]}">${x[1]}</button>`).join("")}</div>
+    <div class="shelf">${list.map(f => `<button class="food ${p.favs.includes(f.id) ? "fav" : ""}" data-act="add" data-id="${f.id}" data-fk="add-${f.id}" aria-label="${esc(f.n)} 담기${c.tray[f.id] ? `, 지금 ${c.tray[f.id]}개` : ""}">
+      ${c.tray[f.id] ? `<span class="cnt">${c.tray[f.id]}</span>` : ""}<span class="e" aria-hidden="true">${f.e}</span><span class="n">${esc(f.n)}</span>
+      ${p.favs.includes(f.id) ? `<span class="favtag">★ ${esc(p.name)}가 좋아함</span>` : ""}<span class="d">${fmt(f.won)}원 · ${f.kcal} kcal</span><span class="d">나트륨 ${fmt(f.na)} · 첨가당 ${f.sug} g${f.caf ? ` · 카페인 ${f.caf}` : ""}</span></button>`).join("")}</div>
+    <p class="su-tiny su-muted">음식의 영양 값과 가격은 수업용 근삿값입니다. 실제 제품과 다를 수 있어요. 같은 음식은 3개까지, 모두 14개까지 담을 수 있어요.</p>
+  </div><div class="su-stack su-sticky"><div class="su-card su-stack">
+    <div class="su-row" style="justify-content:space-between"><b>🍽️ 식판 (${t.n}개)</b><span class="num" style="font-weight:800;color:${over ? "var(--bad)" : "inherit"}">${over ? "⚠️ " : ""}${fmt(t.won)} / ${fmt(BUDGET)}원</span></div>
+    <div class="tray">${t.n ? Object.keys(c.tray).map(id => `<button data-act="rem" data-id="${id}" data-fk="rem-${id}" aria-label="${esc(F[id].n)} 하나 빼기">${F[id].e} ${esc(F[id].n)}${c.tray[id] > 1 ? " ×" + c.tray[id] : ""} ✕</button>`).join("") : `<span class="su-small su-muted">왼쪽에서 음식을 눌러 담으세요. 식판의 음식을 누르면 하나씩 빠집니다.</span>`}</div>
+    <p class="su-small" style="margin:0"><b>기준 ${d.met} / 9 충족</b> <span class="su-muted">· 막대의 세로선이 기준(100%)</span></p>
+    ${critRows(d)}
+    <div class="su-row"><button class="su-btn" data-act="submit3" data-fk="submit3" ${can ? "" : "disabled"}>설계 제출</button><button class="su-btn ghost sm" data-act="cur" data-fk="cur">어제 식단 불러오기</button><button class="su-btn ghost sm" data-act="clear" data-fk="clear">비우기</button></div>
+    <p class="su-small su-muted" style="margin:0">${over ? "예산을 넘었어요." : t.n < 4 ? "음식을 4개 이상 담으면 제출할 수 있어요." : "여러 번 제출할 수 있어요. 마지막 제출안이 보고서에 들어갑니다."}</p>
+    <div class="su-field"><label for="s3note">무엇을 먼저 챙기고 무엇을 양보했나요? (선택)</label><textarea id="s3note" data-in="note" placeholder="예: 나트륨을 줄이려고 컵라면 대신 김밥을 넣었지만, 좋아하는 콜라는 하나 남겼다">${esc(c.note)}</textarea></div>
+  </div>${res}</div></div>${nav(!!c.sub, "식단을 한 번 이상 제출하면 넘어갈 수 있어요.")}`;
+}
+function s4(p) { const c = C(), cards = [...p.ai, ...COMMON_AI], all = cards.every((_, i) => c.ai[i] && c.ai[i].checked);
+  return `${head(3, "AI 식단 앱 '뉴트리봇'의 알림 판정하기", `${esc(p.name)}가 쓰는 앱이 보낸 알림 다섯 개입니다. 수용할지, 검증하고 보완해서 쓸지, 거부할지 고르고 이유를 한 줄로 쓴 뒤 확인하세요.`)}
+  ${cards.map((x, i) => { const st = c.ai[i] || {}, done = st.checked;
+    const fb = done ? (st.pick === x.a ? `<div class="su-fb good"><span><b>타당한 판정이에요.</b> ${esc(x.why)}</span></div>` : st.pick === x.ok ? `<div class="su-fb warn"><span><b>일리가 있어요.</b> 제안 판정은 '${CH[x.a]}'입니다. ${esc(x.why)}</span></div>`
+      : `<div class="su-fb bad"><span><b>다시 생각해 볼 판정이에요.</b> 제안 판정은 '${CH[x.a]}'입니다. ${esc(x.why)}</span></div>`) : "";
+    return `<div class="su-card su-stack"><div class="bot"><div class="av" aria-hidden="true">🤖</div><div class="msg"><span class="su-sr">뉴트리봇 알림 ${i + 1}: </span>${esc(x.msg)}</div></div><p class="ctx">상황: ${esc(x.ctx)}</p>
+      <div class="judge su-stack"><div class="su-row" role="group" aria-label="알림 ${i + 1} 판정">${CH.map((o, j) => `<button class="su-chip" aria-pressed="${st.pick === j}" data-act="aip" data-i="${i}" data-j="${j}" data-fk="aip-${i}-${j}" ${done ? "disabled" : ""}>${o}</button>`).join("")}</div>
+      <div class="su-field"><label for="why${i}" class="su-small">판정 이유</label><input type="text" id="why${i}" data-in="aiwhy" data-i="${i}" value="${esc(st.why || "")}" ${done ? "disabled" : ""} placeholder="예: 광고 표시가 있고 성분을 확인할 수 없어서"></div>
+      ${done ? "" : `<div><button class="su-btn sm" data-act="aichk" data-i="${i}" data-fk="aichk-${i}" ${st.pick != null && String(st.why || "").trim().length >= 4 ? "" : "disabled"}>판정 확인</button> <span class="su-tiny su-muted">판정을 고르고 이유를 4자 이상 쓰면 확인할 수 있어요.</span></div>`}${fb}</div></div>`; }).join("")}
+  <p class="su-small su-muted">판정에는 점수를 매기지 않습니다. 제안 판정과 달라도 이유가 타당하면 모둠에서 토의해 보세요.</p>${nav(all, "다섯 알림을 모두 확인하면 넘어갈 수 있어요.")}`; }
+function evidence(p) { const c = C(), l = [];
+  l.push(`영양표시: ${p.s1[p.s1.length - 1].why}`);
+  l.push(`7일 기록: ${p.s2.qs[0].why}`);
+  if (c.sub) { const sd = judge(p, c.sub.tray), b = judge(p, p.now), g = k => sd.rows.find(x => x.k === k);
+    l.push(`식단 재설계: 기준 아홉 가지 중 어제 ${b.met}개 → 새 식단 ${sd.met}개 충족. 새 식단의 나트륨 ${fmt(g("na").v)} mg, 첨가당 ${fmt(g("sug").v)} g, 칼슘 ${fmt(g("ca").v)} mg, 식이섬유 ${fmt(g("fib").v)} g, 카페인 ${fmt(g("caf").v)} mg, 비용 ${fmt(g("won").v)}원.`); }
+  if (c.note) l.push(`설계에서 양보한 것: ${c.note}`);
+  const cards = [...p.ai, ...COMMON_AI], acc = cards.filter((x, i) => c.ai[i] && c.ai[i].checked && c.ai[i].pick === 0).length;
+  l.push(`AI 알림 5개 중 내가 그대로 수용한 것 ${acc}개, 검증·보완하거나 거부한 것 ${5 - acc}개.`);
+  return l; }
+const CER_MIN = { claim: 15, ev: 30, why: 30, rebut: 20 };
+function cerOk() { const c = C(); return Object.entries(CER_MIN).every(([k, m]) => String(c.cer[k] || "").trim().length >= m); }
+function s5(p) { const c = C();
+  const box = (k, lab, hint) => { const n = String(c.cer[k] || "").trim().length;
+    return `<div class="su-field"><label for="cer-${k}">${lab} <span class="su-tag ${n >= CER_MIN[k] ? "good" : ""}" id="cnt-${k}">${n}/${CER_MIN[k]}자</span></label><p class="su-hint">${hint}</p><textarea id="cer-${k}" data-in="cer" data-k="${k}">${esc(c.cer[k])}</textarea></div>`; };
+  const checks = ["주장이 논제에 바로 답하는가", "근거에 숫자와 단위, 비교한 기준이 있는가", "상관과 인과, 측정 오차를 구분했는가", "쓸모와 한계를 모두 다루었는가", "반대 입장의 독자를 설득할 수 있는가"];
+  return `${head(4, "과학기술의 쓸모와 한계 논증하기", "")}
+  <div class="su-card tint-lav"><b>논제</b> — ${esc(p.prompt)} 쓸모와 한계를 모두 다루어 읽는 사람을 설득하세요.</div>
+  <div class="su-two"><div class="su-stack">
+    ${box("claim", "주장", "논제에 대한 내 입장을 한 문장으로. 예: \"…은 ~라는 조건에서 유용하다.\"")}
+    ${box("ev", "근거", "오른쪽 '내 탐구 자료'에서 숫자를 골라 인용하세요. 숫자와 단위를 함께 씁니다.")}
+    ${box("why", "추론", "그 근거가 왜 주장을 뒷받침하는지 기준이나 과학 원리로 연결하세요.")}
+    ${box("rebut", "예상 반론과 재반박", "\"앱이 다 계산해 주는데 왜 배워야 하나?\" 또는 \"오차와 광고가 있는 기술은 쓸모없다\" 중 하나에 답해 보세요.")}
+  </div><div class="su-stack su-sticky"><div class="su-card su-stack"><b>📂 내 탐구 자료</b><ul class="su-small" style="margin:0;padding-left:18px">${evidence(p).map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>
+    <div class="su-card su-stack"><b>☑️ 제출 전 자기 점검</b>${checks.map((x, i) => `<label class="su-small" style="display:flex;gap:8px;align-items:flex-start;font-weight:400"><input type="checkbox" data-in="chk" data-i="${i}" ${c.check[i] ? "checked" : ""}> ${x}</label>`).join("")}</div></div></div>
+  ${nav(cerOk(), "네 칸을 모두 채우면(칸마다 최소 글자 수) 보고서를 완성할 수 있어요.")}`; }
+function reportText(p) { const c = C(), sd = c.sub ? judge(p, c.sub.tray) : null;
+  return `[식탁 상담소 탐구 보고서]
+탐구자: ${S.name || "이름 없음"}${S.team ? " · " + S.team : ""} / 의뢰인: ${p.name}(${p.tag}, 가상 인물) / 고민: ${p.issue}
+
+1. 탐구 자료
+${evidence(p).map(x => "- " + x).join("\n")}
+
+2. 설계한 식단
+${c.sub ? Object.keys(c.sub.tray).map(id => F[id].n + (c.sub.tray[id] > 1 ? " ×" + c.sub.tray[id] : "")).join(", ") : "-"}
+${sd ? sd.rows.map(x => `  ${WORD[x.st]} ${x.l}: ${x.k === "fav" ? x.v + "개" : fmt(x.v) + " / " + fmt(x.T) + " " + x.u}`).join("\n") : ""}
+
+3. AI 알림 판정
+${[...p.ai, ...COMMON_AI].map((x, i) => { const st = c.ai[i] || {}; return `- ${x.msg} → ${st.pick != null ? CH[st.pick] : "-"} (이유: ${st.why || "-"})`; }).join("\n")}
+
+4. 논증
+논제: ${p.prompt}
+주장: ${String(c.cer.claim).trim()}
+근거: ${String(c.cer.ev).trim()}
+추론: ${String(c.cer.why).trim()}
+예상 반론과 재반박: ${String(c.cer.rebut).trim()}`; }
+function done(p) { const c = C();
+  return `<section class="su-stack"><span class="su-kicker">🎉 탐구 완료</span><h1 class="su-h1">${esc(p.name)}의 고민을 끝까지 따라갔어요!</h1>
+  <div class="su-row" style="gap:12px">${STAGES.map((s, i) => `<div class="su-badge got"><span class="e" aria-hidden="true">${s[0]}</span>${BADGES[i]}</div>`).join("")}</div>
+  <p class="su-small su-muted">점수와 등급은 없습니다. 논증 글은 친구·선생님과 서로 읽고 평가하세요.</p>
+  <div class="su-card su-stack"><b>📄 탐구 보고서</b><pre class="report" id="rep">${esc(reportText(p))}</pre>
+    <div class="su-row su-noprint"><button class="su-btn" data-act="down" data-fk="down">결과 파일 내려받기(.json)</button><button class="su-btn ghost" data-act="copy" data-fk="copy">보고서 복사</button><button class="su-btn ghost" data-act="print">인쇄</button><button class="su-btn ghost" data-act="home">다른 의뢰인 맡기</button></div>
+    <p class="su-tiny su-muted">결과 파일을 선생님께 내면 교사 대시보드에서 모아 볼 수 있어요. 복사가 안 되면 글 상자를 길게 눌러 선택하세요.</p></div>
+  <div class="su-card tint-sky"><b>다음 활동</b> — 급식 24만 끼의 실제 데이터로 탐구해 보고 싶다면 <a href="meal-lab.html">식탁 문제 해결단(급식 데이터 탐구)</a>으로 가 보세요.</div></section>`; }
+function teacher() {
+  return `<section class="su-stack"><span class="su-kicker">👩‍🏫 교사용 안내</span><h1 class="su-h1">성취기준 연결과 수업 운영</h1>
+  <div class="su-card su-scroll"><table class="su-table"><tr><th>단계</th><th>성취기준(2022 개정, 교육부 고시 제2022-33호 [별책 9])</th><th>연결 지점</th></tr>
+    <tr><td>1 문제 발견</td><td>[10과탐2-01-02] 사회적 이슈나 생활 속에서 과학 탐구 문제를 발견하고, 이를 해결하기 위한 과학탐구 활동을 계획하고 수행할 수 있다.</td><td>영양표시의 수치를 섭취기준과 비교해 막연한 고민을 측정할 수 있는 문제로 바꾼다.</td></tr>
+    <tr><td>2 자료 해석</td><td>[10통과2-03-02] 빅데이터를 과학기술사회에서 사용하고 있는 사례를 조사하고, 빅데이터 활용의 장점과 문제점을 추론할 수 있다.</td><td>웨어러블·식단 앱 자료의 경향, 상관과 인과, 측정 오차, 표본의 한계.</td></tr>
+    <tr><td>3 해결책 설계</td><td>[10과탐2-01-03] 과학 개념을 적용하여 실생활 문제의 해결방안을 창의적으로 고안하고, 필요한 도구를 설계⋅제작할 수 있다.</td><td>예산·기호라는 제약 아래 여러 기준을 함께 맞추고 절충한다.</td></tr>
+    <tr><td>4 기술 검증</td><td>[10통과2-03-03] 인공지능 로봇, 사물인터넷 등과 같이 과학기술의 발전을 인간 삶과 환경 개선에 활용하는 사례를 찾고, 이러한 과학기술의 발전이 미래 사회에 미치는 유용성과 한계를 예측할 수 있다. · [10과탐2-02-03](과학 윤리)</td><td>AI 추천의 근거, 학습 데이터의 치우침, 광고, 개인정보.</td></tr>
+    <tr><td>5 논증</td><td>[10통과2-03-04] 과학기술의 발전 과정에서 발생할 수 있는 과학 관련 사회적 쟁점(SSI)과 과학기술 이용에서 과학 윤리의 중요성에 대해 논증할 수 있다.</td><td>주장–근거–추론–반박 구조의 설득하는 글쓰기.</td></tr></table></div>
+  <div class="su-grid"><div class="su-card su-stack"><b>2차시 운영안</b><ul class="su-small" style="margin:0;padding-left:18px">
+      <li>1차시: 모둠마다 다른 의뢰인을 맡아 1~3단계. 3단계는 '어제 식단 불러오기'로 기준선을 먼저 확인하게 한다.</li>
+      <li>2차시: 4단계 판정을 모둠 토의로 진행하고, 5단계는 개인 글쓰기. 결과 파일을 걷어 교사 대시보드에서 모아 본다.</li>
+      <li>급식 데이터 탐구(식탁 문제 해결단) 앞에 두면, 기준을 확인하고 단위를 맞추는 습관을 먼저 다질 수 있다.</li></ul></div>
+    <div class="su-card su-stack"><b>논증 글 평가 예시</b><ul class="su-small" style="margin:0;padding-left:18px">
+      <li>상: 수치 근거를 기준과 견주어 인용하고, 쓸모와 한계를 조건과 함께 밝히며, 반론에 근거로 답한다.</li>
+      <li>중: 수치 근거를 인용하지만 기준과의 비교나 한계 가운데 하나가 빠진다.</li>
+      <li>하: 근거 없이 의견을 말하거나, 기술을 무조건 옹호하거나 거부한다.</li></ul></div>
+    <div class="su-card su-stack"><b>안전과 윤리</b><ul class="su-small" style="margin:0;padding-left:18px">
+      <li>체중 감량을 목표로 제시하지 않는다. 열량은 모자라도 '미달'로 표시한다. 극단적 제한 추천은 거부가 제안 판정이다.</li>
+      <li>학생의 키·몸무게·실제 섭취 기록을 묻지 않는다. 체중은 가상 의뢰인의 카페인 권고량 계산에만 쓴다.</li>
+      <li>의뢰인이 좋아하는 음식을 '나쁜 음식'으로 부르지 않는다. 양과 빈도의 문제로 다룬다.</li></ul></div></div>
+  <div class="su-card su-stack"><b>수치의 출처와 확인 상태</b><ul class="su-small" style="margin:0;padding-left:18px">
+    <li>15~18세 에너지필요추정량(남 2,700·여 2,000 kcal), 단백질 권장섭취량(65·55 g), 칼슘 권장섭취량(800·700 mg), 식이섬유 충분섭취량(25·20 g), 나트륨 만성질환위험감소섭취량(2,300 mg), 첨가당(총 에너지의 10% 이내): 보건복지부·한국영양학회 「2025 한국인 영양소 섭취기준」 요약표에서 확인. 2020년판보다 칼슘·식이섬유가 낮아졌다.</li>
+    <li>1일 영양성분 기준치와 비율 계산법: 「식품 등의 표시·광고에 관한 법률 시행규칙」[별표 5], 식약처 영양표시 가이드라인(2024.12)에서 확인.</li>
+    <li>카페인 체중 1 kg당 2.5 mg 이하: 식품의약품안전처(2차 자료로 확인). 건강정보가 민감정보라는 점: 개인정보 보호법 제23조(2차 자료로 확인).</li>
+    <li>음식별 영양 값·가격, 의뢰인, 7일 기록은 수업용 근삿값과 가상 자료이며 영양교사 검수 전이다. 전체 목록: <code>school-meal-gg/VERIFICATION.md</code></li></ul></div>
+  <div class="su-row"><button class="su-btn" data-act="home">돌아가기</button><a class="su-btn ghost" href="../teacher.html">교사 대시보드 →</a></div></section>`; }
+
+/* ═══════════════ 그리기 ═══════════════ */
+function renderProg() { const c = S.pid && S.cases[S.pid], on = S.view === "case" && c;
+  $("#prog").innerHTML = on ? STAGES.map((s, i) => `<li class="${c.done || i < c.stage ? "done" : i === c.stage ? "now" : ""}"${i === c.stage && !c.done ? ' aria-current="step"' : ""}><i></i><span>${s[0]} ${s[1]}</span></li>`).join("") : ""; }
+function render(focusTop) {
+  const fk = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.fk : null;
+  let h; const p = P[S.pid];
+  if (S.view === "teacher") h = teacher();
+  else if (S.view === "case" && p) { const c = C(); h = c.done ? done(p) : [s1, s2, s3, s4, s5][c.stage](p); }
+  else h = home();
+  $("#app").innerHTML = h; renderProg();
+  if (focusTop) { window.scrollTo(0, 0); $("#app").focus({ preventScroll: true }); }
+  else if (fk) { const el = document.querySelector(`[data-fk="${CSS.escape(fk)}"]`); if (el && !el.disabled) el.focus({ preventScroll: true }); }
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-act]"); if (!b || b.disabled) return; const a = b.dataset.act, p = P[S.pid];
+  if (a === "home") { S.view = "home"; save(); return render(true); }
+  if (a === "teacher") { S.view = "teacher"; save(); return render(true); }
+  if (a === "pick") { S.pid = b.dataset.id; S.view = "case"; C(); save(); return render(true); }
+  if (!p) return; const c = C();
+  if (a === "ans") { const key = b.dataset.key, i = +b.dataset.i, j = +b.dataset.j, list = key === "s1" ? [...p.s1, TRAP_Q] : p.s2.qs, q = list[i];
+    const st = c.q[key][i] || (c.q[key][i] = { tried: [], done: false, first: false });
+    if (st.done) return; st.tried.push(j); if (j === q.a) { st.done = true; st.first = st.tried.length === 1; say("정답입니다. " + q.why); } else say("다시 생각해 보세요.");
+    save(); return render(); }
+  if (a === "next") { if (c.stage < 4) { c.stage++; save(); return render(true); } c.done = true; c.at = new Date().toISOString(); save(); return render(true); }
+  if (a === "prev") { if (c.stage > 0) c.stage--; save(); return render(true); }
+  if (a === "cat") { c.cat = b.dataset.c; save(); return render(); }
+  if (a === "add") { const id = b.dataset.id, t = totals(c.tray); if ((c.tray[id] || 0) >= MAXEACH) return say("같은 음식은 3개까지 담을 수 있어요."); if (t.n >= MAXITEMS) return say("모두 14개까지 담을 수 있어요.");
+    c.tray[id] = (c.tray[id] || 0) + 1; save(); say(`${F[id].n}을(를) 담았어요.`); return render(); }
+  if (a === "rem") { const id = b.dataset.id; if (c.tray[id] > 1) c.tray[id]--; else delete c.tray[id]; save(); say(`${F[id].n} 하나를 뺐어요.`); return render(); }
+  if (a === "cur") { c.tray = Object.assign({}, p.now); save(); say("어제 식단을 불러왔어요."); return render(); }
+  if (a === "clear") { c.tray = {}; save(); return render(); }
+  if (a === "submit3") { c.sub = { tray: Object.assign({}, c.tray), at: new Date().toISOString() }; c.subs = (c.subs || 0) + 1; save(); say(`식단을 제출했어요. 기준 ${judge(p, c.tray).met}개 충족.`); return render(); }
+  if (a === "aip") { const i = +b.dataset.i; c.ai[i] = Object.assign(c.ai[i] || {}, { pick: +b.dataset.j }); save(); return render(); }
+  if (a === "aichk") { const i = +b.dataset.i; c.ai[i].checked = true; save(); return render(); }
+  if (a === "copy") { const t = $("#rep").textContent; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => say("보고서를 복사했어요."), () => say("복사가 막혀 있어요. 글 상자를 직접 선택해 복사하세요.")); return; }
+  if (a === "print") return window.print();
+  if (a === "down") return download(p);
+});
+document.addEventListener("input", e => { const el = e.target, k = el.dataset.in; if (!k) return;
+  const p = P[S.pid]; if (!p) return; const c = C();
+  if (k === "note") c.note = el.value;
+  if (k === "aiwhy") { const i = +el.dataset.i; c.ai[i] = Object.assign(c.ai[i] || {}, { why: el.value }); const btn = document.querySelector(`[data-act="aichk"][data-i="${i}"]`);
+    if (btn) btn.disabled = !(c.ai[i].pick != null && el.value.trim().length >= 4); }
+  if (k === "cer") { c.cer[el.dataset.k] = el.value; const n = el.value.trim().length, m = CER_MIN[el.dataset.k], tag = $("#cnt-" + el.dataset.k);
+    if (tag) { tag.textContent = `${n}/${m}자`; tag.classList.toggle("good", n >= m); } const nx = document.querySelector('[data-act="next"]'); if (nx) nx.disabled = !cerOk(); }
+  if (k === "chk") c.check[+el.dataset.i] = el.checked;
+  save(); });
+document.addEventListener("input", e => { if (e.target.id === "inName") { S.name = e.target.value.trim(); save(); } if (e.target.id === "inTeam") { S.team = e.target.value.trim(); save(); } });
+document.addEventListener("change", e => { if (e.target.dataset && e.target.dataset.in === "chk") { const c = C(); c.check[+e.target.dataset.i] = e.target.checked; save(); } });
+function download(p) { const c = C(), cards = [...p.ai, ...COMMON_AI], list1 = [...p.s1, TRAP_Q], sd = c.sub ? judge(p, c.sub.tray) : null, base = judge(p, p.now);
+  const q = (list, key) => list.map((x, i) => { const st = (c.q[key] || [])[i] || {}; return { 문항: x.q, 첫시도정답: !!st.first, 시도: (st.tried || []).length, 완료: !!st.done }; });
+  const out = { 앱: "식탁 상담소 v1.0", activityId: "nutrition-clinic", 작성: new Date().toISOString(), 이름: S.name, 모둠: S.team,
+    의뢰인: { id: p.id, 이름: p.name, 고민: p.issue }, 문제발견: q(list1, "s1"), 자료해석: q(p.s2.qs, "s2"),
+    식단: { 어제충족: base.met, 설계충족: sd ? sd.met : null, 제출횟수: c.subs || 0, 식판: c.sub ? c.sub.tray : null,
+      기준: sd ? sd.rows.map(x => ({ 기준: x.l, 값: Math.round(x.v), 기준값: x.T, 단위: x.u, 판정: WORD[x.st] })) : null, 양보: c.note },
+    AI판정: cards.map((x, i) => { const st = c.ai[i] || {}; return { 알림: x.msg, 고른판정: st.pick != null ? CH[st.pick] : null, 제안판정: CH[x.a], 일리있는다른판정: x.ok >= 0 ? CH[x.ok] : null, 이유: st.why || "" }; }),
+    논증: { 논제: p.prompt, 주장: c.cer.claim, 근거: c.cer.ev, 추론: c.cer.why, 반박: c.cer.rebut }, 자기점검: c.check, 완료: !!c.done };
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 2)], { type: "application/json" }));
+  a.download = `nutri-clinic_${p.id}_${new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "")}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+render();
+</script>
+</body>
+</html>

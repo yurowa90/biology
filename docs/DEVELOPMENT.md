@@ -10,7 +10,9 @@
 index.html                                  교과서 홈(목차 네비게이션)
 activities/enzyme-kinetics.html             효소반응속도 워크북(UI + 로직 + 시뮬레이터 + 서술형 자가 점검)
 activities/enso.html                        엘니뇨·라니냐 워크북(시뮬레이터 + ONI·실시간 수온 + GRASPS 자가 점검·자기평가)
-activities/meal-intro.html                  식탁 문제 해결단 도입 미션
+activities/nutrition-clinic.html            식탁 상담소(영양·식생활 탐구, 의뢰인 3명 · 5단계 · 앱 안 교사용 안내)
+activities/student-ui.css                   학생 화면 공용 디자인('밝은 탐구 노트형', 어두운 모드 포함). 식탁 상담소와 식탁 문제 해결단이 씀
+activities/meal-intro.html                  예전 도입 미션 주소. 식탁 상담소로 이동하는 안내 페이지
 activities/meal-lab.html                    식탁 문제 해결단(급식 데이터 PBL)
 activities/meal-lab-teacher.html            식탁 문제 해결단 교사용 안내
 activities/meal-lab-data.js                 위 활동의 데이터(10% 무작위 표본·정제 미션 원본 표본·전수 집계표). school-meal-gg/build_web_data.py가 만든다
@@ -76,5 +78,11 @@ GRASPS 활동은 앞으로 만들 때 슬롯별로 따로 생성하지 않고 Ro
 - 엘니뇨 GRASPS 루브릭: `GRASPS_CHECKS`, 기준별 연결은 `BUNDLES[].standards[].checks`, 예시 개요는 `GRASPS_EXEMPLAR`
 - 제출 방식: 각 활동 파일 상단의 `CONFIG.submit`
 - 프롬프트 복사 버튼 숨기기: 각 활동 파일 상단 `CONFIG.showPromptCopy = false`
-- 디자인 토큰: `<style>`의 `:root` CSS 변수
+- 디자인 토큰: 효소·엘니뇨·교사 화면은 각 파일 `<style>`의 `:root` CSS 변수. 식탁 상담소와 식탁 문제 해결단은 `activities/student-ui.css`의 `:root`(밝은 모드)와 `@media (prefers-color-scheme: dark)`(어두운 모드). 차트 색은 `--chart-*` 변수로 두고 스크립트가 `getComputedStyle`로 읽으므로(meal-lab.html `PAL`), 색을 바꿀 때는 CSS만 고치면 됨
+- 식탁 상담소
+  - 기준값: `activities/nutrition-clinic.html`의 `DRV`(1일 영양성분 기준치), `KDRI`(2025 한국인 영양소 섭취기준 15~18세)
+  - 음식 표: `FOODS`. 값을 바꾸면 의뢰인의 `now`(현재 식단) 합계와 문항·7일 그래프 '어제' 값이 서로 맞는지 다시 확인해야 함
+  - 의뢰인 사례: `P.A`·`P.B`·`P.C`(대사, 라벨, 문항 `s1`·`s2`, AI 알림 `ai`). 공통 문항은 `TRAP_Q`, 공통 AI 알림은 `COMMON_AI`
+  - 식단 판정: `judge()`(기준 9개, 충족·근접·미달). 논증 최소 글자 수: `CER_MIN`
+  - 결과 파일 필드: `download()`. `activityId: "nutrition-clinic"`. 교사 대시보드 `teacher.html`의 `n*` 함수가 이 필드를 읽음
 - 시뮬레이터 파라미터 범위: `S_MAX`, 슬라이더 `min/max`, `computeApparent()`(억제 모델)
