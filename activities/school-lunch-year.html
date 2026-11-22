@@ -2,7 +2,7 @@
 <!--
   급식실의 1년 — 영양사가 되어 학교 점심을 짜는 활동(통합과학2·과학탐구실험2 영양·식생활 탐구와 이어짐)
   단일 파일 정적 페이지. 공용 디자인 student-ui.css, 메뉴 은행 lunch-bank.js(자동 생성: school-meal-gg/build_lunch_bank.py) 외 라이브러리 없음.
-  진행 상황은 이 브라우저(localStorage "lunch_year_v1")에만 저장한다. 손님은 모두 가상 인물이다.
+  진행 상황은 이 브라우저(localStorage "lunch_year_v1")에만 저장한다. 이 활동에 나오는 학생(guests)은 모두 가상 인물이다.
 
   근거(원문 확인: school-meal-gg/VERIFICATION.md)
   · 영양관리기준: 학교급식법 시행규칙 [별표 3](2021. 1. 29. 개정) — 고등학생 남·여 한 끼 기준, 연속 5일 평균 평가, 에너지 ±10%,
@@ -47,7 +47,7 @@
   .cal li b{display:block; font-family:var(--font-display); font-size:16px; margin:2px 0}
   .cal li .mo{font-size:12.5px; font-weight:800; color:var(--primary-ink)}
   .cal li.done{background:var(--secondary)} .cal li.now{border-color:var(--primary); box-shadow:var(--shadow-sm)}
-  /* 손님 */
+  /* 학생 */
   .guests{display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr)); gap:12px}
   .guest{border:1px solid var(--border); border-radius:18px; background:var(--card); padding:14px; display:flex; flex-direction:column; gap:10px}
   .guest .who{display:flex; gap:10px; align-items:center} .guest .ava{width:44px; height:44px; border-radius:14px; display:grid; place-items:center; font-size:24px; background:var(--muted); flex:none}
@@ -119,7 +119,7 @@ const ANIMAL = [7, 8, 9, 10, 15, 16, 17, 18];
 const vegOk = d => !MEAT_RE.test(d.n) && !d.a.some(c => ANIMAL.includes(c));
 const inSeason = (d, mon) => d.mo.includes(mon) || (d.sm || []).includes(mon);
 
-/* 1년 6일 — 손님은 가상 인물. hard: 지켜야 제출할 수 있음(알레르기·종교·신념), soft: 만족도 */
+/* 1년 6일 — 학생은 가상 인물. hard: 지켜야 제출할 수 있음(알레르기·종교·신념), soft: 만족도 */
 const DAYS = [
   { mon: 3, when: "3월 첫째 주", title: "새 학기 첫 급식", ico: "🌱", budget: 9,
     brief: "신입생 알레르기 조사서가 들어왔어요. 학교는 알레르기 유발 식재료를 표시한 월간 식단표를 가정통신문과 학교 홈페이지로 알리고, 주간 식단표를 식당과 교실에 게시해야 해요(학교급식법 시행규칙 제7조제2항).",
@@ -210,7 +210,7 @@ function nutJudge(ds) {
   const rows = judgeRows(t, s), pass = rows.filter(r => r.ok).length;
   return { rows, pass, n: rows.length, t, stars: pass >= 8 ? 3 : pass >= 6 ? 2 : 1, na: t.na, sug: t.sug };
 }
-/* 안전·존중: 손님별 위험 메뉴 */
+/* 안전·존중: 학생별 위험 메뉴 */
 function hits(g, ds) {
   const h = g.hard; if (!h) return { hit: [], maybe: [] };
   if (h.type === "allergy") return { hit: ds.filter(d => d.a.some(c => h.codes.includes(c))), maybe: ds.filter(d => !d.a.some(c => h.codes.includes(c)) && d.p.some(c => h.codes.includes(c))) };
@@ -230,7 +230,7 @@ function safety(day, st) {
   const blocked = tasks.some(t => !t.ok);
   return { tasks, blocked, hy, stars: blocked ? 0 : day.hygiene ? (hy <= 1 ? 3 : hy === 2 ? 2 : 1) : 3 };
 }
-/* 만족: 손님 요구(규칙은 화면에 공개) */
+/* 만족: 학생 요구(규칙은 화면에 공개) */
 function softCheck(g, ds, nj, day) {
   const s = g.soft, has = f => ds.some(f), cnt = f => ds.filter(f).length;
   if (s.type === "spicyMax") return { ok: cnt(d => d.t.includes("매움")) <= s.n, why: `매운 메뉴 ${cnt(d => d.t.includes("매움"))}개` };
@@ -272,7 +272,7 @@ function home() {
     <p class="su-lead su-measure" style="margin:0">영양사가 되어 경기도 고등학교 급식에 실제로 나온 메뉴 ${M.length}가지를 조합해 1년 동안 여섯 번의 점심을 짭니다. 알레르기, 위생, 예산, 계절과 기념일, 서로 다른 학생의 바람을 모두 따져야 해요.</p>
     <div class="who-in"><div class="su-field"><label for="inName">이름(별칭도 괜찮아요)</label><input type="text" id="inName" value="${esc(S.name)}" autocomplete="off" placeholder="예: 하늘"></div>
       <div class="su-field"><label for="inTeam">모둠</label><input type="text" id="inTeam" value="${esc(S.team)}" autocomplete="off" placeholder="예: 3모둠"></div></div>
-    <p class="su-tiny su-muted" style="margin:0">입력과 진행 상황은 이 기기의 브라우저에만 저장됩니다. 손님은 모두 가상 인물이에요.</p>
+    <p class="su-tiny su-muted" style="margin:0">입력과 진행 상황은 이 기기의 브라우저에만 저장됩니다. 이 활동에 나오는 학생은 모두 가상 인물이에요.</p>
   </div><figure class="hero-tray su-rise" style="--i:2">${trayHTML(next < 0 ? S.days[5] : any ? S.days[Math.max(0, next - 1)] : { plate: { 주찬: [byName["제육볶음"]], 부찬: [byName["콩나물무침"]], 김치: [byName["배추김치"]], 밥: [byName["혼합잡곡밥"]], 국: [byName["쇠고기미역국"]] } }, false)}<figcaption>밥·국·주찬·부찬·김치, 다섯 칸을 채워요</figcaption></figure></div></div>
   <div class="su-card su-stack"><h2 class="su-h2">우리 학교 설정</h2>
     <p class="su-small su-muted su-measure" style="margin:0">학교급식 영양관리기준(시행규칙 별표 3)은 남녀 고등학생의 한 끼 기준이 달라요(에너지 남 900kcal, 여 670kcal). 남녀공학은 남녀 학생 비율로 가중 평균한 값을 기준으로 쓰는 경우가 많아요.</p>
@@ -330,7 +330,7 @@ function dayView() {
   <h1 class="su-h1">${day.ico} ${esc(day.title)}</h1>
   <div class="su-card su-stack"><p class="su-measure" style="margin:0">${esc(day.brief)}</p><p class="su-small su-muted su-measure" style="margin:0">💡 ${esc(day.learn)}</p>
     <p class="su-small" style="margin:0"><span class="tg theme">계기 목표</span> ${esc(day.theme.label)} · <b>오늘 예산 ${day.budget}칸</b> <span class="su-muted">(₩ 하나가 1칸, 수업용 가정)</span></p></div>
-  <h2 class="su-h2">오늘의 손님</h2>
+  <h2 class="su-h2">오늘의 학생</h2>
   <div class="guests">${day.guests.map(g => guestCard(g)).join("")}</div>
   <div class="su-two plan" style="margin-top:6px">
     <div class="su-stack">
@@ -342,7 +342,7 @@ function dayView() {
     <aside class="su-stack su-sticky" aria-label="오늘의 식판">
       <div class="su-card su-stack"><h2 class="su-h3">오늘의 식판</h2>${trayHTML(st, true)}</div>
       <div class="gauges">${gauge("영양", ev.nj ? ev.stars.nut : 0, ev.nj ? `기준 ${ev.nj.pass}/${ev.nj.n} 충족 · ${fmt(ev.nj.t.kcal)} kcal` : HAS_NUT ? "메뉴를 담으면 계산해요" : "영양값 준비 중")}
-        ${gauge("만족", ev.stars.sat, `손님 ${ev.guests.filter(x => x.ok).length}/3 만족`)}
+        ${gauge("만족", ev.stars.sat, `학생 ${ev.guests.filter(x => x.ok).length}/3 만족`)}
         ${gauge("예산", ev.stars.bud, `${ev.cost} / ${day.budget}칸${Object.values(st.alt).filter(Boolean).length ? " (대체식 포함)" : ""}`)}
         ${gauge("안전", sf.stars, sf.blocked ? "해결할 일이 남았어요" : day.hygiene ? `위생 작업 ${sf.hy}개` : "위험 메뉴 처리 완료", sf.blocked)}</div>
       ${sf.tasks.length ? `<div class="su-card su-stack"><h2 class="su-h3">안전·존중 확인</h2>${sf.tasks.map(t => taskHTML(t, st)).join("")}</div>` : ""}
@@ -367,9 +367,9 @@ function resultView(i) {
   <h1 class="su-h1">${day.ico} ${esc(day.title)} 결과</h1>
   <div class="su-two"><div class="su-card su-stack">${trayHTML(st, false)}
     <p class="su-small" style="margin:0">${ev.theme ? `<span class="su-tag good">계기 목표 달성</span> ${esc(day.theme.label)}` : `<span class="su-tag">계기 목표 못 함</span> ${esc(day.theme.label)}`}</p></div>
-    <div class="su-stack"><div class="gauges">${gauge("영양", ev.stars.nut, ev.nj ? `기준 ${ev.nj.pass}/${ev.nj.n} 충족` : "영양값 준비 중")}${gauge("만족", ev.stars.sat, `손님 ${ev.guests.filter(x => x.ok).length}/3 만족`)}${gauge("예산", ev.stars.bud, `${ev.cost} / ${day.budget}칸`)}${gauge("안전", ev.stars.safe, day.hygiene ? `위생 작업 ${ev.sf.hy}개` : "꼭 지킬 것 모두 지킴")}</div>
+    <div class="su-stack"><div class="gauges">${gauge("영양", ev.stars.nut, ev.nj ? `기준 ${ev.nj.pass}/${ev.nj.n} 충족` : "영양값 준비 중")}${gauge("만족", ev.stars.sat, `학생 ${ev.guests.filter(x => x.ok).length}/3 만족`)}${gauge("예산", ev.stars.bud, `${ev.cost} / ${day.budget}칸`)}${gauge("안전", ev.stars.safe, day.hygiene ? `위생 작업 ${ev.sf.hy}개` : "꼭 지킬 것 모두 지킴")}</div>
     <p class="su-small" style="margin:0">오늘 받은 별: <b>${tot}개</b> / 12개 · 별은 순위가 아니라 무엇을 포기했는지 보는 거울이에요.</p></div></div>
-  <h2 class="su-h2">손님 반응</h2><div class="guests">${day.guests.map(g => guestCard(g, ev)).join("")}</div>
+  <h2 class="su-h2">학생 반응</h2><div class="guests">${day.guests.map(g => guestCard(g, ev)).join("")}</div>
   ${ev.nj ? `<details class="su-card" open><summary><b>영양관리기준 하루 판정</b> <span class="su-small su-muted">(실제 평가는 계절별 연속 5일 평균)</span></summary><div class="su-scroll"><table class="su-table nut"><thead><tr><th>항목</th><th>오늘</th><th>기준</th><th>판정</th></tr></thead><tbody>
     ${ev.nj.rows.map(r => `<tr><td>${r.l}</td><td>${esc(r.v)}</td><td class="su-small su-muted">${esc(r.note)}</td><td>${verdict(r)}</td></tr>`).join("")}</tbody></table></div>
     <p class="su-tiny su-muted">식약처 음식 영양성분(학교급식 레시피 값 우선, 1인분)을 더한 값이에요. 실제 학교는 배식량과 레시피에 따라 달라요. 우유는 이번 메뉴 은행에 없어서 칼슘을 채우려면 반찬을 잘 골라야 해요.</p></details>` : ""}
@@ -423,11 +423,11 @@ function records(y) {
     var: `주찬 재료 ${kinds.length}가지(${kinds.join(", ") || "–"})`,
     salt: wn.length ? `나트륨이 참고값(${fmt(NA_REF)} mg) 이하인 날 ${wn.filter(e => e.nj.na <= NA_REF).length}/${wn.length}번 · 평균 ${fmt(y.avg.na)} mg` : "영양값 병합 전",
     season: `그달에 자주 나오거나 제철인 메뉴 ${y.season}개`, cook: `주찬 조리법 ${mm.length}가지 · 튀김 있는 날 ${y.fried}번`, trad: `전통 메뉴 ${y.trad}개`,
-    allergy: `알레르기 손님 ${alg.length}명 안전하게 · 대체식 ${altOf(alg)}번 · 레시피 확인 ${chk}번`,
+    allergy: `알레르기 학생 ${alg.length}명 안전하게 · 대체식 ${altOf(alg)}번 · 레시피 확인 ${chk}번`,
     hygiene: hy == null ? "6월 점심을 아직 짜지 않음" : `6월 위생 작업 ${hy}개(날것·조개류 메뉴)`,
     budget: `${y.cost}/${y.budget}칸 · ${diff > 0 ? diff + "칸 넘음" : -diff + "칸 남음"}`,
-    like: `손님의 바람 ${soft.filter(x => x.ok).length}/${soft.length}개 들어줌`, event: `계기 목표 ${y.themes}/${y.evs.length}번`,
-    respect: `종교·신념이 다른 손님 ${rel.length}명과 함께 먹음 · 대체식 ${altOf(rel)}번` };
+    like: `학생의 바람 ${soft.filter(x => x.ok).length}/${soft.length}개 들어줌`, event: `계기 목표 ${y.themes}/${y.evs.length}번`,
+    respect: `종교·신념이 다른 학생 ${rel.length}명과 함께 먹음 · 대체식 ${altOf(rel)}번` };
 }
 const REFL = ["1년 동안 가장 어려웠던 고민은 무엇이었고, 어떻게 정했나요?", "영양 기준과 학생의 바람이 부딪힌 날, 무엇을 더 중요하게 봤나요? 그 이유는?", "실제 영양(교)사 선생님께 묻고 싶은 것 한 가지를 적어 보세요."];
 function reportText() {
@@ -445,7 +445,7 @@ function download() {
     날: y.evs.map(e => { const i = DAYS.indexOf(e.day), st = S.days[i]; return { 달: e.day.mon, 제목: e.day.title, 식판: e.ds.map(d => ({ 이름: d.n, 칸: d.s, 알레르기: d.a })),
       대체식: e.day.guests.filter(g => st.alt[g.id]).map(g => g.name), 레시피확인: Object.keys(st.chk).filter(k => st.chk[k]).length, 별점: e.stars, 계기: e.theme, 예산: [e.cost, e.day.budget],
       영양: e.nj ? Object.fromEntries(["kcal", "pro", "fat", "cho", "ca", "fe", "na", "va", "b1", "b2", "vc", "sug"].map(k => [k, +e.nj.t[k].toFixed(2)])) : null,
-      손님: e.guests.map(x => ({ 이름: x.g.name, 종류: x.g.hard ? "꼭" : "바람", 충족: x.ok })), 포기한것: (st.why || "").trim() }; }),
+      학생: e.guests.map(x => ({ 이름: x.g.name, 종류: x.g.hard ? "꼭" : "바람", 충족: x.ok })), 포기한것: (st.why || "").trim() }; }),
     결산: { 별: y.stars, 계기: y.themes, 대체식: y.alt, 예산: [y.cost, y.budget], 튀김날: y.fried, 전통: y.trad, 세계: y.world, 제철: y.season }, 성찰: REFL.map((r, k) => ({ 질문: r, 답: (S.refl[k] || "").trim() })) };
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 2)], { type: "application/json" }));
   a.download = `급식실의1년_${S.name || "이름없음"}.json`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
@@ -467,7 +467,7 @@ function teacher() {
     <li>우유·요구르트·과일(원재료)은 '음식' 자료에 없어 메뉴 은행에서 뺐습니다. 그래서 칼슘을 채우기가 어렵습니다(멸치·두부·쌀국수 등으로 채워야 함). 가공식품·원재료성식품 표준데이터를 합치면 넣을 수 있습니다.</li>
     <li>알레르기 번호는 학교마다 레시피에 따라 달라집니다. 실제로는 그 학교 레시피와 식재료로 확인해야 합니다.</li>
     <li>식재료비 단계(₩~₩₩₩)는 수업용 가정입니다. 실제 단가 자료가 아닙니다.</li>
-    <li>손님은 모두 가상 인물입니다. 체중 감량을 요구하는 인물은 일부러 넣지 않았습니다(체형 낙인 예방).</li>
+    <li>활동에 나오는 학생은 모두 가상 인물입니다. 체중 감량을 요구하는 인물은 일부러 넣지 않았습니다(체형 낙인 예방).</li>
     <li>나트륨은 별표 3에 기준이 없어 참고값(2025 한국인 영양소 섭취기준 만성질환위험감소섭취량 하루 2,300mg의 3분의 1)만 보여 줍니다.</li></ul></div>
   <div class="su-card su-stack su-measure"><h2 class="su-h3">영양교사와 함께하기</h2><ul class="su-small">
     <li>메뉴 은행(school-meal-gg/build_lunch_bank.py의 MENU)과 칸·조리법 분류를 함께 검수합니다.</li>
