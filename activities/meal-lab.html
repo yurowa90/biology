@@ -35,7 +35,7 @@
   .brand .ico{width:38px; height:38px; border-radius:12px; display:grid; place-items:center; background:var(--sky); font-size:21px}
   .brand .t1{font-family:var(--display); font-weight:700; font-size:19px; line-height:1.2} .brand .t2{font-size:12.5px; color:var(--muted-foreground); line-height:1.2}
   .top-right{margin-left:auto; display:flex; align-items:center; gap:8px; flex-wrap:wrap}
-  .who{font-size:13.5px; color:var(--muted-foreground); padding:6px 12px; border-radius:999px; background:var(--soft)} .who b{color:var(--ink)}
+  .who{font-size:13.5px; color:var(--muted-foreground); padding:6px 12px; border-radius:999px; background:var(--soft)} .who.set{color:var(--ink); font-weight:700}
   .btn-exit{font-size:13.5px; font-weight:700; padding:7px 12px; text-decoration:none; border:1.5px solid var(--line); border-radius:999px; background:var(--paper); color:var(--muted-foreground); cursor:pointer}
   .btn-exit:hover{border-color:var(--brand); color:var(--brand)}
   .wrap{display:grid; grid-template-columns:240px minmax(0,1fr); gap:24px; max-width:1260px; margin:0 auto; padding:22px 20px 70px}
@@ -64,6 +64,8 @@
   section#s3 .kicker{background:var(--lemon); color:var(--lemon-d)} section#s4 .kicker{background:var(--lav); color:var(--lav-d)} section#s5 .kicker{background:var(--mint); color:var(--mint-d)} section#s6 .kicker{background:var(--sky); color:var(--sky-d)}
   p,li{line-height:1.7; font-size:15.5px} .muted{color:var(--muted-foreground)} .small{font-size:13.5px}
   .note{display:block; border-radius:14px; background:var(--info-bg); padding:12px 15px; font-size:14.5px; line-height:1.65; margin:12px 0}
+  /* 읽기 폭: 카드 바로 아래 문단과 안내 상자는 44em을 넘기지 않는다 */
+  .card > p, .card > .note{max-width:44em}
   .note::before{content:"💡 "} .warn{background:var(--warn-bg)} .warn::before{content:"⚠️ "} .ok{background:var(--good-bg)} .ok::before{content:"✅ "}
   table{border-collapse:collapse; width:100%; font-size:14.5px} th,td{border-bottom:1.5px solid var(--line); padding:8px 9px; text-align:left; vertical-align:top}
   th{color:var(--muted-foreground); font-weight:800; font-size:13px} td.num,th.num{text-align:right; font-variant-numeric:tabular-nums}
@@ -106,10 +108,10 @@
 <header class="top">
   <a class="brand" href="#" data-step="0" aria-label="식탁 문제 해결단 처음 단계"><span class="ico" aria-hidden="true">📊</span><span><span class="t1">식탁 문제 해결단</span><br><span class="t2">통합과학2 Ⅵ · 경기도 급식 빅데이터 탐구</span></span></a>
   <div class="top-right">
-    <div class="who">탐구자 <b id="whoName">—</b> · 모둠 <b id="whoTeam">—</b></div>
+    <div class="who" id="who">이름을 쓰면 여기에 표시돼요</div>
     <a class="btn-exit" href="nutrition-clinic.html">🥗 식탁 상담소</a>
     <a class="btn-exit" href="meal-lab-teacher.html">교사용 안내</a>
-    <a class="btn-exit" href="../index.html">← 교과서 홈</a>
+    <a class="btn-exit" href="../index.html">교과서 홈</a>
   </div>
 </header>
 
@@ -120,17 +122,17 @@
 <!-- 0. 시작·데이터 카드 -->
 <section id="s0">
   <div class="card s0-hero"><div class="su-aurora" aria-hidden="true"><b></b><b></b><b></b><b></b></div>
-    <div class="kicker">STEP 0 · 문제</div>
+    <div class="kicker">0단계 · 문제</div>
     <h2>우리 급식은 경기도 안에서 어디쯤일까?</h2>
     <p>경기도 고등학교 503곳의 점심 기록 24만 끼가 여러분 앞에 있습니다. 사람이 손으로 훑을 수 없는 크기입니다.
       이 데이터에서 패턴을 찾고, 우리 학교 급식과 견주고, <b>실제로 들을 사람</b>(영양교사, 학생회 등)에게 데이터로 뒷받침한 제안을 합니다.</p>
-    <div class="note"><b>추진 질문</b> — 경기도 고등학교 급식 데이터에는 어떤 계절과 재료의 패턴이 있고, 우리 학교 급식은 그 안에서 어디에 있으며, 우리는 누구에게 무엇을 제안할 것인가?</div>
+    <div class="note"><b>추진 질문</b><br>경기도 고등학교 급식 데이터에는 어떤 계절과 재료의 패턴이 있고, 우리 학교 급식은 그 안에서 어디에 있으며, 우리는 누구에게 무엇을 제안할 것인가?</div>
     <div class="row">
       <div><label for="inName">이름</label><input type="text" id="inName" placeholder="예: 김하늘" autocomplete="off"></div>
       <div><label for="inTeam">모둠</label><input type="text" id="inTeam" placeholder="예: 3모둠" autocomplete="off"></div>
     </div>
     <p class="muted small">입력한 내용과 진행 상황은 이 기기의 브라우저에만 저장됩니다. 서버로 보내지 않습니다.</p>
-    <div class="note" id="introNote">먼저 해 보면 좋은 활동: <a href="nutrition-clinic.html"><b>🥗 식탁 상담소</b></a>(영양·식생활 탐구, 2차시) — 영양표시의 %를 기준과 견주고, AI 식단 앱의 추천을 판정하는 연습을 합니다. 선생님 안내에 따라 먼저 하거나 건너뛰세요.</div>
+    <div class="note" id="introNote">먼저 해 보면 좋은 활동: <a href="nutrition-clinic.html"><b>🥗 식탁 상담소</b></a>(영양·식생활 탐구, 2차시). 영양표시의 %를 기준과 견주고, AI 식단 앱의 추천을 판정하는 연습을 합니다. 선생님 안내에 따라 먼저 하거나 건너뛰세요.</div>
   </div>
   <div class="card">
     <div class="kicker">시작 전 자기 평가</div>
@@ -142,16 +144,16 @@
     <div class="kicker">데이터 카드</div>
     <h2>데이터를 쓰기 전에 읽는 설명서</h2>
     <div class="tablewrap"><table id="dataCard"></table></div>
-    <div class="note warn"><b>먼저 알아 둘 한계</b> — 재료 목록이 없어서 재료는 <b>요리 이름</b>으로 추정합니다("딸기우유"도 딸기로 잡힐 수 있음).
+    <div class="note warn"><b>먼저 알아 둘 한계</b><br>재료 목록이 없어서 재료는 <b>요리 이름</b>으로 추정합니다("딸기우유"도 딸기로 잡힐 수 있음).
       나트륨·당류·잔반량은 없습니다. 경기도 결과를 전국으로 일반화할 수 없습니다. 원본에는 입력 오류가 섞여 있습니다(정제 미션에서 직접 찾습니다).</div>
-    <div class="btns"><button class="btn pri" data-go="1">질문 정하러 가기 →</button></div>
+    <div class="btns"><button class="btn pri" data-go="1">질문 정하기</button></div>
   </div>
 </section>
 
 <!-- 1. 질문 보드 -->
 <section id="s1">
   <div class="card">
-    <div class="kicker">STEP 1 · 질문 보드</div>
+    <div class="kicker">1단계 · 질문 보드</div>
     <h2>데이터로 답할 수 있는 질문 고르기</h2>
     <p>질문 은행에서 고르거나 직접 씁니다. <b>어느 데이터의 어느 변수로 답하는지</b>를 채워야 다음으로 넘어갈 수 있습니다.</p>
     <div id="qbank"></div>
@@ -164,14 +166,14 @@
     </div>
     <label for="qGuess">예상(가설)과 그렇게 생각한 이유</label>
     <textarea id="qGuess" placeholder="예: 바다와 가까우면 해산물 구하기가 쉬워서 더 자주 나올 것 같다"></textarea>
-    <div class="btns"><button class="btn pri" id="qNext" data-go="2" disabled>질문 확정 → 정제 미션</button><span class="muted small" id="qHint"></span></div>
+    <div class="btns"><button class="btn pri" id="qNext" data-go="2" disabled>질문 확정하고 정제 미션 시작</button><span class="muted small" id="qHint"></span></div>
   </div>
 </section>
 
 <!-- 2. 정제 미션 -->
 <section id="s2">
   <div class="card">
-    <div class="kicker">STEP 2 · 정제 미션</div>
+    <div class="kicker">2단계 · 정제 미션</div>
     <h2>원본은 지저분하다 — 직접 고쳐 보기</h2>
     <p>아래는 나이스에서 받은 <b>처리 전 원본</b>에서 뽑은 <span id="rawN"></span>끼입니다. 같은 메뉴가 여러 이름으로 적혀 있고, 알레르기 번호가 붙어 있고, 말이 안 되는 열량도 있습니다.
       네 가지 미션을 끝내면 차트 빌더가 쓰는 데이터가 어떻게 만들어졌는지 알게 됩니다.</p>
@@ -207,13 +209,13 @@
     <div class="btns"><button class="btn ghost sm" id="caReveal">전수 처리 결과 보기</button></div>
     <div id="caResult"></div>
   </div>
-  <div class="card"><div class="btns"><button class="btn pri" data-go="3">재료 분류 사전으로 →</button><span id="cleanDone"></span></div></div>
+  <div class="card"><div class="btns"><button class="btn pri" data-go="3">재료 분류 사전 열기</button><span id="cleanDone"></span></div></div>
 </section>
 
 <!-- 3. 재료 분류 사전 -->
 <section id="s3">
   <div class="card">
-    <div class="kicker">STEP 3 · 재료 분류 사전</div>
+    <div class="kicker">3단계 · 재료 분류 사전</div>
     <h2>요리 이름으로 재료를 찾는 규칙 만들기</h2>
     <p>"돈육, 제육, 삼겹은 돼지고기" 같은 <b>낱말 규칙</b>으로 요리를 분류합니다. 규칙을 바꾸면 집계가 바뀝니다.
       잘못 잡힌 요리(예: 딸기잼)를 찾아 빼 보세요. 사람이 정한 규칙의 오류를 확인하는 경험은, 기계가 학습한 분류가 왜 틀릴 수 있는지 이해하는 바탕이 됩니다.</p>
@@ -229,14 +231,14 @@
     <h3>이 규칙에 걸린 요리 이름 (많은 순)</h3>
     <p class="muted small">재료가 실제로 들어 있지 않거나 재료군이 다른 요리는 체크하세요. 체크한 이름은 이 재료군에서 빠집니다.</p>
     <div class="tablewrap" style="max-height:360px;overflow:auto"><table id="dictTable"></table></div>
-    <div class="btns"><button class="btn pri" data-go="4">차트 빌더로 →</button></div>
+    <div class="btns"><button class="btn pri" data-go="4">차트 빌더 열기</button></div>
   </div>
 </section>
 
 <!-- 4. 차트 빌더 -->
 <section id="s4">
   <div class="card">
-    <div class="kicker">STEP 4 · 차트 빌더</div>
+    <div class="kicker">4단계 · 차트 빌더</div>
     <h2>코드 없이 그래프 만들기</h2>
     <div class="row">
       <div><label for="cbView">그래프</label><select id="cbView">
@@ -269,7 +271,7 @@
       <div class="btns" style="margin-top:0"><button class="btn sm ghost" data-preset="f">하루 권장섭취량의 1/3 넣기(15~18세 여)</button><button class="btn sm ghost" data-preset="m">(15~18세 남)</button><button class="btn sm ghost" data-preset="x">숫자 조건 비우기</button></div>
     </div>
     <div id="cbOut"></div>
-    <div class="btns noprint"><button class="btn pri" id="cbToCard">이 그래프로 주장 카드 쓰기 →</button></div>
+    <div class="btns noprint"><button class="btn pri" id="cbToCard">이 그래프로 주장 카드 쓰기</button></div>
   </div>
   <div class="card">
     <div class="kicker">그래프 함정 찾기</div>
@@ -282,7 +284,7 @@
 <!-- 5. 주장 카드 -->
 <section id="s5">
   <div class="card">
-    <div class="kicker">STEP 5 · 주장 카드</div>
+    <div class="kicker">5단계 · 주장 카드</div>
     <h2>그래프 하나 = 주장 하나</h2>
     <p>주장(Claim) — 근거(Evidence) — 추론(Reasoning) — 한계. 네 칸을 모두 채워야 저장됩니다.</p>
     <div class="note" id="cardGraph">아직 고른 그래프가 없습니다. 차트 빌더에서 "이 그래프로 주장 카드 쓰기"를 누르세요.</div>
@@ -298,13 +300,13 @@
     <input type="file" id="cardImport" accept=".json,application/json" multiple aria-label="모둠원 결과 파일">
     <div id="importMsg" class="small" style="margin-top:6px"></div></div>
   <div class="card"><h3>저장한 카드</h3><div id="cardList"></div>
-    <div class="btns"><button class="btn pri" data-go="6">데이터 이야기로 →</button></div></div>
+    <div class="btns"><button class="btn pri" data-go="6">데이터 이야기 쓰기</button></div></div>
 </section>
 
 <!-- 6. 데이터 이야기 -->
 <section id="s6">
   <div class="card">
-    <div class="kicker">STEP 6 · 데이터 이야기</div>
+    <div class="kicker">6단계 · 데이터 이야기</div>
     <h2 id="storyTitle">데이터 이야기</h2>
     <p class="muted noprint">카드 순서를 정하고 제안을 붙이면 발표용 한 장이 됩니다. 인쇄하거나 파일로 내려받으세요.</p>
     <div class="row">
@@ -396,7 +398,7 @@ function renderSteps() {
 function go(i) { state.done[state.step] = state.done[state.step] || (state.step === 0 && !!state.name); state.step = i; save(); show(); window.scrollTo({ top: 0 }); }
 function show() {
   document.querySelectorAll("main section").forEach((s, i) => s.classList.toggle("on", i === state.step));
-  renderSteps(); $("#whoName").textContent = state.name || "—"; $("#whoTeam").textContent = state.team || "—";
+  renderSteps(); showWho();
   ({ 0: r0, 1: r1, 2: r2, 3: r3, 4: r4, 5: r5, 6: r6 })[state.step]();
 }
 document.addEventListener("click", e => {
@@ -436,8 +438,11 @@ function renderSurvey(box, key) {
 }
 document.addEventListener("click", e => { const c = e.target.closest("[data-sv]"); if (!c) return;
   state.survey[c.dataset.sv][+c.dataset.i] = +c.dataset.v; save(); renderSurvey(c.dataset.sv === "pre" ? "#surveyPre" : "#surveyPost", c.dataset.sv); });
-$("#inName").addEventListener("input", e => { state.name = e.target.value.trim(); $("#whoName").textContent = state.name || "—"; save(); });
-$("#inTeam").addEventListener("input", e => { state.team = e.target.value.trim(); $("#whoTeam").textContent = state.team || "—"; save(); });
+/* 머리의 이름 표시: 비어 있으면 무엇을 하면 되는지 알려 준다 */
+function showWho() { const w = $("#who"), v = [state.name, state.team].filter(Boolean);
+  w.textContent = v.length ? v.join(" · ") : "이름을 쓰면 여기에 표시돼요"; w.classList.toggle("set", v.length > 0); }
+$("#inName").addEventListener("input", e => { state.name = e.target.value.trim(); showWho(); save(); });
+$("#inTeam").addEventListener("input", e => { state.team = e.target.value.trim(); showWho(); save(); });
 
 /* ============================== 1. 질문 보드 ============================== */
 const QB = [

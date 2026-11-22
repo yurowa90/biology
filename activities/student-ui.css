@@ -13,6 +13,9 @@
   못 불러오면 시스템 한글 글꼴로 대신한다.
   접근성: prefers-color-scheme 어두운 모드, :focus-visible 초점 링, prefers-reduced-motion(움직임 멈춤),
   정보는 색만으로 전하지 않는다(✓ ✗ 기호와 글자를 함께 씀). 주요 컨트롤은 높이 44~48px.
+  화면 원칙(frontend-design 비평 반영): 히어로에는 주제에서 온 실제 내용 한 가지만 크게 둔다. 제목의 한 단어만 색칠하지 않는다.
+  움직임은 처음 열 때 한 번(.su-rise)뿐이다. 버튼 문구는 누르면 일어나는 일을 동사로 쓰고 끝에 →를 붙이지 않는다.
+  번호는 실제 순서에만 붙인다. 한글 문단 폭은 42em(.su-measure)을 넘기지 않는다.
 */
 @font-face{font-family:"GmarketSans"; src:url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansBold.woff") format("woff"); font-weight:700; font-display:swap}
 @font-face{font-family:"GmarketSans"; src:url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansMedium.woff") format("woff"); font-weight:500; font-display:swap}
@@ -90,7 +93,7 @@ h1,h2,h3,h4{font-family:var(--font-display); font-weight:700; line-height:1.3; l
 .su-top{position:sticky; top:0; z-index:30; background:var(--card); background:color-mix(in srgb, var(--card) 86%, transparent);
   backdrop-filter:saturate(1.4) blur(10px); -webkit-backdrop-filter:saturate(1.4) blur(10px); border-bottom:1px solid var(--border)}
 .su-top .su-in{max-width:1180px; margin:0 auto; padding:10px 18px; display:flex; align-items:center; gap:14px; flex-wrap:wrap}
-.su-logo{font-family:var(--font-display); font-weight:700; font-size:20px; display:flex; align-items:center; gap:10px; color:var(--foreground); text-decoration:none; background:none; border:0; padding:0; cursor:pointer}
+.su-logo{font-family:var(--font-display); font-weight:700; font-size:20px; display:flex; align-items:center; gap:10px; text-align:left; color:var(--foreground); text-decoration:none; background:none; border:0; padding:0; cursor:pointer}
 .su-logo .ico{width:38px; height:38px; border-radius:12px; display:grid; place-items:center; background:var(--secondary); font-size:20px}
 .su-logo small{font-family:var(--font-sans); font-weight:500; font-size:12.5px; color:var(--muted-foreground); display:block; line-height:1.25}
 .su-top .su-right{margin-left:auto; display:flex; gap:8px; align-items:center; flex-wrap:wrap}
@@ -192,38 +195,30 @@ h1,h2,h3,h4{font-family:var(--font-display); font-weight:700; line-height:1.3; l
 .su-field textarea{min-height:96px; resize:vertical; line-height:1.6}
 .su-input:focus,.su-field input:focus,.su-field textarea:focus,.su-field select:focus{border-color:var(--ring); outline:none; box-shadow:0 0 0 3px color-mix(in srgb, var(--ring) 28%, transparent)}
 
-/* 히어로: 흐린 오로라 + 떠다니는 칩(CSS만). 학습 단계 화면에는 쓰지 않는다 */
-.su-hero{position:relative; overflow:hidden; isolation:isolate; border-radius:calc(var(--radius) + 8px); border:1px solid var(--border);
+/* 히어로: 정지한 흐린 오로라 + 주제에서 온 그림 한 가지(영양정보 카드, 탐구 흐름 등). 학습 단계 화면에는 쓰지 않는다.
+   대담함은 히어로 한곳에만 쓴다. 제목에서 한 단어만 색칠하지 않고, 글꼴 크기와 자간으로 끌고 간다 */
+.su-hero{position:relative; overflow:hidden; isolation:isolate; border-radius:28px; border:1px solid var(--border);
   background:var(--card); padding:clamp(26px,4.5vw,52px) clamp(20px,4vw,48px); box-shadow:var(--shadow-lg)}
 .su-aurora{position:absolute; inset:-25% -12%; z-index:-1; filter:blur(48px); opacity:.85; pointer-events:none}
-.su-aurora b{position:absolute; border-radius:50%; animation:su-drift 18s ease-in-out infinite alternate}
+.su-aurora b{position:absolute; border-radius:50%}
 .su-aurora b:nth-child(1){width:46%; height:70%; left:48%; top:-4%; background:var(--hero-1)}
-.su-aurora b:nth-child(2){width:36%; height:60%; left:72%; top:36%; background:var(--hero-2); animation-delay:-6s}
-.su-aurora b:nth-child(3){width:34%; height:58%; left:2%; top:46%; background:var(--hero-3); animation-delay:-11s}
-.su-aurora b:nth-child(4){width:24%; height:40%; left:30%; top:-12%; background:var(--hero-4); animation-delay:-3s}
-@keyframes su-drift{to{transform:translate(-6%,8%) scale(1.12)}}
-.su-hero-in{display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:24px; align-items:center}
+.su-aurora b:nth-child(2){width:36%; height:60%; left:72%; top:36%; background:var(--hero-2)}
+.su-aurora b:nth-child(3){width:34%; height:58%; left:2%; top:46%; background:var(--hero-3)}
+.su-aurora b:nth-child(4){width:24%; height:40%; left:30%; top:-12%; background:var(--hero-4)}
+.su-hero-in{display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:28px; align-items:center}
 @media(max-width:820px){ .su-hero-in{grid-template-columns:minmax(0,1fr)} }
-.su-display{font-family:var(--font-display); font-weight:700; font-size:clamp(30px,5.4vw,48px); line-height:1.2; letter-spacing:-.02em}
-.su-display em{font-style:normal; color:var(--primary-ink); background:linear-gradient(transparent 62%, color-mix(in srgb, var(--chart-3) 28%, transparent) 0)}
-.su-fchips{position:relative; min-height:240px}
-.su-fchip{position:absolute; display:inline-flex; align-items:center; gap:8px; padding:10px 15px; border-radius:16px; background:var(--card); color:var(--card-foreground);
-  border:1px solid var(--border); box-shadow:var(--shadow-lg); font-weight:800; font-size:14.5px; white-space:nowrap; animation:su-float 6s ease-in-out infinite}
-.su-fchip i{font-style:normal; font-size:24px; line-height:1}
-.su-fchip:nth-child(1){left:4%; top:6%} .su-fchip:nth-child(2){left:50%; top:0; animation-delay:-2s}
-.su-fchip:nth-child(3){left:18%; top:44%; animation-delay:-4s} .su-fchip:nth-child(4){left:56%; top:58%; animation-delay:-1s}
-@keyframes su-float{50%{transform:translateY(-10px)}}
-@media(max-width:820px){ .su-fchips{min-height:0; display:flex; flex-wrap:wrap; gap:8px} .su-fchip{position:static; animation:none; box-shadow:var(--shadow-sm)} }
-/* 처음 그릴 때 차례로 떠오르기(--i로 순서) */
-.su-rise{animation:su-rise .55s cubic-bezier(.2,.7,.2,1) both; animation-delay:calc(var(--i, 0) * 70ms)}
+.su-display{font-family:var(--font-display); font-weight:700; font-size:clamp(32px,5.6vw,52px); line-height:1.16; letter-spacing:-.03em; text-wrap:balance; word-break:keep-all}
+/* 처음 열 때 한 번만: 히어로와 첫 카드가 차례로 떠오른다(--i로 순서). 끝없이 도는 움직임은 두지 않는다 */
+.su-rise{animation:su-rise .55s cubic-bezier(.2,.7,.2,1) both; animation-delay:calc(var(--i, 0) * 80ms)}
 @keyframes su-rise{from{opacity:0; transform:translateY(12px)}}
-/* 스크롤 때 나타나기: <html class="su-js">일 때만 숨겼다가 IntersectionObserver가 .is-in을 붙인다(JS가 없으면 그대로 보임) */
-.su-js .su-reveal{opacity:0; transform:translateY(14px); transition:opacity .6s ease, transform .6s cubic-bezier(.2,.7,.2,1)}
-.su-js .su-reveal.is-in{opacity:1; transform:none}
 
-@media (prefers-reduced-motion: reduce){ *{animation:none !important; transition:none !important} .su-js .su-reveal{opacity:1; transform:none} }
+/* 읽기 폭: 한글 문단은 42em(한글 약 42자, 영문 80자 상당)을 넘기지 않는다 */
+.su-measure{max-width:42em}
+/* 숫자 열 맞춤 */
+.su-num{font-variant-numeric:tabular-nums}
+
+@media (prefers-reduced-motion: reduce){ *{animation:none !important; transition:none !important} }
 @media print{
   .su-top,.su-noprint,.su-aurora{display:none !important}
-  .su-js .su-reveal{opacity:1 !important; transform:none !important}
   body{background:#fff; color:#000} .su-card,.su-hero{box-shadow:none; border-color:#999}
 }

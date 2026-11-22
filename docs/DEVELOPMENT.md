@@ -89,8 +89,10 @@ GRASPS 활동은 앞으로 만들 때 슬롯별로 따로 생성하지 않고 Ro
   - shadcn 규약에서 `--muted`는 흐린 **배경**색입니다. 흐린 글자는 `--muted-foreground`를 씁니다.
   - 차트 색은 `--chart-*`로 두고 스크립트가 `getComputedStyle`로 읽습니다(meal-lab.html `PAL`). 그래서 차트 토큰에는 `color-mix()` 대신 hex 값이나 `var()` 별칭만 씁니다.
   - 색을 바꾼 뒤에는 `node scripts/check-contrast.mjs`를 실행합니다. 기준 미달이면 종료 코드 1을 돌려줍니다.
-  - 부품: 버튼(`su-btn` + `secondary/outline(ghost)/text/sm`), 칩, 선택지, 피드백, 입력, 히어로(`su-hero`, `su-aurora`, `su-fchips`, `su-display`)
-  - 등장 효과: `su-rise`(처음 그릴 때), `su-reveal`(스크롤 때, `<html class="su-js">` + IntersectionObserver)
+  - 부품: 버튼(`su-btn` + `secondary/outline(ghost)/text/sm`), 칩, 선택지, 피드백, 입력, 히어로(`su-hero`, 정지한 `su-aurora`, `su-display`), 읽기 폭 `su-measure`(42em), 숫자 열 맞춤 `su-num`
+  - 히어로 그림은 페이지마다 실제 내용으로 둡니다: 홈 `.inq`(탐구 흐름 5단계), 식탁 상담소 `.hero-label`(`labelCard(P.A.label)` 재사용)
+  - 등장 효과: `su-rise` 하나뿐입니다(처음 그릴 때 한 번, `--i`로 순서). 끝없이 도는 애니메이션과 스크롤 등장 효과는 쓰지 않습니다
+  - 문구 규칙: 버튼은 동작을 동사로 쓰고 끝에 →/←를 붙이지 않습니다. 제목의 한 단어만 색칠하지 않습니다. 번호는 실제 순서에만 붙입니다
 - 식탁 상담소
   - 기준값: `activities/nutrition-clinic.html`의 `DRV`(1일 영양성분 기준치), `KDRI`(2025 한국인 영양소 섭취기준 15~18세)
   - 음식 표: `FOODS`. 값을 바꾸면 의뢰인의 `now`(현재 식단) 합계와 문항·7일 그래프 '어제' 값이 서로 맞는지 다시 확인해야 함
