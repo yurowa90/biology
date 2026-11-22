@@ -20,8 +20,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>식탁 문제 해결단 · 급식 데이터 탐구</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23E0EEFF'/%3E%3Ctext x='16' y='23' font-size='18' text-anchor='middle'%3E%F0%9F%93%8A%3C/text%3E%3C/svg%3E">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gothic+A1:wght@400;700;800&display=swap">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link rel="stylesheet" href="student-ui.css">
 <style>
   /* 공용 디자인(student-ui.css)의 색 이름을 이 앱의 예전 이름에 잇는다 — 화면 문자열 속 var(--amber) 등이 그대로 동작한다 */
@@ -29,24 +29,24 @@
     --green:var(--good); --red:var(--bad); --amber:var(--lemon-d); --violet:var(--lav-d); --sans:var(--body) }
   body{font-size:16px; min-height:100vh}
   .mono{font-family:var(--mono)} .hidden{display:none !important}
-  header.top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:10px 22px; border-bottom:2px solid var(--line);
-    background:var(--paper); position:sticky; top:0; z-index:20}
+  header.top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:10px 22px; border-bottom:1px solid var(--border);
+    background:var(--card); background:color-mix(in srgb, var(--card) 86%, transparent); backdrop-filter:saturate(1.4) blur(10px); -webkit-backdrop-filter:saturate(1.4) blur(10px); position:sticky; top:0; z-index:20}
   .brand{display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--ink)}
   .brand .ico{width:38px; height:38px; border-radius:12px; display:grid; place-items:center; background:var(--sky); font-size:21px}
-  .brand .t1{font-family:var(--display); font-size:21px; line-height:1.15} .brand .t2{font-size:12.5px; color:var(--muted); line-height:1.2}
+  .brand .t1{font-family:var(--display); font-weight:700; font-size:19px; line-height:1.2} .brand .t2{font-size:12.5px; color:var(--muted-foreground); line-height:1.2}
   .top-right{margin-left:auto; display:flex; align-items:center; gap:8px; flex-wrap:wrap}
-  .who{font-size:13.5px; color:var(--muted); padding:6px 12px; border-radius:999px; background:var(--soft)} .who b{color:var(--ink)}
-  .btn-exit{font-size:13.5px; font-weight:700; padding:7px 12px; text-decoration:none; border:1.5px solid var(--line); border-radius:999px; background:var(--paper); color:var(--muted); cursor:pointer}
+  .who{font-size:13.5px; color:var(--muted-foreground); padding:6px 12px; border-radius:999px; background:var(--soft)} .who b{color:var(--ink)}
+  .btn-exit{font-size:13.5px; font-weight:700; padding:7px 12px; text-decoration:none; border:1.5px solid var(--line); border-radius:999px; background:var(--paper); color:var(--muted-foreground); cursor:pointer}
   .btn-exit:hover{border-color:var(--brand); color:var(--brand)}
   .wrap{display:grid; grid-template-columns:240px minmax(0,1fr); gap:24px; max-width:1260px; margin:0 auto; padding:22px 20px 70px}
   nav.steps{position:sticky; top:84px; align-self:start; display:flex; flex-direction:column; gap:8px}
-  .step{display:flex; align-items:center; gap:11px; text-align:left; padding:10px 12px; border:2px solid var(--line); border-radius:16px;
-    background:var(--paper); color:var(--muted); cursor:pointer; width:100%; font:inherit; box-shadow:0 2px 0 var(--line)}
+  .step{display:flex; align-items:center; gap:11px; text-align:left; padding:10px 12px; border:1px solid var(--border); border-radius:16px;
+    background:var(--card); color:var(--muted-foreground); cursor:pointer; width:100%; font:inherit; box-shadow:var(--shadow-sm); transition:border-color .15s, background-color .15s}
   .step:hover{border-color:var(--brand)}
-  .step .no{font-size:20px; width:38px; height:38px; border-radius:12px; display:grid; place-items:center; background:var(--soft); flex:none; position:relative}
+  .step .no{font-size:20px; width:38px; height:38px; border-radius:12px; display:grid; place-items:center; background:var(--muted); flex:none; position:relative}
   .step .nm{font-size:14.5px; font-weight:800; color:var(--ink)} .step .lbl{font-size:12px; color:var(--faint); margin-top:1px}
-  .step.on{border-color:var(--brand); background:var(--brand-soft)} .step.on .no{background:var(--paper)}
-  .step.done .no::after{content:"✓"; position:absolute; right:-5px; bottom:-5px; width:18px; height:18px; border-radius:99px; background:var(--good); color:#fff; font-size:11px; font-weight:800; display:grid; place-items:center}
+  .step.on{border-color:var(--primary); background:var(--secondary)} .step.on .no{background:var(--card)}
+  .step.done .no::after{content:"✓"; position:absolute; right:-5px; bottom:-5px; width:18px; height:18px; border-radius:99px; background:var(--success); color:#fff; font-size:11px; font-weight:800; display:grid; place-items:center}
   @media(max-width:880px){
     .wrap{grid-template-columns:minmax(0,1fr); padding:14px 14px 60px}
     nav.steps{position:sticky; top:0; z-index:15; display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:4px; background:var(--bg); padding:6px 0}
@@ -55,41 +55,43 @@
     header.top{padding:10px 14px; position:static} .brand .t2{display:none}
   }
   main section{display:none} main section.on{display:block}
-  .card{background:var(--paper); border:1.5px solid var(--line); border-radius:var(--radius); padding:20px 22px; margin-bottom:18px; box-shadow:var(--shadow)}
-  .card h2{margin:0 0 8px; font-size:24px} .card h3{margin:18px 0 8px; font-size:18px; color:var(--ink)}
+  .card{background:var(--card); color:var(--card-foreground); border:1px solid var(--border); border-radius:var(--radius); padding:22px 24px; margin-bottom:18px; box-shadow:var(--shadow-md)}
+  .card h2{margin:0 0 8px; font-size:23px}
+  /* 0단계 첫 카드: 옅은 오로라 띠(학습 단계에는 쓰지 않음) */
+  .card.s0-hero{position:relative; overflow:hidden; isolation:isolate} .card.s0-hero .su-aurora{inset:-60% -10% 55% -10%; opacity:.55} .card h3{margin:18px 0 8px; font-size:18px; color:var(--ink)}
   .kicker{display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:800; padding:4px 11px; border-radius:999px; background:var(--brand-soft); color:var(--brand); margin-bottom:8px}
   section#s0 .kicker{background:var(--mint); color:var(--mint-d)} section#s1 .kicker{background:var(--sky); color:var(--sky-d)} section#s2 .kicker{background:var(--coral); color:var(--coral-d)}
   section#s3 .kicker{background:var(--lemon); color:var(--lemon-d)} section#s4 .kicker{background:var(--lav); color:var(--lav-d)} section#s5 .kicker{background:var(--mint); color:var(--mint-d)} section#s6 .kicker{background:var(--sky); color:var(--sky-d)}
-  p,li{line-height:1.7; font-size:15.5px} .muted{color:var(--muted)} .small{font-size:13.5px}
+  p,li{line-height:1.7; font-size:15.5px} .muted{color:var(--muted-foreground)} .small{font-size:13.5px}
   .note{display:block; border-radius:14px; background:var(--info-bg); padding:12px 15px; font-size:14.5px; line-height:1.65; margin:12px 0}
   .note::before{content:"💡 "} .warn{background:var(--warn-bg)} .warn::before{content:"⚠️ "} .ok{background:var(--good-bg)} .ok::before{content:"✅ "}
   table{border-collapse:collapse; width:100%; font-size:14.5px} th,td{border-bottom:1.5px solid var(--line); padding:8px 9px; text-align:left; vertical-align:top}
-  th{color:var(--muted); font-weight:800; font-size:13px} td.num,th.num{text-align:right; font-variant-numeric:tabular-nums}
+  th{color:var(--muted-foreground); font-weight:800; font-size:13px} td.num,th.num{text-align:right; font-variant-numeric:tabular-nums}
   .tablewrap{overflow-x:auto}
   label{font-size:14.5px; color:var(--ink); font-weight:700}
-  input[type=text],input[type=number],textarea,select{font:inherit; color:var(--ink); background:var(--paper); border:2px solid var(--line); border-radius:12px; padding:9px 12px; width:100%}
+  input[type=text],input[type=number],textarea,select{font:inherit; color:var(--ink); background:var(--card); border:1px solid var(--input); border-radius:12px; padding:10px 12px; min-height:44px; width:100%}
   textarea{min-height:80px; resize:vertical; line-height:1.6}
-  input:focus,textarea:focus,select:focus{outline:none; border-color:var(--brand)}
+  input:focus,textarea:focus,select:focus{outline:none; border-color:var(--ring); box-shadow:0 0 0 3px color-mix(in srgb, var(--ring) 28%, transparent)}
   .row{display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); margin:10px 0}
-  .btn{font:inherit; font-size:15px; font-weight:800; white-space:nowrap; min-height:44px; padding:9px 18px; border-radius:14px; border:2px solid var(--line); background:var(--paper); color:var(--ink); cursor:pointer; box-shadow:0 3px 0 var(--line)}
-  .btn:hover{border-color:var(--brand)} .btn:active{transform:translateY(2px); box-shadow:none}
-  .btn.pri{background:var(--brand); color:var(--brand-ink); border-color:var(--brand); box-shadow:0 3px 0 color-mix(in srgb, var(--brand) 60%, #000)}
+  .btn{font:inherit; font-size:15px; font-weight:800; white-space:nowrap; min-height:44px; padding:9px 18px; border-radius:12px; border:1px solid var(--border); background:var(--card); color:var(--ink); cursor:pointer; box-shadow:var(--shadow-sm); transition:border-color .15s, box-shadow .15s}
+  .btn:hover{border-color:var(--primary); box-shadow:var(--shadow-sm), inset 0 0 0 999px color-mix(in srgb, currentColor 6%, transparent)} .btn:active{transform:translateY(1px); box-shadow:inset 0 0 0 999px color-mix(in srgb, currentColor 12%, transparent)}
+  .btn.pri{background:var(--primary); color:var(--primary-foreground); border-color:var(--primary)}
   .btn.pri:disabled,.btn:disabled{opacity:.45; cursor:not-allowed; box-shadow:none}
   .btn.ghost{background:var(--paper)} .btn.sm{font-size:13.5px; min-height:36px; padding:6px 12px; border-radius:11px}
   .btns{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; align-items:center}
   .chips{display:flex; gap:6px; flex-wrap:wrap}
-  .chip{font-size:14px; font-weight:700; padding:6px 13px; border-radius:999px; border:2px solid var(--line); background:var(--paper); color:var(--ink); cursor:pointer}
-  .chip:hover{border-color:var(--brand)} .chip.on{border-color:var(--brand); background:var(--brand-soft); color:var(--brand)} .chip.on::before{content:"✓ "}
-  .qitem{border:2px solid var(--line); border-radius:14px; padding:11px 14px; margin:8px 0; cursor:pointer; background:var(--paper)}
-  .qitem:hover{border-color:var(--brand)} .qitem.on{border-color:var(--brand); background:var(--brand-soft)} .qitem b{color:var(--ink)} .qitem span{color:var(--muted); font-size:14px}
-  .stat{display:inline-block; margin:4px 10px 4px 0; padding:8px 14px; border-radius:14px; background:var(--soft)} .stat b{font-size:20px; color:var(--ink); font-variant-numeric:tabular-nums} .stat span{display:block; font-size:12.5px; color:var(--muted)}
-  .pill{display:inline-block; font-size:12px; font-weight:800; padding:2px 9px; border-radius:999px; background:var(--soft); color:var(--muted)}
+  .chip{font-size:14px; font-weight:700; min-height:38px; padding:6px 14px; border-radius:999px; border:1px solid var(--border); background:var(--card); color:var(--ink); cursor:pointer}
+  .chip:hover{border-color:var(--primary)} .chip.on{border-color:var(--primary); background:var(--secondary); color:var(--secondary-foreground)} .chip.on::before{content:"● "; font-size:.75em; color:var(--primary-ink)}
+  .qitem{border:1px solid var(--border); border-radius:14px; padding:12px 14px; margin:8px 0; cursor:pointer; background:var(--card); transition:border-color .15s}
+  .qitem:hover{border-color:var(--primary)} .qitem.on{border-color:var(--primary); background:var(--secondary)} .qitem b{color:var(--ink)} .qitem span{color:var(--muted-foreground); font-size:14px}
+  .stat{display:inline-block; margin:4px 10px 4px 0; padding:8px 14px; border-radius:14px; background:var(--soft)} .stat b{font-size:20px; color:var(--ink); font-variant-numeric:tabular-nums} .stat span{display:block; font-size:12.5px; color:var(--muted-foreground)}
+  .pill{display:inline-block; font-size:12px; font-weight:800; padding:2px 9px; border-radius:999px; background:var(--soft); color:var(--muted-foreground)}
   .pill.red{color:var(--bad); background:var(--bad-bg)} .pill.green{color:var(--good); background:var(--good-bg)}
   svg text{font-family:var(--body)}
   .chart{width:100%; height:auto; display:block; margin-top:8px}
-  .claim{border:2px solid var(--line); border-radius:16px; padding:14px 16px; margin:10px 0; background:var(--paper)}
+  .claim{border:1px solid var(--border); border-radius:16px; padding:14px 16px; margin:10px 0; background:var(--card); box-shadow:var(--shadow-sm)}
   .claim h4{margin:0 0 8px; font-size:17px} .claim dl{margin:0; display:grid; grid-template-columns:90px 1fr; gap:4px 10px; font-size:14.5px}
-  .claim dt{color:var(--muted); font-weight:700} .claim dd{margin:0; line-height:1.6}
+  .claim dt{color:var(--muted-foreground); font-weight:700} .claim dd{margin:0; line-height:1.6}
   .dish{font-size:13.5px} .raw{color:var(--faint)}
   .grid2{display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:14px}
   .done-badge{color:var(--good); font-size:14px; font-weight:800}
@@ -117,7 +119,7 @@
 
 <!-- 0. 시작·데이터 카드 -->
 <section id="s0">
-  <div class="card">
+  <div class="card s0-hero"><div class="su-aurora" aria-hidden="true"><b></b><b></b><b></b><b></b></div>
     <div class="kicker">STEP 0 · 문제</div>
     <h2>우리 급식은 경기도 안에서 어디쯤일까?</h2>
     <p>경기도 고등학교 503곳의 점심 기록 24만 끼가 여러분 앞에 있습니다. 사람이 손으로 훑을 수 없는 크기입니다.

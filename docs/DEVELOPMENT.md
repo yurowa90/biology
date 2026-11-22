@@ -19,6 +19,7 @@ activities/meal-lab-data.js                 위 활동의 데이터(10% 무작�
 school-meal-gg/                             경기도 고등학교 504곳 급식 데이터(2024.3~2026.11 점심 24만 끼) 수집·분석 스크립트와 수업용 집계표. 앱의 기준값·통계 출처와 확인 상태는 school-meal-gg/VERIFICATION.md
 teacher.html                                교사 대시보드
 data/oni.json                               NOAA ONI(배포 때 자동 수집, 저장소에는 오프라인용 스냅샷/자리표시)
+scripts/check-contrast.mjs                  student-ui.css 색 대비 검사(밝은·어두운 모드, hex·oklch 지원, 외부 의존성 없음)
 scripts/fetch-oni.mjs                       NOAA ONI → data/oni.json 변환·검증, 활동 HTML 내장 스냅샷 교체(외부 의존성 없음)
 .github/workflows/deploy-pages.yml          GitHub Pages 자동 배포(루트 경로) + 배포 시 ONI 수집 + 매주 재배포
 .github/workflows/refresh-oni-snapshot.yml  (수동 실행) 저장소 스냅샷을 NOAA 최신값으로 커밋
@@ -78,7 +79,18 @@ GRASPS 활동은 앞으로 만들 때 슬롯별로 따로 생성하지 않고 Ro
 - 엘니뇨 GRASPS 루브릭: `GRASPS_CHECKS`, 기준별 연결은 `BUNDLES[].standards[].checks`, 예시 개요는 `GRASPS_EXEMPLAR`
 - 제출 방식: 각 활동 파일 상단의 `CONFIG.submit`
 - 프롬프트 복사 버튼 숨기기: 각 활동 파일 상단 `CONFIG.showPromptCopy = false`
-- 디자인 토큰: 효소·엘니뇨·교사 화면은 각 파일 `<style>`의 `:root` CSS 변수. 식탁 상담소와 식탁 문제 해결단은 `activities/student-ui.css`의 `:root`(밝은 모드)와 `@media (prefers-color-scheme: dark)`(어두운 모드). 차트 색은 `--chart-*` 변수로 두고 스크립트가 `getComputedStyle`로 읽으므로(meal-lab.html `PAL`), 색을 바꿀 때는 CSS만 고치면 됨
+- 디자인 토큰
+  - 효소·엘니뇨·교사 화면: 각 파일 `<style>`의 `:root` CSS 변수
+  - 교과서 홈·식탁 상담소·식탁 문제 해결단: `activities/student-ui.css`. 블록은 네 개입니다.
+    - [1] 밝은 모드 기본 토큰(tweakcn의 `:root` 자리)
+    - [2] 어두운 모드(tweakcn의 `.dark` 자리, `prefers-color-scheme` 안)
+    - [3] 추가 토큰: `--primary-ink`, `--faint`, `--success/--warning/--danger`, 상태 글자·바탕, 단계 파스텔, `--hero-1..4`, 차트 축·격자
+    - [4] 예전 이름 별칭: `--bg --paper --ink --brand --chart-bar` 등
+  - shadcn 규약에서 `--muted`는 흐린 **배경**색입니다. 흐린 글자는 `--muted-foreground`를 씁니다.
+  - 차트 색은 `--chart-*`로 두고 스크립트가 `getComputedStyle`로 읽습니다(meal-lab.html `PAL`). 그래서 차트 토큰에는 `color-mix()` 대신 hex 값이나 `var()` 별칭만 씁니다.
+  - 색을 바꾼 뒤에는 `node scripts/check-contrast.mjs`를 실행합니다. 기준 미달이면 종료 코드 1을 돌려줍니다.
+  - 부품: 버튼(`su-btn` + `secondary/outline(ghost)/text/sm`), 칩, 선택지, 피드백, 입력, 히어로(`su-hero`, `su-aurora`, `su-fchips`, `su-display`)
+  - 등장 효과: `su-rise`(처음 그릴 때), `su-reveal`(스크롤 때, `<html class="su-js">` + IntersectionObserver)
 - 식탁 상담소
   - 기준값: `activities/nutrition-clinic.html`의 `DRV`(1일 영양성분 기준치), `KDRI`(2025 한국인 영양소 섭취기준 15~18세)
   - 음식 표: `FOODS`. 값을 바꾸면 의뢰인의 `now`(현재 식단) 합계와 문항·7일 그래프 '어제' 값이 서로 맞는지 다시 확인해야 함

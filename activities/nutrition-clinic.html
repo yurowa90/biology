@@ -16,24 +16,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>식탁 상담소 · 영양·식생활 탐구</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23E2F4EE'/%3E%3Ctext x='16' y='23' font-size='18' text-anchor='middle'%3E%F0%9F%A5%97%3C/text%3E%3C/svg%3E">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gothic+A1:wght@400;700;800&display=swap">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link rel="stylesheet" href="student-ui.css">
 <style>
-  .hero{display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:18px; align-items:center}
-  @media(max-width:760px){ .hero{grid-template-columns:minmax(0,1fr)} }
-  .hero .big{font-size:64px; line-height:1}
-  .client{display:flex; flex-direction:column; gap:12px; text-align:left; cursor:pointer; border:2px solid var(--line); background:var(--paper); border-radius:var(--radius); padding:18px; box-shadow:var(--shadow); width:100%}
-  .client:hover{border-color:var(--brand); transform:translateY(-2px)} .client{transition:transform .12s}
+  .client{display:flex; flex-direction:column; gap:12px; text-align:left; cursor:pointer; border:1px solid var(--border); background:var(--card); color:var(--card-foreground); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow-md); width:100%}
+  .client:hover{border-color:var(--primary); transform:translateY(-3px); box-shadow:var(--shadow-lg)} .client{transition:transform .15s, box-shadow .15s, border-color .15s}
   .client .who{display:flex; gap:12px; align-items:center}
   .client .ava{width:56px; height:56px; border-radius:18px; display:grid; place-items:center; font-size:30px; flex:none}
-  .client .name{font-family:var(--display); font-size:22px} .client .meta{font-size:13.5px; color:var(--muted)}
+  .client .name{font-family:var(--display); font-weight:700; font-size:20px} .client .meta{font-size:13.5px; color:var(--muted-foreground)}
   .flow{display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:10px}
   @media(max-width:1000px){ .flow{grid-template-columns:repeat(3,minmax(0,1fr))} }
   @media(max-width:560px){ .flow{grid-template-columns:repeat(2,minmax(0,1fr))} }
   .scale{display:flex; flex-wrap:wrap; gap:6px; align-items:center} .scale .su-chip{min-width:44px; justify-content:center}
   .mrow td,.mrow th{vertical-align:top}
-  .flow div{border-radius:16px; padding:12px; font-size:14px; line-height:1.5} .flow b{display:block; font-family:var(--display); font-weight:400; font-size:17px}
+  .flow div{border-radius:16px; padding:14px; font-size:14px; line-height:1.5} .flow b{display:block; font-family:var(--display); font-weight:700; font-size:16px; margin-bottom:4px}
   /* 영양성분표: 실제 라벨처럼 흑백 */
   .label{background:#fff; color:#111; border:3px solid #111; border-radius:10px; padding:12px 14px; font-size:15px; max-width:360px}
   .label h3{font-family:var(--body); font-weight:800; font-size:20px; margin:0} .label .sub{font-size:13px; color:#333}
@@ -49,23 +46,23 @@
   .chart .ref{stroke:var(--chart-title); stroke-width:2; stroke-dasharray:6 4} .chart .yest{stroke:var(--chart-title); stroke-width:2.5; fill:none}
   /* 식판 */
   .shelf{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px}
-  .food{position:relative; display:flex; flex-direction:column; gap:2px; text-align:left; padding:10px 12px; border-radius:14px; border:2px solid var(--line); background:var(--paper); cursor:pointer; font-size:14px; line-height:1.4}
-  .food:hover{border-color:var(--brand)} .food .e{font-size:26px} .food .n{font-weight:800} .food .d{font-size:12px; color:var(--muted)}
+  .food{position:relative; display:flex; flex-direction:column; gap:2px; text-align:left; padding:10px 12px; border-radius:14px; border:1px solid var(--border); background:var(--card); cursor:pointer; font-size:14px; line-height:1.4; transition:border-color .15s, box-shadow .15s}
+  .food:hover{border-color:var(--primary); box-shadow:var(--shadow-md)} .food .e{font-size:26px} .food .n{font-weight:800} .food .d{font-size:12px; color:var(--muted-foreground)}
   .food.fav{border-color:var(--mint-d); background:var(--mint)} .food .favtag{font-size:11px; font-weight:800; color:var(--mint-d)}
   .food .cnt{position:absolute; top:6px; right:8px; min-width:26px; height:26px; border-radius:99px; background:var(--brand); color:var(--brand-ink); display:grid; place-items:center; font-weight:800; font-size:14px}
   .tray{display:flex; flex-wrap:wrap; gap:6px; min-height:42px}
-  .tray button{border:2px solid var(--line); background:var(--soft); border-radius:999px; padding:5px 11px; font-size:14px; cursor:pointer}
+  .tray button{border:1px solid var(--border); background:var(--muted); border-radius:999px; padding:6px 12px; font-size:14px; cursor:pointer}
   .crit{display:grid; grid-template-columns:28px minmax(84px,auto) minmax(0,1fr); gap:6px 10px; align-items:center; font-size:14.5px}
-  .crit .ic{font-size:18px; text-align:center} .crit .bar{height:12px; border-radius:99px; background:var(--soft); border:1px solid var(--line); position:relative; overflow:hidden}
-  .crit .bar b{position:absolute; left:0; top:0; bottom:0; border-radius:99px; background:var(--chart-bar)} .crit .bar b.near{background:var(--chart-hi)} .crit .bar b.miss{background:var(--chart-ref)}
+  .crit .ic{font-size:18px; text-align:center} .crit .bar{height:12px; border-radius:99px; background:var(--muted); position:relative; overflow:hidden}
+  .crit .bar b{position:absolute; left:0; top:0; bottom:0; border-radius:99px; background:var(--success)} .crit .bar b.near{background:var(--warning)} .crit .bar b.miss{background:var(--danger)}
   .crit .bar u{position:absolute; top:-2px; bottom:-2px; width:2px; background:var(--ink); left:66.6%}
-  .crit .v{grid-column:2 / 4; font-size:12.5px; color:var(--muted); margin:-4px 0 4px}
+  .crit .v{grid-column:2 / 4; font-size:12.5px; color:var(--muted-foreground); margin:-4px 0 4px}
   /* AI 알림 */
   .bot{display:flex; gap:10px; align-items:flex-start} .bot .av{flex:none; width:40px; height:40px; border-radius:13px; background:var(--sky); display:grid; place-items:center; font-size:22px}
   .bot .msg{background:var(--sky); border-radius:4px 16px 16px 16px; padding:11px 14px; font-size:16.5px; font-weight:700}
-  .ctx{font-size:14px; color:var(--muted); margin:6px 0 0 50px}
+  .ctx{font-size:14px; color:var(--muted-foreground); margin:6px 0 0 50px}
   .judge{margin-left:50px} @media(max-width:560px){ .judge,.ctx{margin-left:0} }
-  .report{white-space:pre-wrap; background:var(--soft); border-radius:14px; padding:14px 16px; font-size:14.5px; line-height:1.7; max-height:420px; overflow:auto}
+  .report{white-space:pre-wrap; background:var(--muted); border-radius:14px; padding:14px 16px; font-size:14.5px; line-height:1.7; max-height:420px; overflow:auto}
   .lesson summary{cursor:pointer; font-weight:800}
   .who-in{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px}
 </style>
@@ -327,22 +324,22 @@ function clientStrip(p) { return `<div class="su-card tint-${p.tint}"><div class
 function home() {
   const any = Object.keys(S.cases).length;
   return `<section class="su-stack">
-  <div class="su-card hero"><div class="su-stack">
+  <div class="su-hero"><div class="su-aurora" aria-hidden="true"><b></b><b></b><b></b><b></b></div><div class="su-hero-in"><div class="su-stack">
     <span class="su-kicker">🥗 통합과학2 · 과학탐구실험2 · 영양·식생활</span>
-    <h1 class="su-h1">친구의 식탁 고민, 숫자로 풀어 볼까요?</h1>
+    <h1 class="su-display">친구의 식탁 고민,<br><em>숫자로</em> 풀어 볼까요?</h1>
     <p class="su-lead" style="margin:0">의뢰인 한 명을 맡아 <b>영양표시를 읽고</b>, <b>7일 기록에서 경향을 찾고</b>, <b>하루 식단을 다시 짜고</b>, <b>AI 앱의 추천을 판정</b>한 뒤, 과학기술의 쓸모와 한계를 <b>논증</b>합니다. 마지막에는 <b>내 식탁의 작은 실천 하나</b>를 계획합니다.</p>
     <div class="who-in"><div class="su-field"><label for="inName">이름(별칭도 괜찮아요)</label><input type="text" id="inName" value="${esc(S.name)}" autocomplete="off" placeholder="예: 하늘"></div>
       <div class="su-field"><label for="inTeam">모둠</label><input type="text" id="inTeam" value="${esc(S.team)}" autocomplete="off" placeholder="예: 3모둠"></div></div>
     <p class="su-tiny su-muted" style="margin:0">입력과 진행 상황은 이 기기의 브라우저에만 저장됩니다. 키·몸무게·실제로 먹은 음식은 묻지 않습니다.</p>
-  </div><div class="big" aria-hidden="true" style="text-align:center">🍱🔍📈<br>🤖✍️</div></div>
+  </div><div class="su-fchips" aria-hidden="true"><span class="su-fchip"><i>🔍</i>영양표시</span><span class="su-fchip"><i>📈</i>7일 기록</span><span class="su-fchip"><i>🍱</i>식단 설계</span><span class="su-fchip"><i>🤖</i>AI 판정</span></div></div></div>
   <h2 class="su-h2" style="margin-top:26px">의뢰인을 골라 주세요</h2>
-  <div class="su-grid">${Object.values(P).map(p => { const c = S.cases[p.id];
-    return `<button class="client" data-act="pick" data-id="${p.id}" data-fk="pick-${p.id}"><div class="who"><div class="ava" style="background:var(--${p.tint})">${p.ava}</div>
+  <div class="su-grid">${Object.values(P).map((p, k) => { const c = S.cases[p.id];
+    return `<button class="client su-rise" style="--i:${k}" data-act="pick" data-id="${p.id}" data-fk="pick-${p.id}"><div class="who"><div class="ava" style="background:var(--${p.tint})">${p.ava}</div>
       <div><div class="name">${esc(p.name)}</div><div class="meta">${esc(p.tag)}</div></div></div>
       <div class="su-bubble su-small">“${esc(p.quote)}”</div>
       <div class="su-row"><span class="su-tag">고민: ${esc(p.issue)}</span>${c ? `<span class="su-tag ${c.done ? "good" : "warn"}">${c.done ? "✓ 완료" : `진행 중 · ${c.stage + 1}단계`}</span>` : ""}</div></button>`; }).join("")}</div>
   <h2 class="su-h2" style="margin-top:26px">탐구는 이렇게 진행돼요</h2>
-  <div class="flow">${STAGES.map((s, i) => `<div style="background:var(--${s[2]})"><b>${s[0]} ${i + 1}. ${s[1]}</b>${["영양표시의 숫자를 기준과 비교해 고민을 문제로 바꿔요", "7일 기록 그래프에서 경향을 찾고 해석의 한계를 따져요", "예산 안에서 아홉 가지 기준을 맞추는 하루 식단을 짜요", "AI 식단 앱의 알림 다섯 개를 수용·보완·거부로 판정해요", "주장–근거–추론–반박으로 설득하는 글을 써요", "의뢰인에게 했던 것처럼 내 식탁의 작은 실천 하나를 계획해요"][i]}</div>`).join("")}</div>
+  <div class="flow">${STAGES.map((s, i) => `<div class="su-rise" style="--i:${i + 3}; background:var(--${s[2]})"><b>${s[0]} ${i + 1}. ${s[1]}</b>${["영양표시의 숫자를 기준과 비교해 고민을 문제로 바꿔요", "7일 기록 그래프에서 경향을 찾고 해석의 한계를 따져요", "예산 안에서 아홉 가지 기준을 맞추는 하루 식단을 짜요", "AI 식단 앱의 알림 다섯 개를 수용·보완·거부로 판정해요", "주장–근거–추론–반박으로 설득하는 글을 써요", "의뢰인에게 했던 것처럼 내 식탁의 작은 실천 하나를 계획해요"][i]}</div>`).join("")}</div>
   <p class="su-small su-muted">점수나 등급은 없습니다. 처음 시작할 때 3분짜리 점검을 한 번 하고, 6단계에서 다시 풀어 비교합니다. 단계를 마칠 때마다 배지를 받고, 마지막에 탐구 보고서를 내려받아 선생님께 냅니다.${any ? " 맡았던 의뢰인을 다시 누르면 이어서 할 수 있어요." : ""}</p>
   </section>`;
 }
