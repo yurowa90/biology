@@ -19,195 +19,132 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>통합과학 AI 디지털교과서</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230e1626'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='%2345d3d8' stroke-width='3'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23E3F4EE'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='%231F7A63' stroke-width='3'/%3E%3C/svg%3E">
 <meta name="description" content="비상교육 통합과학1·2(2022 개정) 목차를 담은 AI 디지털교과서 홈. 개념·시뮬레이션·PBL·GRASPS·형성평가·성찰 활동으로 구성.">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="activities/student-ui.css">
+<script>document.documentElement.classList.add("su-js")</script>
 <style>
-  :root{
-    --bg:#070b14; --bg2:#0a1120; --panel:#0e1626; --panel2:#111d31;
-    --line:#1d2b41; --line2:#26374f;
-    --txt:#e6edf6; --muted:#7e8da0; --faint:#586479;
-    --cyan:#45d3d8; --cyan2:#63e6ea; --cyandim:#1c5a5e;
-    --green:#33d17f; --amber:#f2c14e; --violet:#a98bff; --red:#ff6b7d; --blue:#5aa9ff;
-    --mono:ui-monospace,SFMono-Regular,Menlo,"Cascadia Mono",monospace;
-    --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR",sans-serif;
-  }
-  *{box-sizing:border-box}
-  html,body{margin:0;padding:0}
-  body{
-    font-family:var(--sans); color:var(--txt);
-    background:radial-gradient(1200px 700px at 78% -8%,#122036 0,transparent 55%),
-               radial-gradient(900px 600px at 5% 0,#0d1a2c 0,transparent 50%),
-               linear-gradient(180deg,#070b14,#060910 60%);
-    min-height:100vh; -webkit-font-smoothing:antialiased;
-  }
-  a{color:var(--cyan); text-decoration:none}
-  .mono{font-family:var(--mono)}
-  .hidden{display:none !important}
+  /* 교과서 홈 — 공용 디자인(activities/student-ui.css, 탐구 노트 2.0) 위에 홈 배치만 더한다 */
+  body{font-size:16px}
+  a{text-decoration:none}
+  .mono{font-family:var(--font-mono)}
 
-  /* ---------- header ---------- */
-  header.top{
-    display:flex; align-items:center; gap:16px; flex-wrap:wrap;
-    padding:14px 26px; border-bottom:1px solid var(--line);
-    background:rgba(8,13,22,.72); backdrop-filter:blur(6px);
-    position:sticky; top:0; z-index:20;
-  }
-  .brand{font-family:var(--mono); font-size:11.5px; letter-spacing:.22em; color:var(--faint); white-space:nowrap}
-  .brand b{color:var(--cyan)}
-  .title{font-size:18px; font-weight:700}
-  .title span{color:var(--cyan)}
-  .top-right{margin-left:auto; display:flex; align-items:center; gap:12px; flex-wrap:wrap}
-  .who{font-size:13px; color:var(--muted)}
-  .who b{color:var(--txt)}
-  .who input{
-    font-family:var(--sans); font-size:13px; padding:6px 10px; width:120px;
-    border:1px solid var(--line2); border-radius:8px; background:#0b1220; color:var(--txt);
-  }
-  .who input:focus{outline:none; border-color:var(--cyandim)}
-  .btn-teacher{
-    font-family:var(--mono); font-size:11px; letter-spacing:.12em; padding:8px 14px;
-    border:1px solid var(--violet); border-radius:9px; background:rgba(169,139,255,.1);
-    color:#d9ceff; white-space:nowrap;
-  }
-  .btn-teacher:hover{background:rgba(169,139,255,.2)}
+  /* 상단 띠 */
+  header.top{display:flex; align-items:center; gap:16px; flex-wrap:wrap; padding:12px 26px; border-bottom:1px solid var(--border);
+    background:var(--card); background:color-mix(in srgb, var(--card) 86%, transparent); backdrop-filter:saturate(1.4) blur(10px); -webkit-backdrop-filter:saturate(1.4) blur(10px);
+    position:sticky; top:0; z-index:20}
+  .brand{display:flex; align-items:center; gap:10px; color:var(--foreground)}
+  .brand .ico{width:38px; height:38px; border-radius:12px; display:grid; place-items:center; background:var(--secondary); font-size:20px}
+  .brand .t1{font-family:var(--font-display); font-weight:700; font-size:19px; line-height:1.2} .brand .t1 span{color:var(--primary-ink)}
+  .brand .t2{font-size:12px; color:var(--muted-foreground); letter-spacing:.06em}
+  .top-right{margin-left:auto; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .who{font-size:13.5px; color:var(--muted-foreground); display:flex; align-items:center; gap:8px; font-weight:700}
+  .who input{font:inherit; font-weight:400; font-size:14px; padding:8px 12px; width:130px; min-height:40px; border:1px solid var(--input); border-radius:10px; background:var(--card); color:var(--foreground)}
+  .who input:focus{outline:none; border-color:var(--ring); box-shadow:0 0 0 3px color-mix(in srgb, var(--ring) 28%, transparent)}
+  .btn-teacher{font-size:13.5px; font-weight:800; padding:9px 15px; border-radius:999px; border:1px solid transparent; background:var(--lav); color:var(--lav-d); white-space:nowrap}
+  .btn-teacher:hover{border-color:var(--lav-d)}
+  @media(max-width:640px){ header.top{padding:10px 16px} .brand .t2{display:none} .who input{width:110px} }
 
-  /* ---------- layout ---------- */
-  .wrap{max-width:1120px; margin:0 auto; padding:26px 22px 90px}
+  .wrap{max-width:1120px; margin:0 auto; padding:24px 20px 90px}
+  @media(max-width:640px){ .wrap{padding:16px 14px 70px} }
 
-  /* ---------- hero ---------- */
-  .hero{
-    border:1px solid var(--line); border-radius:18px; padding:28px 30px;
-    background:linear-gradient(180deg,rgba(16,24,40,.9),rgba(9,15,26,.9));
-    box-shadow:0 30px 80px -50px #000; margin-bottom:20px;
-  }
-  .eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.2em; color:var(--cyan); margin-bottom:12px}
-  .hero h1{font-size:27px; margin:0 0 10px; letter-spacing:-.01em; line-height:1.2}
-  .hero h1 span{color:var(--cyan)}
-  .hero .lead{color:var(--muted); font-size:14.5px; line-height:1.7; margin:0 0 18px; max-width:74ch}
-  .hero .lead b{color:#cdd8e6; font-weight:600}
+  /* 히어로 */
+  .home-hero{margin-bottom:22px}
+  .hero-lead{font-size:17px; color:var(--muted-foreground); margin:0; max-width:60ch}
+  .hero-lead b{color:var(--foreground)}
 
-  .principles{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-top:6px}
-  @media(max-width:720px){ .principles{grid-template-columns:1fr 1fr} }
-  .pr{border:1px solid var(--line); border-radius:12px; padding:13px 15px; background:rgba(10,17,30,.55)}
-  .pr .n{font-family:var(--mono); font-size:10px; letter-spacing:.14em; color:var(--cyan); margin-bottom:5px}
-  .pr .t{font-size:13.5px; font-weight:600; margin-bottom:3px}
-  .pr .d{font-size:12px; color:var(--muted); line-height:1.5}
+  /* 설계 원리: 벤토 그리드 */
+  .bento{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; margin:0 0 8px}
+  @media(max-width:860px){ .bento{grid-template-columns:repeat(2,minmax(0,1fr))} }
+  .pr{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:18px; box-shadow:var(--shadow-sm)}
+  .pr .e{font-size:26px; line-height:1} .pr .n{font-family:var(--font-mono); font-size:11px; letter-spacing:.12em; color:var(--faint); margin-top:10px}
+  .pr .t{font-family:var(--font-display); font-weight:700; font-size:17px; margin:2px 0} .pr .d{font-size:13.5px; color:var(--muted-foreground); line-height:1.55}
+  .balance{grid-column:1/-1; background:var(--secondary); color:var(--secondary-foreground); border-radius:var(--radius); padding:16px 20px; font-size:14.5px; line-height:1.75}
+  .balance b{color:inherit} .balance a{color:inherit; text-decoration:underline; text-underline-offset:3px}
+  .srcnote{grid-column:1/-1; font-size:12.5px; color:var(--faint); line-height:1.65; padding:2px 4px 0}
+  .srcnote b{color:var(--muted-foreground)}
 
-  .balance{
-    margin-top:16px; border-left:3px solid var(--cyandim); background:rgba(69,211,216,.05);
-    border-radius:0 10px 10px 0; padding:13px 16px; font-size:13px; color:#cdd8e6; line-height:1.6;
-  }
-  .balance b{color:var(--cyan2)}
-  .srcnote{margin-top:12px; font-size:11.5px; color:var(--faint); line-height:1.6}
+  /* 구역 제목 */
+  .sec-h{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin:32px 0 12px}
+  .sec-h h2{font-size:22px} .sec-h span{font-size:13.5px; color:var(--muted-foreground)}
 
-  /* ---------- live callout ---------- */
-  .live{
-    display:flex; align-items:center; gap:16px; flex-wrap:wrap;
-    border:1px solid var(--cyandim); border-radius:16px; padding:18px 22px; margin-bottom:22px;
-    background:linear-gradient(120deg,rgba(18,84,90,.35),rgba(12,31,40,.5));
-  }
-  .live .ld{flex:1; min-width:200px}
-  .live .lk{font-family:var(--mono); font-size:10.5px; letter-spacing:.16em; color:var(--cyan); margin-bottom:6px; display:flex; align-items:center; gap:8px}
-  .live .lt{font-size:16px; font-weight:700; margin-bottom:4px}
-  .live .ls{font-size:12.5px; color:var(--muted); line-height:1.55}
-  .live .go{
-    font-size:14px; font-weight:700; padding:12px 22px; border-radius:11px; white-space:nowrap;
-    background:linear-gradient(180deg,#1a6f74,#12545a); border:1px solid #1f8288; color:#e7fdff;
-    box-shadow:0 10px 30px -14px var(--cyan);
-  }
-  .live .go:hover{filter:brightness(1.1)}
-  .dot{width:8px; height:8px; border-radius:50%; background:var(--cyan); box-shadow:0 0 0 0 rgba(69,211,216,.6); animation:pulse 1.8s infinite}
-  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(69,211,216,.5)}70%{box-shadow:0 0 0 7px rgba(69,211,216,0)}100%{box-shadow:0 0 0 0 rgba(69,211,216,0)}}
+  /* 지금 할 수 있는 활동(위쪽 카드). 목차 안의 .act.live와 겹치지 않게 .live-grid 아래로 범위를 좁힌다 */
+  .live-grid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px}
+  @media(max-width:760px){ .live-grid{grid-template-columns:minmax(0,1fr)} }
+  .live-grid .live{display:flex; flex-direction:column; gap:8px; padding:20px; border-radius:var(--radius); background:var(--card); border:1px solid var(--border);
+    color:var(--card-foreground); box-shadow:var(--shadow-md); transition:transform .15s, box-shadow .15s, border-color .15s}
+  .live-grid .live:hover{transform:translateY(-3px); box-shadow:var(--shadow-lg); border-color:var(--primary)}
+  .live-grid .ico{width:48px; height:48px; border-radius:14px; display:grid; place-items:center; font-size:26px}
+  .live-grid .lk{font-size:12.5px; font-weight:700; color:var(--muted-foreground); display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+  .live-grid .lt{font-family:var(--font-display); font-weight:700; font-size:18px; line-height:1.35}
+  .live-grid .ls{font-size:13.5px; color:var(--muted-foreground); line-height:1.6; flex:1}
+  .live-grid .go{align-self:flex-start; margin-top:6px; font-weight:800; font-size:14.5px; padding:10px 16px; border-radius:12px; background:var(--primary); color:var(--primary-foreground)}
+  .dot{width:8px; height:8px; border-radius:50%; background:var(--success); animation:pulse 1.8s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb, var(--success) 55%, transparent)}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
 
-  /* ---------- legend ---------- */
-  .legend{border:1px solid var(--line); border-radius:14px; padding:16px 18px; margin-bottom:20px; background:rgba(10,17,30,.5)}
-  .legend .lh{font-family:var(--mono); font-size:10.5px; letter-spacing:.16em; color:var(--faint); margin-bottom:12px}
+  /* 활동 유형 범례 */
+  .legend{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; margin:26px 0 20px; box-shadow:var(--shadow-sm)}
+  .legend .lh{font-family:var(--font-display); font-weight:700; font-size:16px; margin-bottom:12px}
   .legend-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
   @media(max-width:720px){ .legend-grid{grid-template-columns:1fr} }
-  .lg{display:flex; align-items:flex-start; gap:10px; font-size:12.5px; color:var(--muted); line-height:1.5}
-  .lg .tag{margin-top:1px}
-  .lg b{color:#cdd8e6}
+  .lg{display:flex; align-items:flex-start; gap:10px; font-size:13.5px; color:var(--muted-foreground); line-height:1.5}
+  .lg .tag{margin-top:1px} .lg b{color:var(--foreground)}
 
-  /* ---------- book toggle ---------- */
-  .booktabs{display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap}
-  .booktab{
-    font-size:14px; font-weight:600; padding:11px 20px; border-radius:11px;
-    border:1px solid var(--line); background:#0d1626; color:var(--muted); cursor:pointer;
-  }
-  .booktab .bk{font-family:var(--mono); font-size:10px; letter-spacing:.14em; color:var(--faint); display:block; margin-bottom:3px}
-  .booktab.active{border-color:var(--cyan); color:var(--txt); box-shadow:0 0 0 1px var(--cyandim) inset}
-  .booktab.active .bk{color:var(--cyan)}
+  /* 교과서 선택(분절 탭) */
+  .booktabs{display:inline-flex; gap:4px; padding:4px; margin-bottom:18px; border-radius:14px; background:var(--muted); flex-wrap:wrap}
+  .booktab{font:inherit; font-size:14.5px; font-weight:700; padding:8px 18px; min-height:48px; border-radius:11px; border:0; background:transparent; color:var(--muted-foreground); cursor:pointer; text-align:left}
+  .booktab .bk{font-family:var(--font-mono); font-size:10.5px; letter-spacing:.12em; color:var(--faint); display:block}
+  .booktab.active{background:var(--card); color:var(--foreground); box-shadow:var(--shadow-sm)} .booktab.active .bk{color:var(--primary-ink)}
 
-  /* ---------- 대단원 (unit) ---------- */
-  .unit{border:1px solid var(--line); border-radius:16px; margin-bottom:16px; overflow:hidden; background:linear-gradient(180deg,rgba(16,24,40,.85),rgba(9,15,26,.85))}
-  .unit-h{display:flex; align-items:center; gap:14px; padding:18px 22px; cursor:pointer}
-  .unit-h .rn{
-    flex:0 0 auto; font-family:var(--mono); font-size:14px; font-weight:700; color:var(--cyan);
-    border:1px solid var(--cyandim); border-radius:9px; padding:6px 11px; background:rgba(69,211,216,.06);
-  }
-  .unit-h .ut{font-size:17px; font-weight:700}
-  .unit-h .us{font-size:12px; color:var(--faint); font-family:var(--mono); margin-top:3px; letter-spacing:.04em}
-  .unit-h .caret{margin-left:auto; color:var(--faint); transition:transform .2s; font-size:13px}
+  /* 대단원 · 중단원 · 활동 */
+  .unit{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:14px; overflow:hidden; box-shadow:var(--shadow-sm)}
+  .unit-h{display:flex; align-items:center; gap:14px; padding:16px 20px; cursor:pointer}
+  .unit-h:hover{background:color-mix(in srgb, var(--foreground) 3%, transparent)}
+  .unit-h .rn{flex:0 0 auto; font-family:var(--font-display); font-weight:700; font-size:15px; color:var(--secondary-foreground); background:var(--secondary); border-radius:10px; padding:6px 11px}
+  .unit-h .ut{font-family:var(--font-display); font-weight:700; font-size:17px}
+  .unit-h .us{font-size:12.5px; color:var(--faint); margin-top:2px}
+  .unit-h .caret{margin-left:auto; color:var(--faint); transition:transform .2s; font-size:12px}
   .unit.open .caret{transform:rotate(90deg)}
-  .unit-b{padding:0 22px; max-height:0; overflow:hidden; transition:max-height .3s ease}
-  .unit.open .unit-b{max-height:6000px; padding:4px 22px 18px}
-
-  /* ---------- 중단원 (subunit) ---------- */
-  .sub{border-top:1px solid var(--line); padding:16px 0 4px}
-  .sub:first-child{border-top:none}
-  .sub-t{font-size:14.5px; font-weight:600; margin-bottom:3px; color:#dbe4f0}
-  .sub-t .sn{font-family:var(--mono); font-size:11px; color:var(--cyan); margin-right:8px}
-  .sub-d{font-size:12px; color:var(--faint); margin-bottom:12px; line-height:1.5}
-
-  /* ---------- 활동 (activity row) ---------- */
-  .act{
-    display:block; border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:10px;
-    background:rgba(10,17,30,.5); text-decoration:none; color:inherit;
-  }
-  .act.live{border-color:var(--cyandim); background:linear-gradient(180deg,#0c1f28,#0a1822); cursor:pointer}
-  .act.live:hover{border-color:var(--cyan); box-shadow:0 8px 30px -18px var(--cyan)}
-  .act.soon{opacity:.92}
+  .unit-b{padding:0 20px; max-height:0; overflow:hidden; transition:max-height .3s ease}
+  .unit.open .unit-b{max-height:6000px; padding:2px 20px 16px}
+  .sub{border-top:1px solid var(--border); padding:14px 0 4px} .sub:first-child{border-top:none}
+  .sub-t{font-size:15px; font-weight:800; margin-bottom:2px} .sub-t .sn{font-family:var(--font-mono); font-size:11.5px; color:var(--primary-ink); margin-right:8px}
+  .sub-d{font-size:13px; color:var(--muted-foreground); margin-bottom:10px; line-height:1.55}
+  .act{display:block; border:1px solid var(--border); border-radius:14px; padding:13px 15px; margin-bottom:10px; background:var(--card); color:inherit}
+  .act.live{border-color:color-mix(in srgb, var(--primary) 45%, var(--border)); background:color-mix(in srgb, var(--secondary) 40%, var(--card)); cursor:pointer; transition:border-color .15s, box-shadow .15s}
+  .act.live:hover{border-color:var(--primary); box-shadow:var(--shadow-md)}
+  .act.soon{background:var(--muted); border-color:transparent}
   .act-top{display:flex; align-items:center; gap:12px; flex-wrap:wrap}
-  .act-name{font-size:14.5px; font-weight:600; color:var(--txt)}
-  .act .status{margin-left:auto; font-family:var(--mono); font-size:10px; letter-spacing:.1em; padding:4px 9px; border-radius:20px; white-space:nowrap}
-  .status.live{background:var(--cyan); color:#04222a}
-  .status.soon{border:1px solid var(--line2); color:var(--faint)}
+  .act-name{font-size:15px; font-weight:700; color:var(--foreground)}
+  .act .status{margin-left:auto; font-size:11.5px; font-weight:800; padding:3px 10px; border-radius:999px; white-space:nowrap}
+  .status.live{background:var(--primary); color:var(--primary-foreground)}
+  .status.soon{background:var(--card); color:var(--muted-foreground); border:1px solid var(--border)}
   .tags{display:flex; gap:6px; flex-wrap:wrap; margin-top:9px}
-  .tag{font-family:var(--mono); font-size:10px; letter-spacing:.06em; padding:3px 9px; border-radius:7px; border:1px solid; white-space:nowrap}
-  .t-concept{color:var(--blue); border-color:#254a6e; background:rgba(90,169,255,.08)}
-  .t-sim{color:var(--cyan2); border-color:var(--cyandim); background:rgba(69,211,216,.08)}
-  .t-pbl{color:#8fe6b6; border-color:#1e5f3c; background:rgba(51,209,127,.08)}
-  .t-grasps{color:#f7dfa0; border-color:#6a5320; background:rgba(242,193,78,.08)}
-  .t-formative{color:#cbb8ff; border-color:#4b3d80; background:rgba(169,139,255,.08)}
-  .t-reflect{color:#ffc2ca; border-color:#5a2530; background:rgba(255,107,125,.08)}
-  .std{margin-top:10px; font-size:11.5px; color:var(--muted); line-height:1.55}
-  .std .code{font-family:var(--mono); color:var(--cyan); margin-right:6px}
+  .tag{font-size:11.5px; font-weight:800; padding:3px 10px; border-radius:999px; white-space:nowrap}
+  .t-concept{background:var(--sky); color:var(--sky-d)} .t-sim{background:var(--mint); color:var(--mint-d)} .t-pbl{background:var(--good-bg); color:var(--good)}
+  .t-grasps{background:var(--lemon); color:var(--lemon-d)} .t-formative{background:var(--lav); color:var(--lav-d)} .t-reflect{background:var(--coral); color:var(--coral-d)}
+  .std{margin-top:9px; font-size:12.5px; color:var(--muted-foreground); line-height:1.6}
+  .std .code{font-family:var(--font-mono); color:var(--primary-ink); margin-right:6px; font-weight:700}
   .std.check{color:var(--faint); font-style:italic}
-  .memo{margin-top:9px; font-size:11.5px; color:#d3c58a; line-height:1.55; border-left:2px solid #6a5320; padding:6px 0 6px 11px; background:rgba(242,193,78,.04); border-radius:0 6px 6px 0}
-  .memo .mk{font-family:var(--mono); font-size:9.5px; letter-spacing:.12em; color:var(--amber); display:block; margin-bottom:3px}
+  .memo{margin-top:9px; font-size:12.5px; color:var(--lemon-d); background:var(--lemon); border-radius:10px; padding:8px 12px; line-height:1.6}
+  .memo .mk{font-weight:800; display:block; margin-bottom:2px}
 
-  /* ---------- footer / teacher card ---------- */
-  .footcard{
-    display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-top:26px;
-    border:1px solid var(--line2); border-radius:16px; padding:20px 24px;
-    background:linear-gradient(180deg,#130f24,#0e0b1c);
-  }
+  /* 교사 카드 · 맺음말 */
+  .footcard{display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-top:26px; border-radius:var(--radius); padding:20px 24px; background:var(--lav); color:var(--foreground)}
   .footcard .fd{flex:1; min-width:220px}
-  .footcard .fk{font-family:var(--mono); font-size:10.5px; letter-spacing:.16em; color:var(--violet); margin-bottom:6px}
-  .footcard .ft{font-size:16px; font-weight:700; margin-bottom:4px}
-  .footcard .fs{font-size:12.5px; color:var(--muted); line-height:1.55}
-  .footcard .fgo{
-    font-size:14px; font-weight:700; padding:11px 20px; border-radius:11px; white-space:nowrap;
-    background:linear-gradient(180deg,#5a44b0,#43338a); border:1px solid #6f57c9; color:#efeaff;
-  }
-  .footcard .fgo:hover{filter:brightness(1.1)}
-  .colophon{margin-top:26px; font-size:11.5px; color:var(--faint); line-height:1.7; text-align:center}
+  .footcard .fk{font-size:12px; font-weight:800; letter-spacing:.08em; color:var(--lav-d); margin-bottom:4px}
+  .footcard .ft{font-family:var(--font-display); font-weight:700; font-size:18px; margin-bottom:4px}
+  .footcard .fs{font-size:13.5px; color:var(--muted-foreground); line-height:1.6}
+  .footcard .fgo{font-size:14.5px; font-weight:800; padding:11px 18px; border-radius:12px; background:var(--lav-d); color:var(--card); white-space:nowrap}
+  .colophon{margin-top:26px; font-size:12.5px; color:var(--faint); line-height:1.7; text-align:center}
 </style>
 </head>
 <body>
 
 <header class="top">
-  <div class="brand">통합과학 · <b>AI DIGITAL TEXTBOOK</b></div>
-  <div class="title">통합과학 <span>AI 디지털교과서</span></div>
+  <a class="brand" href="index.html"><span class="ico" aria-hidden="true">📘</span><span><span class="t1">통합과학 <span>AI 디지털교과서</span></span><br><span class="t2">AI DIGITAL TEXTBOOK · 2022 개정</span></span></a>
   <div class="top-right">
     <label class="who">이름 <input id="nameInput" type="text" placeholder="이름 입력" maxlength="20" autocomplete="off"></label>
     <a class="btn-teacher" href="teacher.html">교사 대시보드 →</a>
@@ -217,68 +154,72 @@
 <div class="wrap">
 
   <!-- HERO -->
-  <section class="hero">
-    <div class="eyebrow">2022 개정 · 비상교육 기준</div>
-    <h1>탐구로 배우는 <span>통합과학</span> — AI 디지털교과서</h1>
-    <p class="lead">
-      이 교과서는 개념을 읽는 자료가 아니라 <b>학생이 예측·유도·시뮬레이션·평가·성찰을 스스로 밟아가는 탐구 환경</b>입니다.
-      각 활동은 AI·디지털 도구가 <b>참여를 가능하게 하는 수업 조건</b>이 되도록 설계됩니다.
-      아래 네 가지 원리 위에서 <b>하이터치(관계·정서·고차사고)와 하이테크(AI 진단·시각화·자동 피드백)</b>를 함께 엮습니다.
-    </p>
-    <div class="principles">
-      <div class="pr"><div class="n">01 · CONTEXT</div><div class="t">맥락</div><div class="d">실생활·사회 문제와 연결</div></div>
-      <div class="pr"><div class="n">02 · CONSTRUCT</div><div class="t">지식구성</div><div class="d">능동 탐구·발견·성찰</div></div>
-      <div class="pr"><div class="n">03 · COLLABORATE</div><div class="t">상호작용·협력</div><div class="d">모둠·토론·상호 피드백</div></div>
-      <div class="pr"><div class="n">04 · PERSONALIZE</div><div class="t">맞춤교육</div><div class="d">개별화·데이터 기반 지원</div></div>
+  <section class="su-hero home-hero">
+    <div class="su-aurora" aria-hidden="true"><b></b><b></b><b></b><b></b></div>
+    <div class="su-hero-in"><div class="su-stack">
+      <span class="su-kicker">📘 2022 개정 · 비상교육 기준</span>
+      <h1 class="su-display">탐구로 배우는<br><em>통합과학</em> AI 디지털교과서</h1>
+      <p class="hero-lead">이 교과서는 개념을 읽는 자료가 아니라 <b>학생이 예측·유도·시뮬레이션·평가·성찰을 스스로 밟아 가는 탐구 환경</b>입니다.
+        각 활동은 AI·디지털 도구가 <b>참여를 가능하게 하는 수업 조건</b>이 되도록 설계됩니다.</p>
+      <div class="su-row"><a class="su-btn" href="#live">활동 바로 시작 →</a><a class="su-btn outline" href="#toc">목차 보기</a></div>
     </div>
+    <div class="su-fchips" aria-hidden="true"><span class="su-fchip"><i>🧬</i>효소 반응속도</span><span class="su-fchip"><i>🌏</i>엘니뇨·라니냐</span><span class="su-fchip"><i>🥗</i>식탁 상담소</span><span class="su-fchip"><i>📊</i>급식 데이터</span></div>
+    </div>
+  </section>
+
+  <!-- 설계 원리 -->
+  <section class="bento su-reveal" aria-label="설계 원리">
+    <div class="pr"><div class="e" aria-hidden="true">🌱</div><div class="n">01 · CONTEXT</div><div class="t">맥락</div><div class="d">실생활·사회 문제와 연결</div></div>
+    <div class="pr"><div class="e" aria-hidden="true">🧩</div><div class="n">02 · CONSTRUCT</div><div class="t">지식구성</div><div class="d">능동 탐구·발견·성찰</div></div>
+    <div class="pr"><div class="e" aria-hidden="true">🤝</div><div class="n">03 · COLLABORATE</div><div class="t">상호작용·협력</div><div class="d">모둠·토론·상호 피드백</div></div>
+    <div class="pr"><div class="e" aria-hidden="true">🎯</div><div class="n">04 · PERSONALIZE</div><div class="t">맞춤교육</div><div class="d">개별화·데이터 기반 지원</div></div>
     <div class="balance">
-      <b>과정중심평가–성찰 연계.</b> 진단(사전) → 형성평가·즉각 피드백 → 성찰(KWL) 로 이어지고,
-      학생 데이터는 <a href="teacher.html">교사 대시보드</a>로 모여 데이터와 교사의 직관이 균형을 이룹니다.
-      교사는 도구의 "사용자"가 아니라 수업을 짜는 "활용자·설계자"입니다.
+      네 가지 원리 위에서 <b>하이터치(관계·정서·고차사고)와 하이테크(AI 진단·시각화·자동 피드백)</b>를 함께 엮습니다.
+      <b>과정중심평가–성찰 연계:</b> 진단(사전) → 형성평가·즉각 피드백 → 성찰(KWL)로 이어지고, 학생 데이터는 <a href="teacher.html">교사 대시보드</a>로 모여
+      데이터와 교사의 직관이 균형을 이룹니다. 교사는 도구의 "사용자"가 아니라 수업을 짜는 "활용자·설계자"입니다.
     </div>
     <div class="srcnote">
-      목차 뼈대는 <b style="color:var(--muted)">비상교육 「통합과학1·2」(2022 개정)</b>를 기준으로 하고,
+      목차 뼈대는 <b>비상교육 「통합과학1·2」(2022 개정)</b>를 기준으로 하고,
       활동·예시·탐구 소재는 동아·미래엔·지학사·천재교육 교과서를 교차 참고합니다(다음 단계에서 반영).
       성취기준은 확인된 코드만 표기하며, 미확정 소단원은 "성취기준 확인 필요"로 남겨 두었습니다.
     </div>
   </section>
 
   <!-- LIVE ACTIVITY -->
-  <a class="live" href="activities/enzyme-kinetics.html">
-    <div class="ld">
-      <div class="lk"><span class="dot"></span>LIVE 활동 · 통합과학1 ▸ 시스템과 상호작용 ▸ 생명 시스템</div>
+  <div class="sec-h" id="live"><h2>지금 할 수 있는 활동</h2><span>LIVE 4개 · 누르면 바로 시작해요</span></div>
+  <div class="live-grid">
+    <a class="live su-reveal" href="activities/enzyme-kinetics.html">
+      <div class="ico" style="background:var(--sky)" aria-hidden="true">🧬</div>
+      <div class="lk"><span class="dot"></span>통합과학1 ▸ 시스템과 상호작용 ▸ 생명 시스템</div>
       <div class="lt">효소반응속도 워크북 · 미카엘리스–멘텐</div>
       <div class="ls">예측 → 이론 유도 → kcat → 시뮬레이터 → 유도 확인 → 형성평가 → 서술형 자가 점검 → 최종 보고서 (8단계)</div>
-    </div>
-    <span class="go">활동 시작 →</span>
-  </a>
-  <a class="live" href="activities/enso.html">
-    <div class="ld">
-      <div class="lk"><span class="dot"></span>LIVE 활동 · 통합과학2 ▸ 환경과 에너지 ▸ 기후 변화와 지구 환경</div>
+      <span class="go">활동 시작 →</span>
+    </a>
+    <a class="live su-reveal" href="activities/enso.html">
+      <div class="ico" style="background:var(--lav)" aria-hidden="true">🌏</div>
+      <div class="lk"><span class="dot"></span>통합과학2 ▸ 환경과 에너지 ▸ 기후 변화와 지구 환경</div>
       <div class="lt">엘니뇨·라니냐 탐구 워크북 · 시뮬레이터 + 실제 관측 데이터</div>
       <div class="ls">예측 → 개념 → 단면 시뮬레이터 → NOAA ONI·실시간 수온 → 형성평가 → GRASPS 정책 제안 → KWL 성찰 → 보고서 (8단계)</div>
-    </div>
-    <span class="go">활동 시작 →</span>
-  </a>
-  <a class="live" href="activities/nutrition-clinic.html">
-    <div class="ld">
-      <div class="lk"><span class="dot"></span>LIVE 활동 · 통합과학2 ▸ 과학과 미래 사회 ▸ 인공지능·과학 윤리 · 과학탐구실험2</div>
-      <div class="lt">식탁 상담소 · 영양·식생활 탐구 (v1.0)</div>
-      <div class="ls">가상 의뢰인 3명 중 1명 선택 → 영양표시 읽기 → 7일 기록 그래프 해석 → 하루 식단 다시 짜기(기준 9개·예산 15,000원) → AI 식단 앱 알림 판정 → 주장–근거–추론–반박 → 상담 보고서</div>
-    </div>
-    <span class="go">활동 시작 →</span>
-  </a>
-  <a class="live" href="activities/meal-lab.html">
-    <div class="ld">
-      <div class="lk"><span class="dot"></span>LIVE 활동 · 통합과학2 ▸ 과학과 미래 사회 ▸ 빅데이터 · 과학탐구실험2</div>
+      <span class="go">활동 시작 →</span>
+    </a>
+    <a class="live su-reveal" href="activities/nutrition-clinic.html">
+      <div class="ico" style="background:var(--mint)" aria-hidden="true">🥗</div>
+      <div class="lk"><span class="dot"></span>통합과학2 ▸ 과학과 미래 사회 ▸ 인공지능·과학 윤리 · 과학탐구실험2</div>
+      <div class="lt">식탁 상담소 · 영양·식생활 탐구 (v1.1)</div>
+      <div class="ls">가상 의뢰인 3명 중 1명 선택 → 영양표시 읽기 → 7일 기록 그래프 해석 → 하루 식단 다시 짜기(기준 9개·예산 15,000원) → AI 식단 앱 알림 판정 → 주장–근거–추론–반박 → 나에게 옮기기 → 상담 보고서</div>
+      <span class="go">활동 시작 →</span>
+    </a>
+    <a class="live su-reveal" href="activities/meal-lab.html">
+      <div class="ico" style="background:var(--lemon)" aria-hidden="true">📊</div>
+      <div class="lk"><span class="dot"></span>통합과학2 ▸ 과학과 미래 사회 ▸ 빅데이터 · 과학탐구실험2</div>
       <div class="lt">식탁 문제 해결단 · 경기도 급식 빅데이터 탐구 (v1.0)</div>
       <div class="ls">데이터 카드 → 질문 보드 → 정제 미션 → 재료 분류 사전 → 차트 빌더(규칙 실험·새 데이터 검증·또래 통계·그래프 함정) → 주장 카드 → 데이터 이야기</div>
-    </div>
-    <span class="go">활동 시작 →</span>
-  </a>
+      <span class="go">활동 시작 →</span>
+    </a>
+  </div>
 
   <!-- LEGEND -->
-  <section class="legend">
+  <section class="legend su-reveal">
     <div class="lh">활동 유형 — 설계 프레임워크와의 연결</div>
     <div class="legend-grid">
       <div class="lg"><span class="tag t-concept">개념</span><span><b>개념 이해</b> · 지식구성의 기초</span></div>
@@ -291,6 +232,7 @@
   </section>
 
   <!-- BOOK TOGGLE -->
+  <div class="sec-h" id="toc"><h2>교과서 목차</h2><span>대단원 ▸ 중단원 ▸ 활동 · 라이브 활동은 눌러서 시작</span></div>
   <div class="booktabs" id="bookTabs"></div>
 
   <!-- CURRICULUM TREE -->
@@ -619,6 +561,12 @@ function initName(){
   renderTree();
   initName();
 })();
+
+/* 스크롤 때 카드가 부드럽게 나타나기(student-ui.css .su-reveal). JS나 IntersectionObserver가 없으면 그대로 보인다 */
+(function(){ var els=document.querySelectorAll(".su-reveal");
+  if(!("IntersectionObserver" in window)){ for(var i=0;i<els.length;i++) els[i].classList.add("is-in"); return; }
+  var io=new IntersectionObserver(function(es){ es.forEach(function(en){ if(en.isIntersecting){ en.target.classList.add("is-in"); io.unobserve(en.target); } }); }, {rootMargin:"0px 0px -6% 0px"});
+  for(var j=0;j<els.length;j++) io.observe(els[j]); })();
 </script>
 </body>
 </html>
