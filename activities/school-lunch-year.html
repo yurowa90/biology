@@ -191,16 +191,23 @@ function totals(ds) {
   return t;
 }
 /* 영양: 별표 3의 하루 판정(실제 평가는 연속 5일 평균) */
+/* 별표 3 판정 줄(하루 합계와 1년 평균이 같은 규칙을 씀). 못 맞추면 어느 쪽으로 벗어났는지 적는다(에너지·비율은 넘쳐도 탈락) */
+function judgeRows(t, s) {
+  const e = t.cho * 4 + t.pro * 4 + t.fat * 9 || 1, rc = t.cho * 4 / e * 100, rp = t.pro * 4 / e * 100, rf = t.fat * 9 / e * 100;
+  const out = [["탄수화물", rc, 55, 65], ["단백질", rp, 7, 20], ["지방", rf, 15, 30]].filter(x => x[1] < x[2] || x[1] > x[3]).map(x => x[0] + (x[1] > x[3] ? " 많음" : " 적음"));
+  const rows = [
+    { k: "kcal", l: "에너지", x: `${fmt(t.kcal)} kcal`, ref: `${fmt(s.kcal)} kcal`, ok: Math.abs(t.kcal - s.kcal) <= s.kcal * 0.1, bad: t.kcal > s.kcal ? "초과" : "부족", note: "기준의 ±10%" },
+    { k: "ratio", l: "탄·단·지 비율", x: `${fmt(rc)} : ${fmt(rp)} : ${fmt(rf)} %`, ref: "55~65 : 7~20 : 15~30 %", ok: !out.length, bad: out.join("·"), note: "55~65 : 7~20 : 15~30" },
+    { k: "pro", l: "단백질", x: `${fmt(t.pro, 1)} g`, ref: `${fmt(s.pro, 1)} g`, ok: t.pro >= s.pro && rp <= 20, bad: t.pro < s.pro ? "부족" : "에너지 20% 넘음", note: "기준 이상, 에너지의 20% 이하" }];
+  for (const [k, l, u] of NUTS) { const [ear, rda] = s[k], v = t[k];
+    rows.push({ k, l, x: `${fmt(v, k === "b1" || k === "b2" ? 2 : 1)} ${u}`, ref: `${fmt(rda, 2)} ${u}`, ok: v >= ear, good: v >= rda, bad: "부족", note: `권장 ${fmt(rda, 2)}(최소 평균필요량 ${fmt(ear, 2)})` }); }
+  for (const r of rows) r.v = r.k === "ratio" ? r.x : `${r.x.replace(/ [^ ]+$/, "")} / ${r.ref}`;
+  return rows;
+}
+const verdict = r => `<span class="su-tag ${r.ok ? (r.good === false ? "warn" : "good") : "bad"}">${r.ok ? (r.good === false ? "최소 충족" : "충족") : esc(r.bad || "부족")}</span>`;
 function nutJudge(ds) {
   const s = std(), t = totals(ds); if (!HAS_NUT || t.missing === ds.length) return null;
-  const e = t.cho * 4 + t.pro * 4 + t.fat * 9 || 1, rc = t.cho * 4 / e * 100, rp = t.pro * 4 / e * 100, rf = t.fat * 9 / e * 100;
-  const rows = [
-    { k: "kcal", l: "에너지", v: `${fmt(t.kcal)} / ${fmt(s.kcal)} kcal`, ok: Math.abs(t.kcal - s.kcal) <= s.kcal * 0.1, note: "기준의 ±10%" },
-    { k: "ratio", l: "탄·단·지 비율", v: `${fmt(rc)} : ${fmt(rp)} : ${fmt(rf)} %`, ok: rc >= 55 && rc <= 65 && rp >= 7 && rp <= 20 && rf >= 15 && rf <= 30, note: "55~65 : 7~20 : 15~30" },
-    { k: "pro", l: "단백질", v: `${fmt(t.pro, 1)} / ${fmt(s.pro, 1)} g`, ok: t.pro >= s.pro && rp <= 20, note: "기준 이상, 에너지의 20% 이하" }];
-  for (const [k, l, u] of NUTS) { const [ear, rda] = s[k], v = t[k];
-    rows.push({ k, l, v: `${fmt(v, k === "b1" || k === "b2" ? 2 : 1)} / ${fmt(rda, 2)} ${u}`, ok: v >= ear, good: v >= rda, note: `권장 ${fmt(rda, 2)}(최소 평균필요량 ${fmt(ear, 2)})` }); }
-  const pass = rows.filter(r => r.ok).length;
+  const rows = judgeRows(t, s), pass = rows.filter(r => r.ok).length;
   return { rows, pass, n: rows.length, t, stars: pass >= 8 ? 3 : pass >= 6 ? 2 : 1, na: t.na, sug: t.sug };
 }
 /* 안전·존중: 손님별 위험 메뉴 */
@@ -307,8 +314,8 @@ function menuCard(i, day, st, guests) {
   const sea = (d.sm || []).includes(day.mon) ? `<span class="tg season" title="제철 재료">${day.mon}월 제철</span>` : d.mo.includes(day.mon) ? `<span class="tg season" title="경기도 표본에서 ${day.mon}월에 평소의 1.8배 이상 나옴">${day.mon}월에 자주</span>` : "";
   const tags = [sea, day.theme.test(d) ? `<span class="tg theme">계기</span>` : "",
     ...d.t.filter(t => !t.startsWith("계기")).map(t => `<span class="tg">${esc(t)}</span>`), `<span class="tg">${esc(d.m)}</span>`].join("");
-  const n = d.nut ? `${fmt(d.nut.kcal)} kcal · 단백질 ${fmt(d.nut.pro, 1)} g · 칼슘 ${fmt(d.nut.ca)} mg · 나트륨 ${fmt(d.nut.na)} mg` : "영양값 준비 중";
-  const src = d.nut ? `식약처 값: ${d.nut.src}(${d.nut.org.replace(/\(.*$/, "")}) · 1인분 ${fmt(d.nut.w, 1)} g${d.nut.wsrc === "자료의 1인분" ? "" : ` · ${d.nut.wsrc}`}` : "";
+  const n = d.nut ? `1인분 ${fmt(d.nut.w)} ${d.nut.wu || "g"} · ${fmt(d.nut.kcal)} kcal · 단백질 ${fmt(d.nut.pro, 1)} g · 칼슘 ${fmt(d.nut.ca)} mg · 나트륨 ${fmt(d.nut.na)} mg` : "영양값 준비 중";
+  const src = d.nut ? `식약처 값: ${d.nut.src}(${d.nut.org.replace(/\(.*$/, "")}) · 1인분 ${fmt(d.nut.w, 1)} ${d.nut.wu || "g"}${d.nut.wsrc === "자료의 1인분" ? "" : ` · ${d.nut.wsrc}`}` : "";
   return `<button class="menu" aria-pressed="${on}" data-act="pick" data-i="${i}" title="${esc(src)}"><span class="n">${esc(d.n)}</span><span class="d">${n}</span>
     <span class="chips" aria-label="알레르기 번호">${al || `<span class="su-tiny su-muted">알레르기 표시 없음</span>`}</span><span class="chips">${tags}</span>
     <span class="d">경기도 표본 ${fmt(d.f)}끼 · 비용 <b aria-label="식재료비 ${d.c}칸">${"₩".repeat(d.c)}</b></span></button>`;
@@ -329,7 +336,7 @@ function dayView() {
     <div class="su-stack">
       <div class="su-row slots" role="tablist" aria-label="칸 고르기">${SLOTS.map(([k, l]) => `<button class="su-chip" role="tab" aria-selected="${!q && slot === k}" aria-pressed="${!q && slot === k}" data-act="slot" data-k="${k}">${l}<span class="su-tiny"> ${(st.plate[k] || []).length}/${MAX[k]}</span></button>`).join("")}</div>
       <div class="su-field"><label for="inQ">메뉴 이름으로 찾기</label><input type="text" id="inQ" value="${esc(st.q || "")}" placeholder="예: 김치, 오징어, 팥" autocomplete="off"></div>
-      <p class="su-tiny su-muted" style="margin:0">숫자는 알레르기 번호(1 난류 · 2 우유 · 4 땅콩 · 5 대두 · 6 밀 · 9 새우 · 10 돼지고기 · 17 오징어 …). 점선 '?'는 일부 학교에서만 표시한 번호예요. 영양값은 식약처 음식 영양성분(학교급식 레시피 값 우선)의 1인분이라 우리 학교 배식량과 다를 수 있어요. 카드에 마우스를 올리면 출처가 보여요.</p>
+      <p class="su-tiny su-muted" style="margin:0">숫자는 알레르기 번호(1 난류 · 2 우유 · 4 땅콩 · 5 대두 · 6 밀 · 9 새우 · 10 돼지고기 · 17 오징어 …). 점선 '?'는 일부 학교에서만 표시한 번호예요. 영양값은 식약처 음식 영양성분(학교급식 레시피 값 우선)의 1인분이라 우리 학교 배식량과 다를 수 있어요. 1인분 양은 식약처 자료에 적힌 단위(g 또는 mL) 그대로예요. 쌀밥과 보리밥의 열량 차이는 대부분 곡물보다 자료의 1인분 양(450 mL와 280 mL) 차이에서 와요(100 mL당 열량은 거의 같아요). 카드에 마우스를 올리면 출처가 보여요.</p>
       <div class="shelf">${list.map(k => menuCard(k, day, st, day.guests)).join("") || `<p class="su-muted">찾는 메뉴가 없어요.</p>`}</div>
     </div>
     <aside class="su-stack su-sticky" aria-label="오늘의 식판">
@@ -364,7 +371,7 @@ function resultView(i) {
     <p class="su-small" style="margin:0">오늘 받은 별: <b>${tot}개</b> / 12개 · 별은 순위가 아니라 무엇을 포기했는지 보는 거울이에요.</p></div></div>
   <h2 class="su-h2">손님 반응</h2><div class="guests">${day.guests.map(g => guestCard(g, ev)).join("")}</div>
   ${ev.nj ? `<details class="su-card" open><summary><b>영양관리기준 하루 판정</b> <span class="su-small su-muted">(실제 평가는 계절별 연속 5일 평균)</span></summary><div class="su-scroll"><table class="su-table nut"><thead><tr><th>항목</th><th>오늘</th><th>기준</th><th>판정</th></tr></thead><tbody>
-    ${ev.nj.rows.map(r => `<tr><td>${r.l}</td><td>${esc(r.v)}</td><td class="su-small su-muted">${esc(r.note)}</td><td><span class="su-tag ${r.ok ? (r.good === false ? "warn" : "good") : "bad"}">${r.ok ? (r.good === false ? "최소 충족" : "충족") : "미달"}</span></td></tr>`).join("")}</tbody></table></div>
+    ${ev.nj.rows.map(r => `<tr><td>${r.l}</td><td>${esc(r.v)}</td><td class="su-small su-muted">${esc(r.note)}</td><td>${verdict(r)}</td></tr>`).join("")}</tbody></table></div>
     <p class="su-tiny su-muted">식약처 음식 영양성분(학교급식 레시피 값 우선, 1인분)을 더한 값이에요. 실제 학교는 배식량과 레시피에 따라 달라요. 우유는 이번 메뉴 은행에 없어서 칼슘을 채우려면 반찬을 잘 골라야 해요.</p></details>` : ""}
   <div class="su-card su-stack"><label class="su-label" for="inWhy">오늘 무엇을 포기하거나 양보했나요? 왜 그렇게 정했나요?</label>
     <textarea class="su-input" id="inWhy" data-in="why" rows="3" placeholder="예: 지호를 위해 매운 제육볶음 대신 두부조림을 넣었더니 육상부 준우의 단백질이 모자랐다">${esc(st.why || "")}</textarea>
@@ -374,18 +381,17 @@ function resultView(i) {
 function yearStats() {
   const evs = DAYS.map((_, i) => S.days[i].done ? evaluate(i) : null).filter(Boolean), s = std();
   const withNut = evs.filter(e => e.nj), avg = {};
-  if (withNut.length) for (const k of ["kcal", "pro", "ca", "fe", "va", "b1", "b2", "vc", "na"]) avg[k] = withNut.reduce((a, e) => a + e.nj.t[k], 0) / withNut.length;
+  if (withNut.length) for (const k of ["kcal", "pro", "fat", "cho", "sug", "ca", "fe", "va", "b1", "b2", "vc", "na"]) avg[k] = withNut.reduce((a, e) => a + e.nj.t[k], 0) / withNut.length;
   const mains = evs.map(e => (e.ds.find(d => d.s === "주찬") || {}).m).filter(Boolean), methods = [...new Set(evs.flatMap(e => e.ds.map(d => d.m)))];
   const fried = evs.filter(e => e.ds.some(d => d.m === "튀김")).length, cost = evs.reduce((a, e) => a + e.cost, 0), budget = evs.reduce((a, e) => a + e.day.budget, 0);
   const alt = evs.reduce((a, e) => a + Object.values(S.days[DAYS.indexOf(e.day)].alt).filter(Boolean).length, 0);
-  const cnt = tag => evs.reduce((a, e) => a + e.ds.filter(d => d.t.includes(tag)).length, 0), season = evs.reduce((a, e) => a + e.ds.filter(d => d.mo.includes(e.day.mon)).length, 0);
+  const cnt = tag => evs.reduce((a, e) => a + e.ds.filter(d => d.t.includes(tag)).length, 0), season = evs.reduce((a, e) => a + e.ds.filter(d => inSeason(d, e.day.mon)).length, 0);
   return { evs, s, avg, withNut, mains, methods, fried, cost, budget, alt, trad: cnt("전통"), world: cnt("세계"), season, themes: evs.filter(e => e.theme).length,
     stars: evs.reduce((a, e) => a + Object.values(e.stars).reduce((x, y) => x + y, 0), 0) };
 }
 function summary() {
   const y = yearStats(), s = y.s;
-  const avgRows = y.withNut.length ? [["에너지", y.avg.kcal, s.kcal, "kcal", Math.abs(y.avg.kcal - s.kcal) <= s.kcal * 0.1], ["단백질", y.avg.pro, s.pro, "g", y.avg.pro >= s.pro],
-    ...NUTS.map(([k, l, u]) => [l, y.avg[k], s[k][1], u, y.avg[k] >= s[k][0], y.avg[k] >= s[k][1]])] : [];
+  const avgRows = y.withNut.length ? judgeRows(y.avg, s) : [];
   const rec = records(y);
   return `<section class="su-stack">
   <span class="su-kicker">1년 결산</span><h1 class="su-h1">${esc(S.name || "영양사")}의 급식실 1년</h1>
@@ -393,7 +399,7 @@ function summary() {
     <p class="su-small su-muted su-measure" style="margin:0">주찬 조리법: ${y.mains.join(" → ") || "–"} · 튀김이 들어간 날 ${y.fried}번 · 전통 메뉴 ${y.trad}개 · 세계 음식 ${y.world}개 · 그달 제철·자주 나오는 메뉴 ${y.season}개</p></div>
   ${avgRows.length ? `<div class="su-card su-stack"><h2 class="su-h3">${y.withNut.length}번의 평균으로 본 영양관리기준</h2>
     <p class="su-small su-muted su-measure" style="margin:0">실제 학교는 하루가 아니라 계절별 연속 5일의 평균으로 평가해요(시행규칙 별표 3). 어떤 날 부족해도 다른 날 채울 수 있다는 뜻이에요.</p>
-    <div class="su-scroll"><table class="su-table nut"><thead><tr><th>항목</th><th>평균</th><th>기준(권장)</th><th>판정</th></tr></thead><tbody>${avgRows.map(r => `<tr><td>${r[0]}</td><td>${fmt(r[1], r[3] === "mg" && r[2] < 1 ? 2 : 1)} ${r[3]}</td><td>${fmt(r[2], 2)} ${r[3]}</td><td><span class="su-tag ${r[4] ? (r[5] === false ? "warn" : "good") : "bad"}">${r[4] ? (r[5] === false ? "최소 충족" : "충족") : "미달"}</span></td></tr>`).join("")}</tbody></table></div>
+    <div class="su-scroll"><table class="su-table nut"><thead><tr><th>항목</th><th>평균</th><th>기준(권장)</th><th>판정</th></tr></thead><tbody>${avgRows.map(r => `<tr><td>${r.l}</td><td>${esc(r.x)}</td><td>${esc(r.ref)}</td><td>${verdict(r)}</td></tr>`).join("")}</tbody></table></div>
     <p class="su-tiny su-muted" style="margin:0">나트륨 평균 ${fmt(y.avg.na)} mg(참고: 하루 2,300mg의 3분의 1은 ${fmt(NA_REF)} mg)</p></div>` : ""}
   <h2 class="su-h2">영양사의 고민 지도</h2>
   <p class="su-small su-muted su-measure" style="margin:0">칸마다 나의 1년 기록이 적혀 있어요. 어느 고민을 가장 많이 했고, 어느 고민을 가장 적게 했나요?</p>

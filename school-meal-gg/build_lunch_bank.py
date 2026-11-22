@@ -198,7 +198,7 @@ def nut_of(name, by, norm, med):
         w, wsrc = round(med.get(r["식품대분류명"], statistics.median(list(med.values()))), 1), "같은 분류 학교급식 1인분 중앙값"
     f = w / 100
     out = {k: (round(num(r.get(col)) * f, 2) if num(r.get(col)) is not None else None) for k, col in NUT_COLS.items()}
-    out.update({"src": r["식품명"], "org": r["식품기원명"], "w": w, "wsrc": wsrc, "code": r["식품코드"], "date": r.get("데이터생성일자", "")})
+    out.update({"src": r["식품명"], "org": r["식품기원명"], "w": w, "wu": "mL" if r.get("영양성분함량기준량", "").lower().endswith("ml") else "g", "wsrc": wsrc, "code": r["식품코드"], "date": r.get("데이터생성일자", ""), "ref": r.get("데이터기준일자", "")})
     return out
 
 
@@ -239,7 +239,9 @@ def main():
                 unmatched.append(name); continue  # 영양값이 없는 메뉴는 싣지 않는다(지어내지 않음)
         menus.append(item)
     meta = {"built": __import__("datetime").date.today().isoformat(), "source": "경기도 고등학교 급식 10% 표본·원본 표본(NEIS), 식약처 전국통합식품영양성분정보(음식)표준데이터(15100070)",
-            "nutBase": max((m["nut"]["date"] for m in menus if m["nut"]), default=None),
+            # 데이터기준일자는 표준데이터 전체의 기준일, 데이터생성일자는 행마다 다름(고른 행 중 가장 늦은 날)
+            "nutRefDate": max((m["nut"]["ref"] for m in menus if m["nut"]), default=None),
+            "nutRowLatest": max((m["nut"]["date"] for m in menus if m["nut"]), default=None),
             "menus": len(menus), "withNut": sum(1 for m in menus if m["nut"]), "rawMeals": len(raw), "sampleMeals": len(sample)}
     js = "/* 자동 생성 파일: school-meal-gg/build_lunch_bank.py. 손으로 고치지 말 것 */\nwindow.LUNCH_BANK=" + json.dumps(
         {"meta": meta, "allergens": ALLERGENS, "menus": menus}, ensure_ascii=False, separators=(",", ":")) + ";\n"
