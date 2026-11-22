@@ -19,7 +19,7 @@
 - 알레르기 유발물질 19종: 식품 등의 표시·광고에 관한 법률 시행규칙 [별표 2](2024. 12. 30. 개정) Ⅰ.1.가
 - 영양관리기준·식단 작성 고려사항: 학교급식법 시행규칙 [별표 3](2021. 1. 29. 개정), 제5조제2항
 """
-import sys, json, re, csv, collections as C
+import sys, io, json, re, csv, statistics, collections as C
 
 DATA_JS = "../activities/meal-lab-data.js"
 OUT_JS = "../activities/lunch-bank.js"
@@ -63,17 +63,18 @@ MENU = [
     ("진미채볶음", "부찬", 2, "동해"), ("해물파전", "부찬", 2, "전통"), ("메밀전병", "부찬", 2, "전통"),
     ("국물떡볶이", "부찬", 1, "매움"), ("시금치프리타타", "부찬", 2, "세계"), ("브로콜리초회", "부찬", 1, "채식"),
     ("나쵸샐러드", "부찬", 2, "세계"), ("달래오이무침", "부찬", 1, "채식"), ("오징어김치전", "부찬", 2, "동해"),
-    ("감자채전", "부찬", 1, "채식"),
+    ("감자채전", "부찬", 1, "채식"), ("고구마맛탕", "부찬", 1, "채식 제철:9.10.11"), ("연근조림", "부찬", 1, "채식 전통"),
     # 김치
     ("배추김치", "김치", 1, "전통"), ("깍두기", "김치", 1, "전통"), ("총각김치", "김치", 1, "전통"),
     ("백김치", "김치", 1, "전통 소화"), ("열무김치", "김치", 1, "전통"), ("배추겉절이", "김치", 1, "전통"),
-    ("단무지무침", "김치", 1, "세계"), ("오이피클", "김치", 1, "세계 채식"),
+    ("단무지무침", "김치", 1, "세계"), ("오이피클", "김치", 1, "세계 채식"), ("오이김치", "김치", 1, "전통"),
     # 후식·음료
-    ("사과", "후식", 1, "채식"), ("귤", "후식", 1, "채식"), ("바나나", "후식", 1, "채식 소화"), ("수박", "후식", 2, "채식"),
-    ("방울토마토", "후식", 1, "채식"), ("파인애플", "후식", 1, "채식"), ("요구르트", "후식", 1, "소화"),
+    ("사과", "후식", 1, "채식 과일"), ("귤", "후식", 1, "채식 과일"), ("바나나", "후식", 1, "채식 과일 소화"), ("수박", "후식", 2, "채식 과일"),
+    ("방울토마토", "후식", 1, "채식 과일"), ("파인애플", "후식", 1, "채식 과일"), ("요구르트", "후식", 1, "소화"),
     ("우유", "후식", 1, ""), ("두유", "후식", 1, "채식"), ("식혜", "후식", 1, "전통"),
     ("독도케이크", "후식", 2, "계기:독도"), ("크림찹쌀떡", "후식", 2, "계기:수능"), ("동지팥죽", "후식", 1, "전통 계기:동지 채식"),
     ("마카롱", "후식", 2, "세계"), ("에그타르트", "후식", 2, "세계"), ("열대과일샐러드", "후식", 2, "세계 채식"),
+    ("수박화채", "후식", 2, "채식 과일 제철:6.7.8"), ("과일샐러드", "후식", 1, "과일"),
 ]
 
 FRIED = r"튀김|까스|가스|커틀릿|강정|탕수|꿔바로우|너겟|후라이드|프라이드"
@@ -125,34 +126,80 @@ def months(sample, idx):
     return out
 
 
-# 식약처 CSV: 이름이 같은 것 → 정규화(공백·괄호 제거) → 수동 대응표 순서로 찾는다
-ALIAS = {}  # 예: "혼합잡곡밥": "잡곡밥" — CSV를 받은 뒤 검토해 채운다
+# 식약처 「전국통합식품영양성분정보(음식)표준데이터」: 값은 100 g(또는 100 mL)당, 식품중량이 1인분 중량
+# 같은 이름이 여러 출처로 있으면 학교급식에 가까운 출처부터 고른다(업체 제공 프랜차이즈 값은 쓰지 않음)
+ORIGINS = ["중고등학교급식", "초등학교급식", "산업체급식", "가정식", "외식(분석", "외식(재료량"]
+SCHOOL = ORIGINS[:3]  # 재료량 기반 1인분 중량이 학교·단체급식 기준인 출처
+# 경기도 메뉴 이름 → 식약처 식품명(같은 음식, 이름만 다름). 검토 근거는 VERIFICATION.md 9절
+ALIAS = {"쇠고기미역국": "소고기 미역국", "들깨미역국": "미역국_들깨", "쇠고기무국": "소고기 무국", "오징어무국": "오징어국",
+         "조랭이떡국": "떡국_소고기", "닭다리삼계탕": "삼계탕", "홍합탕": "홍합국(홍합탕)", "안동찜닭": "닭찜", "닭갈비": "닭볶음(닭갈비)",
+         "계란찜": "달걀찜", "계란말이": "달걀말이", "삼치데리야끼구이": "삼치구이", "고등어무조림": "고등어조림_무",
+         "오징어초무침": "오징어무침_채소", "돈육메추리알장조림": "메추리알 돼지고기장조림", "한우불고기": "소불고기",
+         "수육": "제육(돼지고기 수육)", "김구이": "조미 김구이", "숙주나물무침": "숙주나물", "청포묵김가루무침": "청포묵무침",
+         "감자채볶음": "감자볶음", "도라지오이생채": "도라지생채_오이", "알감자조림": "감자조림", "꽈리고추멸치볶음": "꽈리고추볶음_잔멸치",
+         "견과류멸치볶음": "멸치볶음_견과류", "진미채볶음": "오징어채볶음", "메밀전병": "빙떡(메밀전병)", "국물떡볶이": "떡볶이",
+         "시금치프리타타": "오믈렛", "브로콜리초회": "브로콜리무침", "달래오이무침": "오이무침_달래", "오징어김치전": "김치전_오징어",
+         "독도케이크": "케이크_생크림케이크", "크림찹쌀떡": "찹쌀떡_팥", "동지팥죽": "팥죽", "영양닭죽": "닭죽"}
+# 이름은 있으나 같은 음식으로 보기 어렵거나 1인분 중량을 정할 수 없어 대응하지 않는 것
+# (면이 든 짬뽕 ↔ 짬뽕국, 반찬 마파두부 ↔ 덮밥, 크림 스파게티 ↔ 투움바, 생오징어채볶음 ↔ 진미채, 마카롱·빙떡은 1인분 중량 불명)
+NO_MATCH = {"짬뽕국", "마파두부덮밥", "투움바파스타", "순두부찌개", "마카롱", "메밀전병", "진미채볶음"}
+# 1인분 중량을 자료에서 정할 수 없어 수업용으로 정한 것(한 조각)
+PORTION = {"독도케이크": 50, "크림찹쌀떡": 50}
 NUT_COLS = {"kcal": "에너지(kcal)", "pro": "단백질(g)", "fat": "지방(g)", "cho": "탄수화물(g)", "sug": "당류(g)",
             "ca": "칼슘(mg)", "fe": "철(mg)", "na": "나트륨(mg)", "va": "비타민 A(μg RAE)", "b1": "티아민(mg)",
             "b2": "리보플라빈(mg)", "vc": "비타민 C(mg)"}
 
 
-def load_nut(path):
-    for enc in ("utf-8-sig", "cp949", "euc-kr"):
-        try:
-            rows = list(csv.DictReader(open(path, encoding=enc)))
-            break
-        except UnicodeDecodeError:
-            continue
-    norm = lambda s: re.sub(r"\(.*?\)|\s|_", "", s or "")
-    by = {}
-    for r in rows:
-        nm = r.get("식품명", "")
-        by.setdefault(nm, r)
-        by.setdefault(norm(nm), r)
-    return by, norm, rows
-
-
 def num(v):
     try:
-        return round(float(str(v).replace(",", "")), 2)
+        return float(str(v).replace(",", ""))
     except (TypeError, ValueError):
         return None
+
+
+def origin_rank(r):
+    o = r.get("식품기원명", "")
+    return next((i for i, k in enumerate(ORIGINS) if o.startswith(k)), None)
+
+
+def load_nut(path):
+    raw = open(path, "rb").read()
+    for enc in ("utf-8-sig", "cp949"):
+        try:
+            text = raw.decode(enc); break
+        except UnicodeDecodeError:
+            continue
+    rows = [r for r in csv.DictReader(io.StringIO(text)) if origin_rank(r) is not None]
+    norm = lambda s: re.sub(r"[\s_()]", "", s or "")
+    by = C.defaultdict(list)
+    for r in rows:
+        by[norm(r["식품명"])].append(r)
+    # 학교급식 1인분 중량: 같은 식품대분류의 중고등·초등학교급식 메뉴 중량 중앙값
+    med = C.defaultdict(list)
+    for r in rows:
+        if r["식품기원명"].startswith(("중고등학교급식", "초등학교급식")) and num(re.sub(r"[^\d.]", "", r["식품중량"])):
+            med[r["식품대분류명"]].append(num(re.sub(r"[^\d.]", "", r["식품중량"])))
+    med = {k: statistics.median(v) for k, v in med.items()}
+    return by, norm, rows, med
+
+
+def nut_of(name, by, norm, med):
+    target = ALIAS.get(name, name)
+    cands = by.get(norm(target)) or []
+    if not cands or name in NO_MATCH:
+        return None
+    r = min(cands, key=origin_rank)
+    w = num(re.sub(r"[^\d.]", "", r["식품중량"]))
+    if name in PORTION:
+        w, wsrc = PORTION[name], "수업용 가정(한 조각)"
+    elif r["식품기원명"].startswith(tuple(SCHOOL)) and w:
+        wsrc = "자료의 1인분"
+    else:
+        w, wsrc = round(med.get(r["식품대분류명"], statistics.median(list(med.values()))), 1), "같은 분류 학교급식 1인분 중앙값"
+    f = w / 100
+    out = {k: (round(num(r.get(col)) * f, 2) if num(r.get(col)) is not None else None) for k, col in NUT_COLS.items()}
+    out.update({"src": r["식품명"], "org": r["식품기원명"], "w": w, "wsrc": wsrc, "code": r["식품코드"], "date": r.get("데이터생성일자", "")})
+    return out
 
 
 def main():
@@ -164,9 +211,9 @@ def main():
     mo = months(sample, idx)
     nut = None
     if len(sys.argv) > 1:
-        by, norm, rows = load_nut(sys.argv[1])
-        nut = (by, norm)
-        print("식약처 CSV", len(rows), "행")
+        by, norm, rows, med = load_nut(sys.argv[1])
+        nut = (by, norm, med)
+        print("식약처 CSV(업체 제공 제외)", len(rows), "행")
     menus, skipped, unmatched = [], [], []
     for name, slot, cost, tags in MENU:
         if name not in idx:
@@ -181,22 +228,18 @@ def main():
                 share[x] += c
         codes = sorted(x for x, c in share.items() if c / n_lab >= 0.5)
         maybe = sorted(x for x, c in share.items() if 0.2 <= c / n_lab < 0.5)
-        item = {"n": name, "s": slot, "c": cost, "t": [t for t in tags.split() if t],
+        tg = [t for t in tags.split() if t]
+        sm = [int(x) for t in tg if t.startswith("제철:") for x in t[3:].split(".")]
+        item = {"n": name, "s": slot, "c": cost, "t": [t for t in tg if not t.startswith("제철:")], "sm": sm,
                 "a": codes, "p": maybe, "ag": [k, n_lab], "f": cnt[idx[name]], "mo": mo.get(idx[name], []),
                 "m": method(name, slot), "raw": bool(re.search(RAW, name)) or name in FRUIT, "sh": 18 in codes, "nut": None}
         if nut:
-            by, norm = nut
-            r = by.get(name) or by.get(norm(name)) or by.get(ALIAS.get(name, "\0"))
-            if r:
-                item["nut"] = {k2: num(r.get(col)) for k2, col in NUT_COLS.items()}
-                item["nut"]["src"] = r.get("식품명")
-                item["nut"]["base"] = r.get("영양성분함량기준량") or r.get("영양성분함량 기준량")
-                item["nut"]["serv"] = r.get("1인(회)분량 참고량")
-                item["nut"]["wt"] = r.get("식품중량")
-            else:
-                unmatched.append(name)
+            item["nut"] = nut_of(name, *nut)
+            if not item["nut"]:
+                unmatched.append(name); continue  # 영양값이 없는 메뉴는 싣지 않는다(지어내지 않음)
         menus.append(item)
-    meta = {"built": __import__("datetime").date.today().isoformat(), "source": "경기도 고등학교 급식 10% 표본·원본 표본(NEIS), 식약처 음식 영양성분 표준데이터(15100070)",
+    meta = {"built": __import__("datetime").date.today().isoformat(), "source": "경기도 고등학교 급식 10% 표본·원본 표본(NEIS), 식약처 전국통합식품영양성분정보(음식)표준데이터(15100070)",
+            "nutBase": max((m["nut"]["date"] for m in menus if m["nut"]), default=None),
             "menus": len(menus), "withNut": sum(1 for m in menus if m["nut"]), "rawMeals": len(raw), "sampleMeals": len(sample)}
     js = "/* 자동 생성 파일: school-meal-gg/build_lunch_bank.py. 손으로 고치지 말 것 */\nwindow.LUNCH_BANK=" + json.dumps(
         {"meta": meta, "allergens": ALLERGENS, "menus": menus}, ensure_ascii=False, separators=(",", ":")) + ";\n"
@@ -206,7 +249,10 @@ def main():
     for n, why in skipped:
         print("뺌:", n, "-", why)
     if unmatched:
-        print("식약처 값 못 찾음(" + str(len(unmatched)) + "):", ", ".join(unmatched))
+        print("식약처 값 없음 → 뺌(" + str(len(unmatched)) + "):", ", ".join(unmatched))
+    for m in menus:
+        if m["nut"] and (m["n"] in ALIAS or m["nut"]["wsrc"] != "자료의 1인분"):
+            n = m["nut"]; print(f"  대응 {m['n']} → {n['src']} [{n['org'][:8]}] {n['w']}g({n['wsrc']}) {n['kcal']} kcal")
 
 
 if __name__ == "__main__":

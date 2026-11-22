@@ -17,7 +17,7 @@ activities/meal-lab.html                    식탁 문제 해결단(급식 데�
 activities/meal-lab-teacher.html            식탁 문제 해결단 교사용 안내
 activities/meal-lab-data.js                 위 활동의 데이터(10% 무작위 표본·정제 미션 원본 표본·전수 집계표). school-meal-gg/build_web_data.py가 만든다
 activities/school-lunch-year.html           급식실의 1년(영양사 타이쿤: 6일 시나리오·계기판·안전 관문·1년 결산·앱 안 교사용 안내)
-activities/lunch-bank.js                    위 활동의 메뉴 은행(109가지, 알레르기·칸·조리법·제철 달·식약처 영양값). school-meal-gg/build_lunch_bank.py가 만든다
+activities/lunch-bank.js                    위 활동의 메뉴 은행(87가지, 알레르기·칸·조리법·제철 달·식약처 영양값). school-meal-gg/build_lunch_bank.py가 만든다
 school-meal-gg/                             경기도 고등학교 504곳 급식 데이터(2024.3~2026.11 점심 24만 끼) 수집·분석 스크립트와 수업용 집계표. 앱의 기준값·통계 출처와 확인 상태는 school-meal-gg/VERIFICATION.md
 teacher.html                                교사 대시보드
 data/oni.json                               NOAA ONI(배포 때 자동 수집, 저장소에는 오프라인용 스냅샷/자리표시)
@@ -107,7 +107,7 @@ GRASPS 활동은 앞으로 만들 때 슬롯별로 따로 생성하지 않고 Ro
   - 식품군: `FG_NAMES`, `FG`(음식 id → 식품군 번호), `groups(tray)`. 판정(`judge()`)에는 넣지 않는 참고 정보
   - 결과 파일 v1.1 필드: `식단.식품군`, `실천`(`포함` false면 내용 없음), `환경제안`, `측정`(`순서`, `건너뜀`, `늦은시작`, `사전`·`사후`의 `형`·`정답`·`고른답`·`효능감`). 예전(v1.0) 파일에는 없으며 대시보드는 없어도 읽음
 - 급식실의 1년
-  - 메뉴 은행: `school-meal-gg/build_lunch_bank.py`의 `MENU`(이름, 칸, 식재료비 단계, 태그). 실행: `cd school-meal-gg && python3 build_lunch_bank.py [식약처 CSV 경로]` → `activities/lunch-bank.js`. 자료에 없거나 알레르기 표시가 없는 메뉴, 식약처 값을 못 찾은 메뉴는 화면에 목록이 나옴. 이름이 달라 못 찾는 메뉴는 `ALIAS`에 대응 이름을 적음
+  - 메뉴 은행: `school-meal-gg/build_lunch_bank.py`의 `MENU`(이름, 칸, 식재료비 단계, 태그). 실행: `cd school-meal-gg && python3 build_lunch_bank.py data/mfds_food_nutrition_dish.csv`(식약처 음식 영양성분 표준데이터). 출처 우선순위 `ORIGINS`, 이름 대응 `ALIAS`, 대응하지 않는 것 `NO_MATCH`, 수업용 1인분 `PORTION` → `activities/lunch-bank.js`. 자료에 없거나 알레르기 표시가 없는 메뉴, 식약처 값을 못 찾은 메뉴는 화면에 목록이 나옴. 이름이 달라 못 찾는 메뉴는 `ALIAS`에 대응 이름을 적음
   - 알레르기: 원본 표시의 50% 이상에 붙은 번호 `a`, 20~50%는 `p`(게임에서 '레시피 확인'), 20 이상 번호는 버림
   - 기준값: `STD`(시행규칙 별표 3 고등학생 남·여), `std()`(남녀공학 가중 평균). 하루 판정 `nutJudge()`, 안전 관문 `safety()`·`hits()`, 손님 바람 `softCheck()`, 종합 `evaluate()`
   - 1년 시나리오: `DAYS`(달, 브리핑·근거, 계기 목표 `theme.test`, 손님 `guests`의 `hard`/`soft`, 예산 `budget`, 위생일 `hygiene`). 손님은 가상 인물이며 체중 감량 인물은 넣지 않음

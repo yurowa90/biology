@@ -9,7 +9,8 @@
     탄수화물:단백질:지방 55~65:7~20:15~30%, 단백질 기준 이상(에너지의 20% 이하), 비타민·무기질은 권장섭취량 원칙·최소 평균필요량
   · 식단 작성 고려사항: 같은 규칙 제5조제2항 1~5호 · 알레르기 표시: 제7조제2항 · 위생: [별표 4]
   · 알레르기 유발물질 19종: 식품 등의 표시·광고에 관한 법률 시행규칙 [별표 2](2024. 12. 30. 개정)
-  · 메뉴 영양값: 식약처 「전국통합식품영양성분정보(음식)표준데이터」(1인분 기준, 학교 배식량과 다를 수 있음)
+  · 메뉴 영양값: 식약처 「전국통합식품영양성분정보(음식)표준데이터」. 중고등학교급식(재료량 기반) 값을 먼저 쓰고, 1인분 중량은
+    자료의 학교급식 1인분 또는 같은 분류 학교급식 1인분의 중앙값(그 밖의 출처일 때). 실제 학교 배식량·레시피와 다를 수 있음
 -->
 <html lang="ko">
 <head>
@@ -114,7 +115,9 @@ const NA_REF = Math.round(2300 / 3); // 참고: 2025 KDRI 나트륨 만성질환
 const SLOTS = [["밥", "밥"], ["국", "국·찌개"], ["주찬", "주찬"], ["부찬", "부찬"], ["김치", "김치"], ["후식", "후식(선택)"]];
 const MAX = { 밥: 1, 국: 1, 주찬: 1, 부찬: 2, 김치: 1, 후식: 1 };
 const MEAT_RE = /고기|소고기|쇠고기|한우|닭|오리|돼지|돈육|갈비|제육|햄|소시지|베이컨|어묵|참치|멸치|황태|북어|오징어|새우|홍합|바지락|조개|연어|고등어|삼치|코다리|사골|육개장|곰탕|삼계|수육|불고기|함박|치킨|진미채|해물|탕수|꿔바로우|부대/;
-const vegOk = d => !MEAT_RE.test(d.n) && !d.a.some(c => [7, 8, 9, 10, 15, 16, 17, 18].includes(c));
+const ANIMAL = [7, 8, 9, 10, 15, 16, 17, 18];
+const vegOk = d => !MEAT_RE.test(d.n) && !d.a.some(c => ANIMAL.includes(c));
+const inSeason = (d, mon) => d.mo.includes(mon) || (d.sm || []).includes(mon);
 
 /* 1년 6일 — 손님은 가상 인물. hard: 지켜야 제출할 수 있음(알레르기·종교·신념), soft: 만족도 */
 const DAYS = [
@@ -141,13 +144,13 @@ const DAYS = [
     guests: [
       { name: "태민", ava: "🥵", who: "1학년", say: "복날엔 삼계탕이죠! 몸보신하고 싶어요.", soft: { type: "tag", tag: "보양", label: "보양 메뉴 1개 이상" } },
       { name: "라일라", ava: "🧑‍🎓", who: "2학년 유학생", say: "종교적인 이유로 돼지고기를 먹지 않아요.", hard: { type: "nopork" } },
-      { name: "수아", ava: "🫠", who: "3학년", say: "더워서 입맛이 없어요. 시원한 제철 과일이 있으면 좋겠어요.", soft: { type: "season", slot: "후식", label: "7월 제철 후식" } }] },
+      { name: "수아", ava: "🫠", who: "3학년", say: "더워서 입맛이 없어요. 시원한 제철 과일이 있으면 좋겠어요.", soft: { type: "season", slot: "후식", fruit: true, label: "7월 제철 과일 후식" } }] },
   { mon: 10, when: "10월 셋째~넷째 주", title: "세계 식량의 날 · 독도의 날 주간", ico: "🌏", budget: 9,
     brief: "10월 16일은 세계 식량의 날(국제연합식량농업기구, FAO 창설일), 10월 25일은 독도의 날이에요. 굶주림과 음식물 쓰레기, 그리고 우리 바다를 함께 생각하는 주간이에요. 독도 주변 동해는 오징어 같은 수산물이 많이 나는 바다예요.",
     learn: "계기교육 식단은 메뉴 이름만 바꾸는 게 아니라, 왜 그 음식인지 학생에게 이야기를 건넬 수 있어야 해요.",
     theme: { label: "독도·동해 계기 메뉴", test: d => d.t.includes("동해") || d.t.includes("계기:독도") },
     guests: [
-      { name: "예준", ava: "🌱", who: "2학년 환경동아리", say: "포장 쓰레기가 나오는 후식 말고, 지금 제철인 과일이면 좋겠어요.", soft: { type: "season", slot: "후식", fruit: true, label: "10월 제철 과일 후식" } },
+      { name: "예준", ava: "🌱", who: "2학년 환경동아리", say: "멀리서 온 재료 말고, 지금 제철인 재료로 만든 메뉴면 좋겠어요.", soft: { type: "season", label: "10월 제철 재료 메뉴(고구마 등)" } },
       { name: "민서", ava: "🙂", who: "1학년", say: "오징어 알레르기가 있어요. 독도 메뉴가 나오면 저는 어떡하죠?", hard: { type: "allergy", codes: [17] } },
       { name: "다온", ava: "🧭", who: "3학년", say: "세계 여러 나라 음식도 궁금해요. 세계시민교육 주간이잖아요.", soft: { type: "tag", tag: "세계", label: "세계 음식 1개 이상" } }] },
   { mon: 11, when: "11월 둘째 주", title: "수능 응원 주간", ico: "📚", budget: 10,
@@ -205,7 +208,7 @@ function hits(g, ds) {
   const h = g.hard; if (!h) return { hit: [], maybe: [] };
   if (h.type === "allergy") return { hit: ds.filter(d => d.a.some(c => h.codes.includes(c))), maybe: ds.filter(d => !d.a.some(c => h.codes.includes(c)) && d.p.some(c => h.codes.includes(c))) };
   if (h.type === "nopork") return { hit: ds.filter(d => d.a.includes(10) || /돼지|돈육|제육|수육|햄|소시지|베이컨|탕수/.test(d.n)), maybe: ds.filter(d => !d.a.includes(10) && d.p.includes(10)) };
-  if (h.type === "veg") return { hit: ds.filter(d => !vegOk(d)), maybe: [] };
+  if (h.type === "veg") return { hit: ds.filter(d => !vegOk(d)), maybe: ds.filter(d => vegOk(d) && d.p.some(c => ANIMAL.includes(c))) };
   return { hit: [], maybe: [] };
 }
 function hardLabel(g) { const h = g.hard; if (!h) return "";
@@ -225,7 +228,7 @@ function softCheck(g, ds, nj, day) {
   const s = g.soft, has = f => ds.some(f), cnt = f => ds.filter(f).length;
   if (s.type === "spicyMax") return { ok: cnt(d => d.t.includes("매움")) <= s.n, why: `매운 메뉴 ${cnt(d => d.t.includes("매움"))}개` };
   if (s.type === "tag") { const n = cnt(d => d.t.includes(s.tag)); return { ok: n >= (s.n || 1), why: `해당 메뉴 ${n}개` }; }
-  if (s.type === "season") { const f = d => d.s === s.slot && d.mo.includes(day.mon) && (!s.fruit || d.t.includes("채식")); return { ok: has(f), why: has(f) ? ds.filter(f).map(d => d.n).join(", ") : `${day.mon}월에 자주 나오는 ${s.fruit ? "과일" : "후식"} 없음` }; }
+  if (s.type === "season") { const f = d => (!s.slot || d.s === s.slot) && inSeason(d, day.mon) && (!s.fruit || d.t.includes("과일")); return { ok: has(f), why: has(f) ? ds.filter(f).map(d => d.n).join(", ") : `${day.mon}월 제철·자주 나오는 ${s.fruit ? "과일 후식" : "메뉴"} 없음` }; }
   if (s.type === "digest") { const fr = cnt(d => d.m === "튀김"), sp = cnt(d => d.t.includes("매움")), dg = cnt(d => d.t.includes("소화"));
     return { ok: !fr && !sp && dg >= 1, why: `튀김 ${fr} · 매움 ${sp} · 소화 잘 되는 메뉴 ${dg}` }; }
   if (s.type === "noName") { const r = new RegExp(s.re), bad = ds.filter(d => r.test(d.n)); return { ok: !bad.length, why: bad.length ? bad.map(d => d.n).join(", ") + " 있음" : "없음" }; }
@@ -301,11 +304,12 @@ function menuCard(i, day, st, guests) {
   const d = M[i], on = (st.plate[d.s] || []).includes(i), danger = new Set();
   for (const g of guests) { if (g.hard && g.hard.type === "allergy") g.hard.codes.forEach(c => danger.add(c)); }
   const al = d.a.map(c => `<span class="al${danger.has(c) ? " hit" : ""}" title="${esc(AL[c - 1])}">${c}</span>`).join("") + d.p.map(c => `<span class="al maybe" title="일부 학교 표시: ${esc(AL[c - 1])}">${c}?</span>`).join("");
-  const fresh = d.s === "후식" ? d.t.includes("채식") : d.t.includes("채식") && d.s !== "김치";
-  const tags = [d.mo.includes(day.mon) ? `<span class="tg season" title="경기도 표본에서 ${day.mon}월에 평소의 1.8배 이상 나옴">${day.mon}월${fresh ? " 제철" : "에 자주"}</span>` : "", day.theme.test(d) ? `<span class="tg theme">계기</span>` : "",
+  const sea = (d.sm || []).includes(day.mon) ? `<span class="tg season" title="제철 재료">${day.mon}월 제철</span>` : d.mo.includes(day.mon) ? `<span class="tg season" title="경기도 표본에서 ${day.mon}월에 평소의 1.8배 이상 나옴">${day.mon}월에 자주</span>` : "";
+  const tags = [sea, day.theme.test(d) ? `<span class="tg theme">계기</span>` : "",
     ...d.t.filter(t => !t.startsWith("계기")).map(t => `<span class="tg">${esc(t)}</span>`), `<span class="tg">${esc(d.m)}</span>`].join("");
-  const n = d.nut ? `${fmt(d.nut.kcal)} kcal · 단백질 ${fmt(d.nut.pro, 1)} g · 나트륨 ${fmt(d.nut.na)} mg` : "영양값 준비 중";
-  return `<button class="menu" aria-pressed="${on}" data-act="pick" data-i="${i}"><span class="n">${esc(d.n)}</span><span class="d">${n}</span>
+  const n = d.nut ? `${fmt(d.nut.kcal)} kcal · 단백질 ${fmt(d.nut.pro, 1)} g · 칼슘 ${fmt(d.nut.ca)} mg · 나트륨 ${fmt(d.nut.na)} mg` : "영양값 준비 중";
+  const src = d.nut ? `식약처 값: ${d.nut.src}(${d.nut.org.replace(/\(.*$/, "")}) · 1인분 ${fmt(d.nut.w, 1)} g${d.nut.wsrc === "자료의 1인분" ? "" : ` · ${d.nut.wsrc}`}` : "";
+  return `<button class="menu" aria-pressed="${on}" data-act="pick" data-i="${i}" title="${esc(src)}"><span class="n">${esc(d.n)}</span><span class="d">${n}</span>
     <span class="chips" aria-label="알레르기 번호">${al || `<span class="su-tiny su-muted">알레르기 표시 없음</span>`}</span><span class="chips">${tags}</span>
     <span class="d">경기도 표본 ${fmt(d.f)}끼 · 비용 <b aria-label="식재료비 ${d.c}칸">${"₩".repeat(d.c)}</b></span></button>`;
 }
@@ -325,7 +329,7 @@ function dayView() {
     <div class="su-stack">
       <div class="su-row slots" role="tablist" aria-label="칸 고르기">${SLOTS.map(([k, l]) => `<button class="su-chip" role="tab" aria-selected="${!q && slot === k}" aria-pressed="${!q && slot === k}" data-act="slot" data-k="${k}">${l}<span class="su-tiny"> ${(st.plate[k] || []).length}/${MAX[k]}</span></button>`).join("")}</div>
       <div class="su-field"><label for="inQ">메뉴 이름으로 찾기</label><input type="text" id="inQ" value="${esc(st.q || "")}" placeholder="예: 김치, 오징어, 팥" autocomplete="off"></div>
-      <p class="su-tiny su-muted" style="margin:0">숫자는 알레르기 번호(1 난류 · 2 우유 · 4 땅콩 · 5 대두 · 6 밀 · 9 새우 · 10 돼지고기 · 17 오징어 …). 점선 '?'는 일부 학교에서만 표시한 번호예요. 영양값은 식약처 1인분 기준이라 학교 배식량과 다를 수 있어요.</p>
+      <p class="su-tiny su-muted" style="margin:0">숫자는 알레르기 번호(1 난류 · 2 우유 · 4 땅콩 · 5 대두 · 6 밀 · 9 새우 · 10 돼지고기 · 17 오징어 …). 점선 '?'는 일부 학교에서만 표시한 번호예요. 영양값은 식약처 음식 영양성분(학교급식 레시피 값 우선)의 1인분이라 우리 학교 배식량과 다를 수 있어요. 카드에 마우스를 올리면 출처가 보여요.</p>
       <div class="shelf">${list.map(k => menuCard(k, day, st, day.guests)).join("") || `<p class="su-muted">찾는 메뉴가 없어요.</p>`}</div>
     </div>
     <aside class="su-stack su-sticky" aria-label="오늘의 식판">
@@ -361,7 +365,7 @@ function resultView(i) {
   <h2 class="su-h2">손님 반응</h2><div class="guests">${day.guests.map(g => guestCard(g, ev)).join("")}</div>
   ${ev.nj ? `<details class="su-card" open><summary><b>영양관리기준 하루 판정</b> <span class="su-small su-muted">(실제 평가는 계절별 연속 5일 평균)</span></summary><div class="su-scroll"><table class="su-table nut"><thead><tr><th>항목</th><th>오늘</th><th>기준</th><th>판정</th></tr></thead><tbody>
     ${ev.nj.rows.map(r => `<tr><td>${r.l}</td><td>${esc(r.v)}</td><td class="su-small su-muted">${esc(r.note)}</td><td><span class="su-tag ${r.ok ? (r.good === false ? "warn" : "good") : "bad"}">${r.ok ? (r.good === false ? "최소 충족" : "충족") : "미달"}</span></td></tr>`).join("")}</tbody></table></div>
-    <p class="su-tiny su-muted">식약처 음식 영양성분(1인분 기준)을 더한 값이에요. 실제 학교는 배식량과 레시피에 따라 달라요.</p></details>` : ""}
+    <p class="su-tiny su-muted">식약처 음식 영양성분(학교급식 레시피 값 우선, 1인분)을 더한 값이에요. 실제 학교는 배식량과 레시피에 따라 달라요. 우유는 이번 메뉴 은행에 없어서 칼슘을 채우려면 반찬을 잘 골라야 해요.</p></details>` : ""}
   <div class="su-card su-stack"><label class="su-label" for="inWhy">오늘 무엇을 포기하거나 양보했나요? 왜 그렇게 정했나요?</label>
     <textarea class="su-input" id="inWhy" data-in="why" rows="3" placeholder="예: 지호를 위해 매운 제육볶음 대신 두부조림을 넣었더니 육상부 준우의 단백질이 모자랐다">${esc(st.why || "")}</textarea>
     <p class="su-tiny su-muted" style="margin:0" id="whyCnt">${(st.why || "").trim().length}/10자 이상</p>
@@ -451,9 +455,10 @@ function teacher() {
     <li>같은 규칙 제5조제2항(식단 작성 시 고려사항 1~5호), 제7조제2항(알레르기 유발식품 표시·공지), [별표 4] 위생·안전관리기준</li>
     <li>식품 등의 표시·광고에 관한 법률 시행규칙 [별표 2](2024. 12. 30. 개정): 알레르기 유발물질 19종</li>
     <li>메뉴 이름·알레르기 번호: 경기도 고등학교 급식(NEIS) 10% 표본과 원본 표본 1,260끼. 번호는 그 메뉴에 붙은 표시의 50% 이상에 나온 번호, '?'는 20~50%</li>
-    <li>메뉴 영양값: 식약처 「전국통합식품영양성분정보(음식)표준데이터」(공공데이터포털 15100070), 1인분 기준</li></ul></div>
+    <li>메뉴 영양값: 식약처 「전국통합식품영양성분정보(음식)표준데이터」(공공데이터포털 15100070). 같은 이름이 여러 출처에 있으면 중고등학교급식 → 초등학교급식 → 산업체급식 → 가정식 → 외식 순으로 고름(프랜차이즈 업체 제공 값은 쓰지 않음). 1인분 중량은 학교·단체급식 출처면 자료의 값, 그 밖의 출처면 같은 분류 중·초등학교급식 메뉴의 중앙값. 케이크·찹쌀떡은 한 조각 50 g으로 수업용 가정</li></ul></div>
   <div class="su-card su-stack su-measure"><h2 class="su-h3">한계와 주의</h2><ul class="su-small">
-    <li>영양값은 1인분 표준값이라 학교 배식량·레시피와 다릅니다. 판정은 학습용이며 실제 급식 평가가 아닙니다.</li>
+    <li>영양값은 표준 레시피의 1인분 값이라 학교 배식량·레시피와 다릅니다. 판정은 학습용이며 실제 급식 평가가 아닙니다.</li>
+    <li>우유·요구르트·과일(원재료)은 '음식' 자료에 없어 메뉴 은행에서 뺐습니다. 그래서 칼슘을 채우기가 어렵습니다(멸치·두부·쌀국수 등으로 채워야 함). 가공식품·원재료성식품 표준데이터를 합치면 넣을 수 있습니다.</li>
     <li>알레르기 번호는 학교마다 레시피에 따라 달라집니다. 실제로는 그 학교 레시피와 식재료로 확인해야 합니다.</li>
     <li>식재료비 단계(₩~₩₩₩)는 수업용 가정입니다. 실제 단가 자료가 아닙니다.</li>
     <li>손님은 모두 가상 인물입니다. 체중 감량을 요구하는 인물은 일부러 넣지 않았습니다(체형 낙인 예방).</li>
