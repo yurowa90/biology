@@ -109,8 +109,8 @@ GRASPS 활동은 앞으로 만들 때 슬롯별로 따로 생성하지 않고 Ro
 - 급식실의 1년
   - 메뉴 은행: `school-meal-gg/build_lunch_bank.py`의 `MENU`(이름, 칸, 식재료비 단계, 태그). 실행: `cd school-meal-gg && python3 build_lunch_bank.py data/mfds_food_nutrition_dish.csv`(식약처 음식 영양성분 표준데이터). 출처 우선순위 `ORIGINS`, 이름 대응 `ALIAS`, 대응하지 않는 것 `NO_MATCH`, 수업용 1인분 `PORTION` → `activities/lunch-bank.js`. 자료에 없거나 알레르기 표시가 없는 메뉴, 식약처 값을 못 찾은 메뉴는 화면에 목록이 나옴. 이름이 달라 못 찾는 메뉴는 `ALIAS`에 대응 이름을 적음
   - 알레르기: 원본 표시의 50% 이상에 붙은 번호 `a`, 20~50%는 `p`(게임에서 '레시피 확인'), 20 이상 번호는 버림
-  - 기준값: `STD`(시행규칙 별표 3 고등학생 남·여), `std()`(남녀공학 가중 평균). 하루 판정 `nutJudge()`, 안전 관문 `safety()`·`hits()`, 손님 바람 `softCheck()`, 종합 `evaluate()`
-  - 1년 시나리오: `DAYS`(달, 브리핑·근거, 계기 목표 `theme.test`, 손님 `guests`의 `hard`/`soft`, 예산 `budget`, 위생일 `hygiene`). 손님은 가상 인물이며 체중 감량 인물은 넣지 않음
+  - 기준값: `STD`(시행규칙 별표 3 고등학생 남·여), `std()`(남녀공학 가중 평균). 하루 판정 `nutJudge()`, 안전 관문 `safety()`·`hits()`, 학생 바람 `softCheck()`, 종합 `evaluate()`
+  - 1년 시나리오: `DAYS`(달, 브리핑·근거, 계기 목표 `theme.test`, 학생 `guests`의 `hard`/`soft`, 예산 `budget`, 위생일 `hygiene`). 학생은 가상 인물이며 체중 감량 인물은 넣지 않음
   - 고민 지도: `CONCERNS`(12칸), 학생 기록 `records()`. 결과 파일: `download()`, `activityId: "school-lunch-year"`(교사 대시보드 집계는 아직 없음)
   - 저장: localStorage `lunch_year_v1`
 - 시뮬레이터 파라미터 범위: `S_MAX`, 슬라이더 `min/max`, `computeApparent()`(억제 모델)
