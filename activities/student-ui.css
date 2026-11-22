@@ -84,6 +84,8 @@ body{background:var(--background); color:var(--foreground); font-family:var(--fo
 a{color:var(--primary-ink)}
 button,input,select,textarea{font:inherit; color:inherit}
 :focus-visible{outline:3px solid var(--ring); outline-offset:2px; border-radius:6px}
+/* 화면을 바꿀 때 본문(tabindex="-1")으로 옮기는 초점에는 링을 그리지 않는다(화면 읽기 프로그램용) */
+main[tabindex="-1"]:focus{outline:none}
 h1,h2,h3,h4{font-family:var(--font-display); font-weight:700; line-height:1.3; letter-spacing:-.01em; margin:0}
 .hidden{display:none !important}
 .mono,.num{font-variant-numeric:tabular-nums}
@@ -99,6 +101,8 @@ h1,h2,h3,h4{font-family:var(--font-display); font-weight:700; line-height:1.3; l
 .su-top .su-right{margin-left:auto; display:flex; gap:8px; align-items:center; flex-wrap:wrap}
 .su-link{font-size:13.5px; font-weight:700; color:var(--muted-foreground); text-decoration:none; padding:8px 13px; border-radius:999px; border:1px solid var(--border); background:var(--card); transition:border-color .15s, color .15s}
 .su-link:hover{border-color:var(--primary); color:var(--primary-ink)}
+/* 휴대폰: 머리 띠가 링크로 여러 줄이 되므로 고정하지 않는다 */
+@media(max-width:640px){ .su-top{position:static} }
 
 /* 진행 막대: 칸 + 이름 */
 .su-progress{display:flex; gap:6px; list-style:none; margin:0; padding:0; flex:1 1 380px; min-width:240px}

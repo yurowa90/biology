@@ -1,0 +1,523 @@
+<!doctype html>
+<!--
+  급식실의 1년 — 영양사가 되어 학교 점심을 짜는 활동(통합과학2·과학탐구실험2 영양·식생활 탐구와 이어짐)
+  단일 파일 정적 페이지. 공용 디자인 student-ui.css, 메뉴 은행 lunch-bank.js(자동 생성: school-meal-gg/build_lunch_bank.py) 외 라이브러리 없음.
+  진행 상황은 이 브라우저(localStorage "lunch_year_v1")에만 저장한다. 손님은 모두 가상 인물이다.
+
+  근거(원문 확인: school-meal-gg/VERIFICATION.md)
+  · 영양관리기준: 학교급식법 시행규칙 [별표 3](2021. 1. 29. 개정) — 고등학생 남·여 한 끼 기준, 연속 5일 평균 평가, 에너지 ±10%,
+    탄수화물:단백질:지방 55~65:7~20:15~30%, 단백질 기준 이상(에너지의 20% 이하), 비타민·무기질은 권장섭취량 원칙·최소 평균필요량
+  · 식단 작성 고려사항: 같은 규칙 제5조제2항 1~5호 · 알레르기 표시: 제7조제2항 · 위생: [별표 4]
+  · 알레르기 유발물질 19종: 식품 등의 표시·광고에 관한 법률 시행규칙 [별표 2](2024. 12. 30. 개정)
+  · 메뉴 영양값: 식약처 「전국통합식품영양성분정보(음식)표준데이터」(1인분 기준, 학교 배식량과 다를 수 있음)
+-->
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>급식실의 1년 · 영양사 타이쿤</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23FFF1C7'/%3E%3Ctext x='16' y='23' font-size='18' text-anchor='middle'%3E%F0%9F%8D%B1%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="student-ui.css">
+<style>
+  /* 식판: 위 세 칸(주찬·부찬·김치), 아래 두 칸(밥·국). 이 활동의 상징이라 히어로에도 쓴다 */
+  .tray5{display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:10px; padding:14px; border-radius:26px;
+    background:linear-gradient(160deg, color-mix(in srgb, var(--muted) 70%, var(--card)), var(--muted)); border:1px solid var(--border)}
+  .tray5 .cell{grid-column:span 2; min-height:78px; border-radius:16px; background:var(--card); border:1px solid var(--border);
+    box-shadow:inset 0 2px 6px color-mix(in srgb, var(--foreground) 8%, transparent); padding:9px 10px; display:flex; flex-direction:column; gap:4px; font-size:14px; line-height:1.35}
+  .tray5 .cell.big{grid-column:span 3; min-height:96px}
+  .tray5 .cell .lb{font-size:12px; font-weight:800; color:var(--muted-foreground)}
+  .tray5 .cell.empty{border-style:dashed; background:color-mix(in srgb, var(--card) 70%, transparent); box-shadow:none}
+  .tray5 .cell button{all:unset; cursor:pointer; font-weight:800; color:var(--foreground); border-radius:8px}
+  .tray5 .cell button:focus-visible{outline:3px solid var(--ring); outline-offset:2px}
+  .tray5 .cell button::after{content:" ✕"; font-size:.8em; color:var(--faint)}
+  .dessert{display:flex; align-items:center; gap:10px; margin-top:10px; font-size:14px}
+  .dessert .dot{width:56px; height:56px; border-radius:50%; flex:none; display:grid; place-items:center; background:var(--card); border:1px dashed var(--border); font-size:12px; color:var(--muted-foreground); text-align:center}
+  .dessert .dot.on{border-style:solid; background:var(--lemon); color:var(--lemon-d); font-weight:800}
+  .hero-tray{margin:0; display:grid; gap:12px; justify-items:center}
+  .hero-tray .tray5{width:min(100%,380px); transform:rotate(-1.5deg); box-shadow:var(--shadow-lg)}
+  .hero-tray .cell{min-height:64px; font-weight:800}
+  .hero-tray figcaption{font-size:13.5px; font-weight:700; color:var(--muted-foreground)}
+  @media(max-width:820px){ .hero-tray .tray5{transform:none} }
+  /* 1년 달력 */
+  .cal{display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr)); gap:10px; list-style:none; margin:0; padding:0}
+  .cal li{border:1px solid var(--border); border-radius:16px; padding:12px 14px; background:var(--card); font-size:14px; line-height:1.45}
+  .cal li b{display:block; font-family:var(--font-display); font-size:16px; margin:2px 0}
+  .cal li .mo{font-size:12.5px; font-weight:800; color:var(--primary-ink)}
+  .cal li.done{background:var(--secondary)} .cal li.now{border-color:var(--primary); box-shadow:var(--shadow-sm)}
+  /* 손님 */
+  .guests{display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr)); gap:12px}
+  .guest{border:1px solid var(--border); border-radius:18px; background:var(--card); padding:14px; display:flex; flex-direction:column; gap:10px}
+  .guest .who{display:flex; gap:10px; align-items:center} .guest .ava{width:44px; height:44px; border-radius:14px; display:grid; place-items:center; font-size:24px; background:var(--muted); flex:none}
+  .guest .nm{font-weight:800} .guest .meta{font-size:13px; color:var(--muted-foreground)}
+  .guest .req{font-size:13px}
+  /* 메뉴 칸 */
+  .slots{display:flex; flex-wrap:wrap; gap:6px}
+  .shelf{display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:10px}
+  .menu{display:flex; flex-direction:column; gap:5px; text-align:left; padding:11px 12px; border-radius:14px; border:1px solid var(--border); background:var(--card); cursor:pointer; font-size:13.5px; line-height:1.4; color:var(--foreground)}
+  .menu:hover{border-color:var(--primary)} .menu[aria-pressed="true"]{border-color:var(--primary); background:var(--secondary)}
+  .menu .n{font-weight:800; font-size:15px} .menu .d{color:var(--muted-foreground); font-size:12.5px}
+  .chips{display:flex; flex-wrap:wrap; gap:4px}
+  .al{display:inline-flex; align-items:center; justify-content:center; min-width:22px; height:22px; padding:0 6px; border-radius:7px; font-size:11.5px; font-weight:800; background:var(--warn-bg); color:var(--warn)}
+  .al.maybe{background:transparent; border:1px dashed var(--warn); color:var(--warn)}
+  .al.hit{background:var(--bad-bg); color:var(--bad)}
+  .tg{font-size:11.5px; font-weight:800; padding:2px 8px; border-radius:999px; background:var(--muted); color:var(--muted-foreground)}
+  .tg.season{background:var(--good-bg); color:var(--good)} .tg.theme{background:var(--lav); color:var(--lav-d)}
+  /* 계기판 */
+  .gauges{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px}
+  .gauge{border:1px solid var(--border); border-radius:14px; padding:10px 12px; background:var(--card); font-size:13.5px}
+  .gauge .h{display:flex; justify-content:space-between; align-items:baseline; font-weight:800; font-size:14px}
+  .gauge .st{letter-spacing:2px; color:var(--warning)} .gauge .v{color:var(--muted-foreground); margin-top:2px}
+  .gauge.block{border-color:var(--danger); background:var(--bad-bg)}
+  .stars{color:var(--warning); letter-spacing:2px; font-weight:800}
+  .nut td,.nut th{font-variant-numeric:tabular-nums}
+  .task{display:flex; gap:8px; align-items:flex-start; font-size:14px; padding:8px 10px; border-radius:12px; background:var(--bad-bg)}
+  .task.ok{background:var(--good-bg)} .task.warn{background:var(--warn-bg)}
+  .task input{margin-top:3px; width:18px; height:18px; flex:none}
+  .map{display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr)); gap:10px}
+  .map div{border:1px solid var(--border); border-radius:14px; padding:11px 13px; font-size:13.5px; line-height:1.5; background:var(--card)}
+  .map b{display:block; font-size:14.5px}
+  .report{white-space:pre-wrap; background:var(--muted); border-radius:14px; padding:14px 16px; font-size:14px; line-height:1.7; max-height:420px; overflow:auto}
+  .who-in{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px}
+  .menu,.nut,.gauge{font-variant-numeric:tabular-nums}
+  .map .rec{display:block; margin-top:6px; font-weight:800; color:var(--primary-ink)}
+  /* 좁은 화면: 식판·계기판을 메뉴 목록보다 먼저 */
+  @media(max-width:860px){ .plan aside{order:-1} .shelf{grid-template-columns:repeat(2,minmax(0,1fr))} }
+</style>
+</head>
+<body>
+<header class="su-top"><div class="su-in">
+  <button class="su-logo" data-act="home" aria-label="급식실의 1년 처음 화면"><span class="ico" aria-hidden="true">🍱</span><span>급식실의 1년<small>영양사가 되어 학교 점심 짜기</small></span></button>
+  <ol class="su-progress" id="prog" aria-label="1년 진행"></ol>
+  <div class="su-right"><a class="su-link" href="nutrition-clinic.html">식탁 상담소</a><a class="su-link" href="meal-lab.html">급식 데이터 탐구</a><button class="su-link" data-act="teacher">교사용 안내</button><a class="su-link" href="../index.html">교과서 홈</a></div>
+</div></header>
+<main class="su-wrap" id="app" tabindex="-1"></main>
+<div class="su-sr" aria-live="polite" id="live"></div>
+<script src="lunch-bank.js"></script>
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmt = (v, d = 0) => v == null || isNaN(v) ? "–" : Number(v).toLocaleString("ko-KR", { maximumFractionDigits: d, minimumFractionDigits: 0 });
+const say = t => { const l = $("#live"); l.textContent = ""; setTimeout(() => l.textContent = t, 30); };
+const BANK = window.LUNCH_BANK || { menus: [], allergens: [], meta: {} };
+const M = BANK.menus, AL = BANK.allergens, HAS_NUT = M.some(m => m.nut);
+const byName = Object.fromEntries(M.map((m, i) => [m.n, i]));
+
+/* 학교급식법 시행규칙 [별표 3] 고등학생 한 끼 기준. 비타민·무기질은 [평균필요량, 권장섭취량] */
+const STD = {
+  M: { kcal: 900, pro: 21.7, va: [207, 284], b1: [0.37, 0.44], b2: [0.47, 0.57], vc: [26.7, 33.4], ca: [250, 300], fe: [3.7, 4.7] },
+  F: { kcal: 670, pro: 18.4, va: [150, 217], b1: [0.30, 0.37], b2: [0.34, 0.40], vc: [26.7, 33.4], ca: [234, 267], fe: [3.7, 4.7] } };
+const NUTS = [["va", "비타민A", "㎍RAE"], ["b1", "티아민", "mg"], ["b2", "리보플라빈", "mg"], ["vc", "비타민C", "mg"], ["ca", "칼슘", "mg"], ["fe", "철", "mg"]];
+const NA_REF = Math.round(2300 / 3); // 참고: 2025 KDRI 나트륨 만성질환위험감소섭취량 하루 2,300mg의 3분의 1(별표 3에는 나트륨 기준 없음)
+const SLOTS = [["밥", "밥"], ["국", "국·찌개"], ["주찬", "주찬"], ["부찬", "부찬"], ["김치", "김치"], ["후식", "후식(선택)"]];
+const MAX = { 밥: 1, 국: 1, 주찬: 1, 부찬: 2, 김치: 1, 후식: 1 };
+const MEAT_RE = /고기|소고기|쇠고기|한우|닭|오리|돼지|돈육|갈비|제육|햄|소시지|베이컨|어묵|참치|멸치|황태|북어|오징어|새우|홍합|바지락|조개|연어|고등어|삼치|코다리|사골|육개장|곰탕|삼계|수육|불고기|함박|치킨|진미채|해물|탕수|꿔바로우|부대/;
+const vegOk = d => !MEAT_RE.test(d.n) && !d.a.some(c => [7, 8, 9, 10, 15, 16, 17, 18].includes(c));
+
+/* 1년 6일 — 손님은 가상 인물. hard: 지켜야 제출할 수 있음(알레르기·종교·신념), soft: 만족도 */
+const DAYS = [
+  { mon: 3, when: "3월 첫째 주", title: "새 학기 첫 급식", ico: "🌱", budget: 9,
+    brief: "신입생 알레르기 조사서가 들어왔어요. 학교는 알레르기 유발 식재료를 표시한 월간 식단표를 가정통신문과 학교 홈페이지로 알리고, 주간 식단표를 식당과 교실에 게시해야 해요(학교급식법 시행규칙 제7조제2항).",
+    learn: "표시 대상 알레르기 유발물질은 19종이에요. 김치와 국에는 새우젓(9번)이, 간장 요리에는 대두(5번)와 밀(6번)이 숨어 있는 경우가 많아요.",
+    theme: { label: "봄나물(냉이·달래·봄동·시금치 등)", test: d => /냉이|달래|봄동|쑥|두릅|미나리|참나물|시금치/.test(d.n) },
+    guests: [
+      { name: "서윤", ava: "🧑‍🎓", who: "1학년", say: "우유 알레르기가 있어요. 우유가 들어간 음식은 먹으면 안 돼요.", hard: { type: "allergy", codes: [2] } },
+      { name: "도현", ava: "🧒", who: "1학년", say: "새우를 먹으면 두드러기가 나요. 김치는 좋아하는데…", hard: { type: "allergy", codes: [9] } },
+      { name: "지호", ava: "🙂", who: "1학년", say: "아직 매운 걸 잘 못 먹어요. 첫날부터 매운 건 무서워요.", soft: { type: "spicyMax", n: 0, label: "매운 메뉴 없이" } }] },
+  { mon: 6, when: "6월 셋째 주", title: "장마철 식중독 주의", ico: "☔", budget: 9, hygiene: true,
+    brief: "덥고 습한 장마철이에요. 학교급식 위생·안전관리기준(시행규칙 별표 4)에 따라 날로 먹는 채소·과일은 충분히 세척·소독하고, 가열 조리는 중심부 75℃(조개류 85℃) 이상에서 1분 이상, 조리가 끝난 음식은 2시간 안에 배식을 마쳐야 해요.",
+    learn: "날로 먹는 메뉴와 조개류 메뉴가 많을수록 조리실이 지켜야 할 위생 작업이 늘어요. 금지된 건 아니지만, 위험과 일손을 함께 따져야 해요.",
+    theme: { label: "익혀서 만든 채소 반찬(볶음·조림·전·구이)", test: d => d.s === "부찬" && ["볶음", "조림", "전", "구이"].includes(d.m) },
+    guests: [
+      { name: "준우", ava: "🏃", who: "2학년 육상부", say: "오후에 훈련이 있어서 든든하게 먹고 싶어요.", soft: { type: "energy", label: "에너지 기준 이상, 단백질 기준의 1.3배 이상" } },
+      { name: "하린", ava: "🧑", who: "2학년", say: "땅콩 알레르기가 있어요. 견과류 반찬이 나오면 꼭 확인해 주세요.", hard: { type: "allergy", codes: [4] } },
+      { name: "은채", ava: "😐", who: "3학년", say: "나물은 솔직히 잘 안 먹게 돼요. 채소도 맛있게 먹고 싶긴 한데…", soft: { type: "cookedVeg", label: "볶음·조림·전·구이로 만든 채소 반찬" } }] },
+  { mon: 7, when: "7월 중순", title: "초복 무렵", ico: "🔥", budget: 11,
+    brief: "초복은 삼복 더위가 시작되는 날이에요. 예부터 더위를 이기려고 삼계탕 같은 보양식을 먹었어요. 학교급식은 전통 식문화의 계승·발전을 고려해야 하지만(시행규칙 제5조제2항 1호), 예산과 모든 학생을 함께 생각해야 해요.",
+    learn: "특별한 날은 예산을 조금 더 쓰는 대신 다른 날에 아끼는 식으로 한 달 단위로 맞추는 경우가 많아요.",
+    theme: { label: "초복 보양식", test: d => d.t.includes("보양") },
+    guests: [
+      { name: "태민", ava: "🥵", who: "1학년", say: "복날엔 삼계탕이죠! 몸보신하고 싶어요.", soft: { type: "tag", tag: "보양", label: "보양 메뉴 1개 이상" } },
+      { name: "라일라", ava: "🧑‍🎓", who: "2학년 유학생", say: "종교적인 이유로 돼지고기를 먹지 않아요.", hard: { type: "nopork" } },
+      { name: "수아", ava: "🫠", who: "3학년", say: "더워서 입맛이 없어요. 시원한 제철 과일이 있으면 좋겠어요.", soft: { type: "season", slot: "후식", label: "7월 제철 후식" } }] },
+  { mon: 10, when: "10월 셋째~넷째 주", title: "세계 식량의 날 · 독도의 날 주간", ico: "🌏", budget: 9,
+    brief: "10월 16일은 세계 식량의 날(국제연합식량농업기구, FAO 창설일), 10월 25일은 독도의 날이에요. 굶주림과 음식물 쓰레기, 그리고 우리 바다를 함께 생각하는 주간이에요. 독도 주변 동해는 오징어 같은 수산물이 많이 나는 바다예요.",
+    learn: "계기교육 식단은 메뉴 이름만 바꾸는 게 아니라, 왜 그 음식인지 학생에게 이야기를 건넬 수 있어야 해요.",
+    theme: { label: "독도·동해 계기 메뉴", test: d => d.t.includes("동해") || d.t.includes("계기:독도") },
+    guests: [
+      { name: "예준", ava: "🌱", who: "2학년 환경동아리", say: "포장 쓰레기가 나오는 후식 말고, 지금 제철인 과일이면 좋겠어요.", soft: { type: "season", slot: "후식", fruit: true, label: "10월 제철 과일 후식" } },
+      { name: "민서", ava: "🙂", who: "1학년", say: "오징어 알레르기가 있어요. 독도 메뉴가 나오면 저는 어떡하죠?", hard: { type: "allergy", codes: [17] } },
+      { name: "다온", ava: "🧭", who: "3학년", say: "세계 여러 나라 음식도 궁금해요. 세계시민교육 주간이잖아요.", soft: { type: "tag", tag: "세계", label: "세계 음식 1개 이상" } }] },
+  { mon: 11, when: "11월 둘째 주", title: "수능 응원 주간", ico: "📚", budget: 10,
+    brief: "고3 수험생을 응원하는 주간이에요. 시험을 앞두고는 익숙하고 소화가 잘 되는 음식이 좋아요. 응원 후식을 내더라도 단순당을 과다하게 쓰지 않아야 해요(시행규칙 제5조제2항 3호).",
+    learn: "학생의 바람과 과학적 근거가 다를 때도 있어요. 근거는 지키되, 마음은 헤아리는 것이 영양사의 일이에요.",
+    theme: { label: "수능 응원 후식", test: d => d.t.includes("계기:수능") },
+    guests: [
+      { name: "서진", ava: "📖", who: "3학년 수험생", say: "요즘 긴장해서 속이 더부룩해요. 튀기거나 매운 건 부담돼요.", soft: { type: "digest", label: "튀김·매운 메뉴 없이, 소화 잘 되는 메뉴 1개 이상" } },
+      { name: "하윤", ava: "🙏", who: "3학년 수험생", say: "미역국은 빼 주세요… 미끄러질 것 같아서요.", soft: { type: "noName", re: "미역국", label: "미역국 없이", note: "미역국을 먹으면 시험에 떨어진다는 건 근거 없는 속설이에요. 그래도 수험생 마음을 헤아릴지는 영양사가 정할 일이에요." } },
+      { name: "지안", ava: "🍡", who: "2학년 학생회", say: "선배들 응원 떡을 꼭 넣어 주세요! 대신 단 후식이 너무 많으면 안 되겠죠?", soft: { type: "tag", tag: "계기:수능", label: "응원 후식(후식은 하나만)" } }] },
+  { mon: 12, when: "12월 셋째 주", title: "동지", ico: "🌙", budget: 10,
+    brief: "동지는 일 년 중 밤이 가장 긴 날이에요. 예부터 팥죽을 쑤어 먹으며 한 해를 마무리했어요. 전통 식문화를 잇되(시행규칙 제5조제2항 1호), 서로 다른 식문화를 가진 학생도 함께 먹을 수 있어야 해요.",
+    learn: "김치처럼 익숙한 반찬에도 젓갈이 들어가 채식하는 학생은 먹지 못할 수 있어요.",
+    theme: { label: "동지 절기 음식", test: d => d.t.includes("계기:동지") },
+    guests: [
+      { name: "하람", ava: "🥢", who: "1학년", say: "할머니가 동지엔 팥죽을 먹어야 한대요. 학교에서도 먹고 싶어요.", soft: { type: "tag", tag: "전통", n: 2, label: "전통 메뉴 2개 이상" } },
+      { name: "윤슬", ava: "🌿", who: "2학년", say: "저는 채식을 해요. 고기·생선·젓갈이 들어간 음식은 먹지 않아요.", hard: { type: "veg" } },
+      { name: "아만", ava: "🙂", who: "3학년 유학생", say: "돼지고기는 먹지 않아요. 한국의 겨울 음식은 궁금해요!", hard: { type: "nopork" } }] }];
+DAYS.forEach((d, i) => d.guests.forEach((g, j) => g.id = `d${i}g${j}`));
+
+/* 상태 */
+const LS = "lunch_year_v1";
+let S = { name: "", team: "", school: "coed", male: 50, view: "home", day: 0, days: DAYS.map(() => ({ plate: {}, alt: {}, chk: {}, slot: "밥", q: "", done: false })), refl: {} };
+try { const s = JSON.parse(localStorage.getItem(LS) || "null"); if (s && s.days && s.days.length === DAYS.length) S = Object.assign(S, s); } catch (e) {}
+function save() { try { localStorage.setItem(LS, JSON.stringify(S)); } catch (e) {} }
+const D = () => S.days[S.day];
+
+/* 기준값: 남고·여고·남녀공학(남학생 비율로 가중 평균) */
+function std() {
+  const r = S.school === "M" ? 1 : S.school === "F" ? 0 : S.male / 100, mix = (a, b) => +(a * r + b * (1 - r)).toFixed(2), o = {};
+  for (const k of Object.keys(STD.M)) o[k] = Array.isArray(STD.M[k]) ? STD.M[k].map((v, i) => mix(v, STD.F[k][i])) : mix(STD.M[k], STD.F[k]);
+  o.kcal = Math.round(o.kcal); return o;
+}
+const dishes = st => Object.values(st.plate).flat().map(i => M[i]).filter(Boolean);
+function totals(ds) {
+  const t = { kcal: 0, pro: 0, fat: 0, cho: 0, sug: 0, ca: 0, fe: 0, na: 0, va: 0, b1: 0, b2: 0, vc: 0, missing: 0 };
+  for (const d of ds) { if (!d.nut) { t.missing++; continue; } for (const k in t) if (k !== "missing" && d.nut[k] != null) t[k] += d.nut[k]; }
+  return t;
+}
+/* 영양: 별표 3의 하루 판정(실제 평가는 연속 5일 평균) */
+function nutJudge(ds) {
+  const s = std(), t = totals(ds); if (!HAS_NUT || t.missing === ds.length) return null;
+  const e = t.cho * 4 + t.pro * 4 + t.fat * 9 || 1, rc = t.cho * 4 / e * 100, rp = t.pro * 4 / e * 100, rf = t.fat * 9 / e * 100;
+  const rows = [
+    { k: "kcal", l: "에너지", v: `${fmt(t.kcal)} / ${fmt(s.kcal)} kcal`, ok: Math.abs(t.kcal - s.kcal) <= s.kcal * 0.1, note: "기준의 ±10%" },
+    { k: "ratio", l: "탄·단·지 비율", v: `${fmt(rc)} : ${fmt(rp)} : ${fmt(rf)} %`, ok: rc >= 55 && rc <= 65 && rp >= 7 && rp <= 20 && rf >= 15 && rf <= 30, note: "55~65 : 7~20 : 15~30" },
+    { k: "pro", l: "단백질", v: `${fmt(t.pro, 1)} / ${fmt(s.pro, 1)} g`, ok: t.pro >= s.pro && rp <= 20, note: "기준 이상, 에너지의 20% 이하" }];
+  for (const [k, l, u] of NUTS) { const [ear, rda] = s[k], v = t[k];
+    rows.push({ k, l, v: `${fmt(v, k === "b1" || k === "b2" ? 2 : 1)} / ${fmt(rda, 2)} ${u}`, ok: v >= ear, good: v >= rda, note: `권장 ${fmt(rda, 2)}(최소 평균필요량 ${fmt(ear, 2)})` }); }
+  const pass = rows.filter(r => r.ok).length;
+  return { rows, pass, n: rows.length, t, stars: pass >= 8 ? 3 : pass >= 6 ? 2 : 1, na: t.na, sug: t.sug };
+}
+/* 안전·존중: 손님별 위험 메뉴 */
+function hits(g, ds) {
+  const h = g.hard; if (!h) return { hit: [], maybe: [] };
+  if (h.type === "allergy") return { hit: ds.filter(d => d.a.some(c => h.codes.includes(c))), maybe: ds.filter(d => !d.a.some(c => h.codes.includes(c)) && d.p.some(c => h.codes.includes(c))) };
+  if (h.type === "nopork") return { hit: ds.filter(d => d.a.includes(10) || /돼지|돈육|제육|수육|햄|소시지|베이컨|탕수/.test(d.n)), maybe: ds.filter(d => !d.a.includes(10) && d.p.includes(10)) };
+  if (h.type === "veg") return { hit: ds.filter(d => !vegOk(d)), maybe: [] };
+  return { hit: [], maybe: [] };
+}
+function hardLabel(g) { const h = g.hard; if (!h) return "";
+  if (h.type === "allergy") return h.codes.map(c => `${c} ${AL[c - 1]}`).join(", ") + " 알레르기";
+  return h.type === "nopork" ? "돼지고기를 먹지 않음(종교)" : "채식(고기·생선·젓갈 없음)"; }
+function safety(day, st) {
+  const ds = dishes(st), tasks = [];
+  for (const g of day.guests) { if (!g.hard) continue; const { hit, maybe } = hits(g, ds), alt = !!st.alt[g.id];
+    if (hit.length) tasks.push({ g, kind: "hit", ds: hit, ok: alt });
+    for (const d of maybe) tasks.push({ g, kind: "maybe", ds: [d], ok: alt || !!st.chk[g.id + "|" + d.n], key: g.id + "|" + d.n }); }
+  const hy = day.hygiene ? ds.filter(d => d.raw).length + ds.filter(d => d.sh).length : 0;
+  const blocked = tasks.some(t => !t.ok);
+  return { tasks, blocked, hy, stars: blocked ? 0 : day.hygiene ? (hy <= 1 ? 3 : hy === 2 ? 2 : 1) : 3 };
+}
+/* 만족: 손님 요구(규칙은 화면에 공개) */
+function softCheck(g, ds, nj, day) {
+  const s = g.soft, has = f => ds.some(f), cnt = f => ds.filter(f).length;
+  if (s.type === "spicyMax") return { ok: cnt(d => d.t.includes("매움")) <= s.n, why: `매운 메뉴 ${cnt(d => d.t.includes("매움"))}개` };
+  if (s.type === "tag") { const n = cnt(d => d.t.includes(s.tag)); return { ok: n >= (s.n || 1), why: `해당 메뉴 ${n}개` }; }
+  if (s.type === "season") { const f = d => d.s === s.slot && d.mo.includes(day.mon) && (!s.fruit || d.t.includes("채식")); return { ok: has(f), why: has(f) ? ds.filter(f).map(d => d.n).join(", ") : `${day.mon}월에 자주 나오는 ${s.fruit ? "과일" : "후식"} 없음` }; }
+  if (s.type === "digest") { const fr = cnt(d => d.m === "튀김"), sp = cnt(d => d.t.includes("매움")), dg = cnt(d => d.t.includes("소화"));
+    return { ok: !fr && !sp && dg >= 1, why: `튀김 ${fr} · 매움 ${sp} · 소화 잘 되는 메뉴 ${dg}` }; }
+  if (s.type === "noName") { const r = new RegExp(s.re), bad = ds.filter(d => r.test(d.n)); return { ok: !bad.length, why: bad.length ? bad.map(d => d.n).join(", ") + " 있음" : "없음" }; }
+  if (s.type === "cookedVeg") { const f = d => d.s === "부찬" && ["볶음", "조림", "전", "구이"].includes(d.m) && !/멸치|진미채|오징어|해물|어묵|햄|소시지|계란|달걀|김구이/.test(d.n);
+    return { ok: has(f), why: has(f) ? ds.filter(f).map(d => d.n).join(", ") : "익힌 채소 반찬 없음" }; }
+  if (s.type === "energy") { if (!nj) return { ok: null, why: "영양값이 없어 판단할 수 없음" }; const st = std();
+    return { ok: nj.t.kcal >= st.kcal && nj.t.pro >= st.pro * 1.3, why: `${fmt(nj.t.kcal)} kcal · 단백질 ${fmt(nj.t.pro, 1)} g` }; }
+  return { ok: null, why: "" };
+}
+function evaluate(i) {
+  const day = DAYS[i], st = S.days[i], ds = dishes(st), nj = nutJudge(ds), sf = safety(day, st);
+  const guests = day.guests.map(g => g.hard ? { g, ok: !sf.blocked && !sf.tasks.some(t => t.g === g && !t.ok), why: st.alt[g.id] ? "대체식 제공" : "위험 메뉴 없음" } : Object.assign({ g }, softCheck(g, ds, nj, day)));
+  const sat = guests.filter(x => x.ok).length, cost = ds.reduce((a, d) => a + d.c, 0) + Object.values(st.alt).filter(Boolean).length;
+  const filled = ["밥", "국", "주찬", "부찬", "김치"].every(k => (st.plate[k] || []).length);
+  return { day, ds, nj, sf, guests, filled, theme: ds.some(day.theme.test), cost,
+    stars: { nut: nj ? nj.stars : 0, sat: sat === 3 ? 3 : sat === 2 ? 2 : 1, bud: cost <= day.budget ? 3 : cost <= day.budget + 2 ? 2 : 1, safe: sf.stars } };
+}
+const star = n => n ? "★".repeat(n) + "☆".repeat(3 - n) : "–";
+
+/* 화면 */
+function trayHTML(st, interactive) {
+  const cell = (k, big) => { const ids = st ? st.plate[k] || [] : [];
+    return `<div class="cell${big ? " big" : ""}${ids.length ? "" : " empty"}"><span class="lb">${k === "국" ? "국·찌개" : k}</span>${ids.map(i => interactive
+      ? `<button data-act="rem" data-k="${k}" data-i="${i}" aria-label="${esc(M[i].n)} 빼기">${esc(M[i].n)}</button>` : `<span>${esc(M[i].n)}</span>`).join("")}</div>`; };
+  const ds = st ? st.plate["후식"] || [] : [];
+  return `<div class="tray5" role="group" aria-label="식판">${cell("주찬")}${cell("부찬")}${cell("김치")}${cell("밥", 1)}${cell("국", 1)}</div>
+    <div class="dessert"><span class="dot${ds.length ? " on" : ""}">${ds.length ? esc(M[ds[0]].n) : "후식"}</span>${ds.length && interactive ? `<button class="su-btn sm ghost" data-act="rem" data-k="후식" data-i="${ds[0]}">후식 빼기</button>` : `<span class="su-small su-muted">후식은 넣어도, 빼도 돼요.</span>`}</div>`;
+}
+function home() {
+  const any = S.days.some(d => d.done), next = S.days.findIndex(d => !d.done);
+  return `<section class="su-stack">
+  <div class="su-hero"><div class="su-aurora" aria-hidden="true"><b></b><b></b><b></b><b></b></div><div class="su-hero-in"><div class="su-stack su-rise">
+    <h1 class="su-display">올해 우리 학교 점심,<br>여러분이 짭니다</h1>
+    <p class="su-lead su-measure" style="margin:0">영양사가 되어 경기도 고등학교 급식에 실제로 나온 메뉴 ${M.length}가지를 조합해 1년 동안 여섯 번의 점심을 짭니다. 알레르기, 위생, 예산, 계절과 기념일, 서로 다른 학생의 바람을 모두 따져야 해요.</p>
+    <div class="who-in"><div class="su-field"><label for="inName">이름(별칭도 괜찮아요)</label><input type="text" id="inName" value="${esc(S.name)}" autocomplete="off" placeholder="예: 하늘"></div>
+      <div class="su-field"><label for="inTeam">모둠</label><input type="text" id="inTeam" value="${esc(S.team)}" autocomplete="off" placeholder="예: 3모둠"></div></div>
+    <p class="su-tiny su-muted" style="margin:0">입력과 진행 상황은 이 기기의 브라우저에만 저장됩니다. 손님은 모두 가상 인물이에요.</p>
+  </div><figure class="hero-tray su-rise" style="--i:2">${trayHTML(next < 0 ? S.days[5] : any ? S.days[Math.max(0, next - 1)] : { plate: { 주찬: [byName["제육볶음"]], 부찬: [byName["콩나물무침"]], 김치: [byName["배추김치"]], 밥: [byName["혼합잡곡밥"]], 국: [byName["쇠고기미역국"]] } }, false)}<figcaption>밥·국·주찬·부찬·김치, 다섯 칸을 채워요</figcaption></figure></div></div>
+  <div class="su-card su-stack"><h2 class="su-h2">우리 학교 설정</h2>
+    <p class="su-small su-muted su-measure" style="margin:0">학교급식 영양관리기준(시행규칙 별표 3)은 남녀 고등학생의 한 끼 기준이 달라요(에너지 남 900kcal, 여 670kcal). 남녀공학은 남녀 학생 비율로 가중 평균한 값을 기준으로 쓰는 경우가 많아요.</p>
+    <div class="su-row" role="radiogroup" aria-label="학교 유형">${[["M", "남고"], ["F", "여고"], ["coed", "남녀공학"]].map(([v, l]) => `<button class="su-chip" role="radio" aria-pressed="${S.school === v}" aria-checked="${S.school === v}" data-act="school" data-v="${v}">${l}</button>`).join("")}</div>
+    ${S.school === "coed" ? `<div class="su-field" style="max-width:420px"><label for="inMale">남학생 비율 <b id="maleOut">${S.male}%</b></label><input type="range" id="inMale" min="0" max="100" step="10" value="${S.male}" style="width:100%"></div>` : ""}
+    <p class="su-small" style="margin:0">이 학교의 한 끼 에너지 기준: <b id="stdOut">${fmt(std().kcal)} kcal</b> · 단백질 <b>${fmt(std().pro, 1)} g</b></p></div>
+  <h2 class="su-h2" style="margin-top:22px">1년 동안 짤 점심 여섯 번</h2>
+  <ol class="cal">${DAYS.map((d, i) => `<li class="${S.days[i].done ? "done" : i === next ? "now" : ""}"><span class="mo">${i + 1}. ${esc(d.when)}</span><b>${d.ico} ${esc(d.title)}</b>${S.days[i].done ? `<span class="su-tag good">완료 · 별 ${Object.values(evaluate(i).stars).reduce((a, b) => a + b, 0)}개</span>` : ""}</li>`).join("")}</ol>
+  <div class="su-row">${next < 0 ? `<button class="su-btn" data-act="summary">1년 결산 보기</button>` : `<button class="su-btn" data-act="go" data-i="${next}">${any ? `${next + 1}번째 점심 이어 짜기` : "첫 점심 짜러 가기"}</button>`}${any ? `<button class="su-btn ghost" data-act="reset">처음부터 다시</button>` : ""}</div>
+  <details class="su-card"><summary><b>영양사가 1년 동안 고민하는 것</b></summary>
+    <ul class="su-small su-measure">${CONCERNS.map(c => `<li><b>${esc(c[1])}</b> — ${esc(c[2])}</li>`).join("")}</ul></details>
+  ${HAS_NUT ? "" : `<div class="su-fb warn">메뉴별 영양값(식약처 음식 영양성분 자료)을 아직 합치지 않았어요. 영양 계기판은 그때까지 비어 있어요.</div>`}
+  </section>`;
+}
+const CONCERNS = [
+  ["nut", "영양관리기준", "한 끼 에너지와 영양소가 학교급식 영양관리기준(별표 3)에 맞는가. 실제 평가는 계절별 연속 5일 평균"],
+  ["var", "다양한 식품", "곡류·채소·과일·어육류·콩류·우유를 고루 쓰는가(제5조② 2호)"],
+  ["salt", "염분·당·기름", "염분·유지류·단순당류·식품첨가물을 과다하게 쓰지 않는가(제5조② 3호)"],
+  ["season", "계절 식품", "자연식품과 그 계절에 나는 식품을 쓰는가(제5조② 4호)"],
+  ["cook", "조리법", "튀김만 겹치지 않게 여러 조리법을 쓰는가(제5조② 5호)"],
+  ["trad", "전통 식문화", "절기와 전통 음식을 잇는가(제5조② 1호)"],
+  ["allergy", "알레르기", "알레르기 유발 식재료를 식단표에 표시하고 알리는가(제7조②), 대체식이 필요한 학생은 누구인가"],
+  ["hygiene", "위생·안전", "세척·소독, 가열 온도, 배식 시간(별표 4)을 지킬 수 있는 메뉴인가"],
+  ["budget", "예산", "정해진 식품비 안에서 한 달·한 해를 맞추는가"],
+  ["like", "학생의 바람", "기호와 잔반, 학생의 요구를 얼마나 반영하는가"],
+  ["event", "계기교육·행사", "기념일, 시험, 행사에 맞춰 이야기가 있는 식단을 짜는가"],
+  ["respect", "서로 다른 학생", "종교·신념·문화가 다른 학생도 함께 먹을 수 있는가"]];
+function guestCard(g, ev) {
+  const r = ev && ev.guests.find(x => x.g === g);
+  return `<div class="guest"><div class="who"><div class="ava" aria-hidden="true">${g.ava}</div><div><div class="nm">${esc(g.name)}</div><div class="meta">${esc(g.who)}</div></div></div>
+    <div class="su-bubble su-small">“${esc(g.say)}”</div>
+    <div class="req">${g.hard ? `<span class="su-tag bad">꼭 지킬 것</span> ${esc(hardLabel(g))}` : `<span class="su-tag">바람</span> ${esc(g.soft.label)}`}</div>
+    ${r ? `<div class="su-small"><span class="su-tag ${r.ok ? "good" : r.ok === null ? "" : "warn"}">${r.ok ? "만족" : r.ok === null ? "판단 못함" : "아쉬움"}</span> ${esc(r.why)}</div>${g.soft && g.soft.note ? `<p class="su-tiny su-muted" style="margin:0">${esc(g.soft.note)}</p>` : ""}` : ""}</div>`;
+}
+function menuCard(i, day, st, guests) {
+  const d = M[i], on = (st.plate[d.s] || []).includes(i), danger = new Set();
+  for (const g of guests) { if (g.hard && g.hard.type === "allergy") g.hard.codes.forEach(c => danger.add(c)); }
+  const al = d.a.map(c => `<span class="al${danger.has(c) ? " hit" : ""}" title="${esc(AL[c - 1])}">${c}</span>`).join("") + d.p.map(c => `<span class="al maybe" title="일부 학교 표시: ${esc(AL[c - 1])}">${c}?</span>`).join("");
+  const fresh = d.s === "후식" ? d.t.includes("채식") : d.t.includes("채식") && d.s !== "김치";
+  const tags = [d.mo.includes(day.mon) ? `<span class="tg season" title="경기도 표본에서 ${day.mon}월에 평소의 1.8배 이상 나옴">${day.mon}월${fresh ? " 제철" : "에 자주"}</span>` : "", day.theme.test(d) ? `<span class="tg theme">계기</span>` : "",
+    ...d.t.filter(t => !t.startsWith("계기")).map(t => `<span class="tg">${esc(t)}</span>`), `<span class="tg">${esc(d.m)}</span>`].join("");
+  const n = d.nut ? `${fmt(d.nut.kcal)} kcal · 단백질 ${fmt(d.nut.pro, 1)} g · 나트륨 ${fmt(d.nut.na)} mg` : "영양값 준비 중";
+  return `<button class="menu" aria-pressed="${on}" data-act="pick" data-i="${i}"><span class="n">${esc(d.n)}</span><span class="d">${n}</span>
+    <span class="chips" aria-label="알레르기 번호">${al || `<span class="su-tiny su-muted">알레르기 표시 없음</span>`}</span><span class="chips">${tags}</span>
+    <span class="d">경기도 표본 ${fmt(d.f)}끼 · 비용 <b aria-label="식재료비 ${d.c}칸">${"₩".repeat(d.c)}</b></span></button>`;
+}
+function dayView() {
+  const i = S.day, day = DAYS[i], st = D();
+  if (st.done) return resultView(i);
+  const ev = evaluate(i), sf = ev.sf, q = (st.q || "").trim(), slot = st.slot || "밥";
+  const list = M.map((m, k) => k).filter(k => q ? M[k].n.includes(q) : M[k].s === slot);
+  return `<section class="su-stack">
+  <div class="su-row"><span class="su-kicker">${i + 1}번째 점심 · ${esc(day.when)}</span></div>
+  <h1 class="su-h1">${day.ico} ${esc(day.title)}</h1>
+  <div class="su-card su-stack"><p class="su-measure" style="margin:0">${esc(day.brief)}</p><p class="su-small su-muted su-measure" style="margin:0">💡 ${esc(day.learn)}</p>
+    <p class="su-small" style="margin:0"><span class="tg theme">계기 목표</span> ${esc(day.theme.label)} · <b>오늘 예산 ${day.budget}칸</b> <span class="su-muted">(₩ 하나가 1칸, 수업용 가정)</span></p></div>
+  <h2 class="su-h2">오늘의 손님</h2>
+  <div class="guests">${day.guests.map(g => guestCard(g)).join("")}</div>
+  <div class="su-two plan" style="margin-top:6px">
+    <div class="su-stack">
+      <div class="su-row slots" role="tablist" aria-label="칸 고르기">${SLOTS.map(([k, l]) => `<button class="su-chip" role="tab" aria-selected="${!q && slot === k}" aria-pressed="${!q && slot === k}" data-act="slot" data-k="${k}">${l}<span class="su-tiny"> ${(st.plate[k] || []).length}/${MAX[k]}</span></button>`).join("")}</div>
+      <div class="su-field"><label for="inQ">메뉴 이름으로 찾기</label><input type="text" id="inQ" value="${esc(st.q || "")}" placeholder="예: 김치, 오징어, 팥" autocomplete="off"></div>
+      <p class="su-tiny su-muted" style="margin:0">숫자는 알레르기 번호(1 난류 · 2 우유 · 4 땅콩 · 5 대두 · 6 밀 · 9 새우 · 10 돼지고기 · 17 오징어 …). 점선 '?'는 일부 학교에서만 표시한 번호예요. 영양값은 식약처 1인분 기준이라 학교 배식량과 다를 수 있어요.</p>
+      <div class="shelf">${list.map(k => menuCard(k, day, st, day.guests)).join("") || `<p class="su-muted">찾는 메뉴가 없어요.</p>`}</div>
+    </div>
+    <aside class="su-stack su-sticky" aria-label="오늘의 식판">
+      <div class="su-card su-stack"><h2 class="su-h3">오늘의 식판</h2>${trayHTML(st, true)}</div>
+      <div class="gauges">${gauge("영양", ev.nj ? ev.stars.nut : 0, ev.nj ? `기준 ${ev.nj.pass}/${ev.nj.n} 충족 · ${fmt(ev.nj.t.kcal)} kcal` : HAS_NUT ? "메뉴를 담으면 계산해요" : "영양값 준비 중")}
+        ${gauge("만족", ev.stars.sat, `손님 ${ev.guests.filter(x => x.ok).length}/3 만족`)}
+        ${gauge("예산", ev.stars.bud, `${ev.cost} / ${day.budget}칸${Object.values(st.alt).filter(Boolean).length ? " (대체식 포함)" : ""}`)}
+        ${gauge("안전", sf.stars, sf.blocked ? "해결할 일이 남았어요" : day.hygiene ? `위생 작업 ${sf.hy}개` : "위험 메뉴 처리 완료", sf.blocked)}</div>
+      ${sf.tasks.length ? `<div class="su-card su-stack"><h2 class="su-h3">안전·존중 확인</h2>${sf.tasks.map(t => taskHTML(t, st)).join("")}</div>` : ""}
+      ${day.hygiene ? `<div class="su-fb ${sf.hy >= 2 ? "warn" : ""}">날로 먹는 메뉴 ${ev.ds.filter(d => d.raw).length}개(세척·소독), 조개류 메뉴 ${ev.ds.filter(d => d.sh).length}개(85℃ 가열 확인)</div>` : ""}
+      ${ev.nj ? `<p class="su-tiny su-muted" style="margin:0">참고: 나트륨 ${fmt(ev.nj.na)} mg(하루 2,300mg의 3분의 1은 ${fmt(NA_REF)} mg) · 당류 ${fmt(ev.nj.sug, 1)} g(자연당 포함)</p>` : ""}
+      <button class="su-btn" data-act="submit" ${ev.filled && !sf.blocked ? "" : "disabled"}>이 식단으로 배식하기</button>
+      <p class="su-tiny su-muted" style="margin:0">${!ev.filled ? "밥·국·주찬·부찬·김치 칸을 모두 채워야 배식할 수 있어요." : sf.blocked ? "꼭 지킬 것을 해결해야 배식할 수 있어요. 알레르기와 종교·신념은 점수와 바꿀 수 없어요." : "배식 뒤에는 바꿀 수 없어요."}</p>
+    </aside></div></section>`;
+}
+function gauge(l, n, v, block) { return `<div class="gauge${block ? " block" : ""}"><div class="h"><span>${l}</span><span class="st" aria-label="별 ${n}개">${star(n)}</span></div><div class="v">${esc(v)}</div></div>`; }
+function taskHTML(t, st) {
+  const names = t.ds.map(d => d.n).join(", "), g = t.g;
+  if (t.kind === "hit") return `<div class="task${t.ok ? " ok" : ""}"><input type="checkbox" id="alt-${g.id}" data-in="alt" data-g="${g.id}" ${st.alt[g.id] ? "checked" : ""}>
+    <label for="alt-${g.id}"><b>${esc(g.name)}</b>: ${esc(names)}에 ${esc(hardLabel(g))} 관련 재료가 있어요. 메뉴를 바꾸거나, <b>대체식을 따로 준비</b>해요(예산 1칸).</label></div>`;
+  return `<div class="task ${t.ok ? "ok" : "warn"}"><input type="checkbox" id="chk-${esc(t.key)}" data-in="chk" data-k="${esc(t.key)}" ${st.chk[t.key] ? "checked" : ""}>
+    <label for="chk-${esc(t.key)}"><b>${esc(g.name)}</b>: ${esc(names)}은(는) 일부 학교 레시피에 관련 재료가 들어가요. <b>우리 레시피를 확인했어요</b>(들어가지 않음).</label></div>`;
+}
+function resultView(i) {
+  const ev = evaluate(i), st = S.days[i], day = DAYS[i], tot = Object.values(ev.stars).reduce((a, b) => a + b, 0), last = i === DAYS.length - 1;
+  return `<section class="su-stack">
+  <div class="su-row"><span class="su-kicker">${i + 1}번째 점심 · ${esc(day.when)} · 배식 완료</span></div>
+  <h1 class="su-h1">${day.ico} ${esc(day.title)} 결과</h1>
+  <div class="su-two"><div class="su-card su-stack">${trayHTML(st, false)}
+    <p class="su-small" style="margin:0">${ev.theme ? `<span class="su-tag good">계기 목표 달성</span> ${esc(day.theme.label)}` : `<span class="su-tag">계기 목표 못 함</span> ${esc(day.theme.label)}`}</p></div>
+    <div class="su-stack"><div class="gauges">${gauge("영양", ev.stars.nut, ev.nj ? `기준 ${ev.nj.pass}/${ev.nj.n} 충족` : "영양값 준비 중")}${gauge("만족", ev.stars.sat, `손님 ${ev.guests.filter(x => x.ok).length}/3 만족`)}${gauge("예산", ev.stars.bud, `${ev.cost} / ${day.budget}칸`)}${gauge("안전", ev.stars.safe, day.hygiene ? `위생 작업 ${ev.sf.hy}개` : "꼭 지킬 것 모두 지킴")}</div>
+    <p class="su-small" style="margin:0">오늘 받은 별: <b>${tot}개</b> / 12개 · 별은 순위가 아니라 무엇을 포기했는지 보는 거울이에요.</p></div></div>
+  <h2 class="su-h2">손님 반응</h2><div class="guests">${day.guests.map(g => guestCard(g, ev)).join("")}</div>
+  ${ev.nj ? `<details class="su-card" open><summary><b>영양관리기준 하루 판정</b> <span class="su-small su-muted">(실제 평가는 계절별 연속 5일 평균)</span></summary><div class="su-scroll"><table class="su-table nut"><thead><tr><th>항목</th><th>오늘</th><th>기준</th><th>판정</th></tr></thead><tbody>
+    ${ev.nj.rows.map(r => `<tr><td>${r.l}</td><td>${esc(r.v)}</td><td class="su-small su-muted">${esc(r.note)}</td><td><span class="su-tag ${r.ok ? (r.good === false ? "warn" : "good") : "bad"}">${r.ok ? (r.good === false ? "최소 충족" : "충족") : "미달"}</span></td></tr>`).join("")}</tbody></table></div>
+    <p class="su-tiny su-muted">식약처 음식 영양성분(1인분 기준)을 더한 값이에요. 실제 학교는 배식량과 레시피에 따라 달라요.</p></details>` : ""}
+  <div class="su-card su-stack"><label class="su-label" for="inWhy">오늘 무엇을 포기하거나 양보했나요? 왜 그렇게 정했나요?</label>
+    <textarea class="su-input" id="inWhy" data-in="why" rows="3" placeholder="예: 지호를 위해 매운 제육볶음 대신 두부조림을 넣었더니 육상부 준우의 단백질이 모자랐다">${esc(st.why || "")}</textarea>
+    <p class="su-tiny su-muted" style="margin:0" id="whyCnt">${(st.why || "").trim().length}/10자 이상</p>
+    <div class="su-row"><button class="su-btn" data-act="${last ? "summary" : "next"}" ${(st.why || "").trim().length >= 10 ? "" : "disabled"}>${last ? "1년 결산 보기" : "다음 점심 짜기"}</button><button class="su-btn ghost" data-act="home">1년 달력 보기</button></div></div></section>`;
+}
+function yearStats() {
+  const evs = DAYS.map((_, i) => S.days[i].done ? evaluate(i) : null).filter(Boolean), s = std();
+  const withNut = evs.filter(e => e.nj), avg = {};
+  if (withNut.length) for (const k of ["kcal", "pro", "ca", "fe", "va", "b1", "b2", "vc", "na"]) avg[k] = withNut.reduce((a, e) => a + e.nj.t[k], 0) / withNut.length;
+  const mains = evs.map(e => (e.ds.find(d => d.s === "주찬") || {}).m).filter(Boolean), methods = [...new Set(evs.flatMap(e => e.ds.map(d => d.m)))];
+  const fried = evs.filter(e => e.ds.some(d => d.m === "튀김")).length, cost = evs.reduce((a, e) => a + e.cost, 0), budget = evs.reduce((a, e) => a + e.day.budget, 0);
+  const alt = evs.reduce((a, e) => a + Object.values(S.days[DAYS.indexOf(e.day)].alt).filter(Boolean).length, 0);
+  const cnt = tag => evs.reduce((a, e) => a + e.ds.filter(d => d.t.includes(tag)).length, 0), season = evs.reduce((a, e) => a + e.ds.filter(d => d.mo.includes(e.day.mon)).length, 0);
+  return { evs, s, avg, withNut, mains, methods, fried, cost, budget, alt, trad: cnt("전통"), world: cnt("세계"), season, themes: evs.filter(e => e.theme).length,
+    stars: evs.reduce((a, e) => a + Object.values(e.stars).reduce((x, y) => x + y, 0), 0) };
+}
+function summary() {
+  const y = yearStats(), s = y.s;
+  const avgRows = y.withNut.length ? [["에너지", y.avg.kcal, s.kcal, "kcal", Math.abs(y.avg.kcal - s.kcal) <= s.kcal * 0.1], ["단백질", y.avg.pro, s.pro, "g", y.avg.pro >= s.pro],
+    ...NUTS.map(([k, l, u]) => [l, y.avg[k], s[k][1], u, y.avg[k] >= s[k][0], y.avg[k] >= s[k][1]])] : [];
+  const rec = records(y);
+  return `<section class="su-stack">
+  <span class="su-kicker">1년 결산</span><h1 class="su-h1">${esc(S.name || "영양사")}의 급식실 1년</h1>
+  <div class="su-card su-stack"><p style="margin:0">점심 ${y.evs.length}번 · 별 ${y.stars}개 · 계기 목표 ${y.themes}번 · 대체식 ${y.alt}번 · 예산 ${y.cost}/${y.budget}칸</p>
+    <p class="su-small su-muted su-measure" style="margin:0">주찬 조리법: ${y.mains.join(" → ") || "–"} · 튀김이 들어간 날 ${y.fried}번 · 전통 메뉴 ${y.trad}개 · 세계 음식 ${y.world}개 · 그달 제철·자주 나오는 메뉴 ${y.season}개</p></div>
+  ${avgRows.length ? `<div class="su-card su-stack"><h2 class="su-h3">${y.withNut.length}번의 평균으로 본 영양관리기준</h2>
+    <p class="su-small su-muted su-measure" style="margin:0">실제 학교는 하루가 아니라 계절별 연속 5일의 평균으로 평가해요(시행규칙 별표 3). 어떤 날 부족해도 다른 날 채울 수 있다는 뜻이에요.</p>
+    <div class="su-scroll"><table class="su-table nut"><thead><tr><th>항목</th><th>평균</th><th>기준(권장)</th><th>판정</th></tr></thead><tbody>${avgRows.map(r => `<tr><td>${r[0]}</td><td>${fmt(r[1], r[3] === "mg" && r[2] < 1 ? 2 : 1)} ${r[3]}</td><td>${fmt(r[2], 2)} ${r[3]}</td><td><span class="su-tag ${r[4] ? (r[5] === false ? "warn" : "good") : "bad"}">${r[4] ? (r[5] === false ? "최소 충족" : "충족") : "미달"}</span></td></tr>`).join("")}</tbody></table></div>
+    <p class="su-tiny su-muted" style="margin:0">나트륨 평균 ${fmt(y.avg.na)} mg(참고: 하루 2,300mg의 3분의 1은 ${fmt(NA_REF)} mg)</p></div>` : ""}
+  <h2 class="su-h2">영양사의 고민 지도</h2>
+  <p class="su-small su-muted su-measure" style="margin:0">칸마다 나의 1년 기록이 적혀 있어요. 어느 고민을 가장 많이 했고, 어느 고민을 가장 적게 했나요?</p>
+  <div class="map">${CONCERNS.map(c => `<div><b>${esc(c[1])}</b>${esc(c[2])}<span class="rec">${esc(rec[c[0]])}</span></div>`).join("")}</div>
+  <div class="su-card su-stack"><h2 class="su-h3">돌아보기</h2>${REFL.map((r, k) => `<label class="su-label" for="rf${k}">${k + 1}. ${esc(r)}</label><textarea class="su-input" id="rf${k}" data-in="refl" data-k="${k}" rows="3">${esc(S.refl[k] || "")}</textarea>`).join("")}</div>
+  <div class="su-card su-stack"><h2 class="su-h3">보고서</h2><div class="report" id="rep">${esc(reportText())}</div>
+    <div class="su-row su-noprint"><button class="su-btn" data-act="down">결과 파일 내려받기(JSON)</button><button class="su-btn ghost" data-act="copy">보고서 복사하기</button><button class="su-btn ghost" data-act="print">인쇄하기</button><button class="su-btn ghost" data-act="home">1년 달력 보기</button></div></div></section>`;
+}
+/* 고민 지도: 고민마다 이 학생의 1년 기록 한 줄 */
+function mainKind(d) { const n = d.n;
+  if (/오리|닭|치킨/.test(n)) return "닭·오리"; if (/오징어|오삼|새우|해물/.test(n)) return "해산물"; if (/고등어|삼치|연어|코다리|생선/.test(n)) return "생선";
+  if (/돼지|돈육|제육|수육|갈비찜|탕수|꿔바로우|함박|소시지/.test(n)) return "돼지"; if (/소고기|쇠고기|한우|불고기/.test(n)) return "소"; if (/두부|계란|달걀/.test(n)) return "두부·달걀"; return "기타"; }
+function records(y) {
+  const wn = y.withNut, mains = y.evs.map(e => e.ds.find(d => d.s === "주찬")).filter(Boolean), kinds = [...new Set(mains.map(mainKind))];
+  const mm = [...new Set(mains.map(d => d.m))], soft = y.evs.flatMap(e => e.guests.filter(x => x.g.soft)), hard = y.evs.flatMap(e => e.guests.filter(x => x.g.hard));
+  const alg = hard.filter(x => x.g.hard.type === "allergy"), rel = hard.filter(x => x.g.hard.type !== "allergy");
+  const chk = y.evs.reduce((a, e) => a + Object.values(S.days[DAYS.indexOf(e.day)].chk).filter(Boolean).length, 0);
+  const altOf = list => list.filter(x => S.days[DAYS.indexOf(DAYS.find(d => d.guests.includes(x.g)))].alt[x.g.id]).length;
+  const hy = S.days[1].done ? evaluate(1).sf.hy : null, diff = y.cost - y.budget;
+  return { nut: wn.length ? `기준 9개 중 8개 이상 충족한 날 ${wn.filter(e => e.nj.pass >= 8).length}/${wn.length}번` : "영양값 병합 전이라 기록 없음",
+    var: `주찬 재료 ${kinds.length}가지(${kinds.join(", ") || "–"})`,
+    salt: wn.length ? `나트륨이 참고값(${fmt(NA_REF)} mg) 이하인 날 ${wn.filter(e => e.nj.na <= NA_REF).length}/${wn.length}번 · 평균 ${fmt(y.avg.na)} mg` : "영양값 병합 전",
+    season: `그달에 자주 나오거나 제철인 메뉴 ${y.season}개`, cook: `주찬 조리법 ${mm.length}가지 · 튀김 있는 날 ${y.fried}번`, trad: `전통 메뉴 ${y.trad}개`,
+    allergy: `알레르기 손님 ${alg.length}명 안전하게 · 대체식 ${altOf(alg)}번 · 레시피 확인 ${chk}번`,
+    hygiene: hy == null ? "6월 점심을 아직 짜지 않음" : `6월 위생 작업 ${hy}개(날것·조개류 메뉴)`,
+    budget: `${y.cost}/${y.budget}칸 · ${diff > 0 ? diff + "칸 넘음" : -diff + "칸 남음"}`,
+    like: `손님의 바람 ${soft.filter(x => x.ok).length}/${soft.length}개 들어줌`, event: `계기 목표 ${y.themes}/${y.evs.length}번`,
+    respect: `종교·신념이 다른 손님 ${rel.length}명과 함께 먹음 · 대체식 ${altOf(rel)}번` };
+}
+const REFL = ["1년 동안 가장 어려웠던 고민은 무엇이었고, 어떻게 정했나요?", "영양 기준과 학생의 바람이 부딪힌 날, 무엇을 더 중요하게 봤나요? 그 이유는?", "실제 영양(교)사 선생님께 묻고 싶은 것 한 가지를 적어 보세요."];
+function reportText() {
+  const y = yearStats(), L = [`급식실의 1년 — ${S.name || "이름 없음"}${S.team ? " · " + S.team : ""}`, `학교: ${S.school === "M" ? "남고" : S.school === "F" ? "여고" : `남녀공학(남 ${S.male}%)`} · 한 끼 에너지 기준 ${fmt(y.s.kcal)} kcal`, ""];
+  y.evs.forEach(e => { const i = DAYS.indexOf(e.day), st = S.days[i];
+    L.push(`${i + 1}. ${e.day.when} ${e.day.title}: ${e.ds.map(d => d.n).join(", ")}`);
+    L.push(`   별 영양 ${e.stars.nut} · 만족 ${e.stars.sat} · 예산 ${e.stars.bud} · 안전 ${e.stars.safe} · 계기 ${e.theme ? "달성" : "못 함"}${Object.values(st.alt).some(Boolean) ? " · 대체식 제공" : ""}`);
+    L.push(`   포기한 것: ${(st.why || "").trim()}`); });
+  L.push("", ...REFL.map((r, k) => `${r}\n   ${(S.refl[k] || "").trim() || "(아직 쓰지 않음)"}`));
+  return L.join("\n");
+}
+function download() {
+  const y = yearStats(), out = { app: "급식실의 1년 v1.0", activityId: "school-lunch-year", 작성: new Date().toISOString(), 이름: S.name, 모둠: S.team,
+    학교: { 유형: S.school, 남학생비율: S.school === "coed" ? S.male : null, 기준: y.s }, 메뉴은행: BANK.meta,
+    날: y.evs.map(e => { const i = DAYS.indexOf(e.day), st = S.days[i]; return { 달: e.day.mon, 제목: e.day.title, 식판: e.ds.map(d => ({ 이름: d.n, 칸: d.s, 알레르기: d.a })),
+      대체식: e.day.guests.filter(g => st.alt[g.id]).map(g => g.name), 레시피확인: Object.keys(st.chk).filter(k => st.chk[k]).length, 별점: e.stars, 계기: e.theme, 예산: [e.cost, e.day.budget],
+      영양: e.nj ? Object.fromEntries(["kcal", "pro", "fat", "cho", "ca", "fe", "na", "va", "b1", "b2", "vc", "sug"].map(k => [k, +e.nj.t[k].toFixed(2)])) : null,
+      손님: e.guests.map(x => ({ 이름: x.g.name, 종류: x.g.hard ? "꼭" : "바람", 충족: x.ok })), 포기한것: (st.why || "").trim() }; }),
+    결산: { 별: y.stars, 계기: y.themes, 대체식: y.alt, 예산: [y.cost, y.budget], 튀김날: y.fried, 전통: y.trad, 세계: y.world, 제철: y.season }, 성찰: REFL.map((r, k) => ({ 질문: r, 답: (S.refl[k] || "").trim() })) };
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 2)], { type: "application/json" }));
+  a.download = `급식실의1년_${S.name || "이름없음"}.json`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+function teacher() {
+  return `<section class="su-stack"><span class="su-kicker">교사용 안내</span><h1 class="su-h1">급식실의 1년 운영 안내</h1>
+  <div class="su-card su-stack su-measure"><h2 class="su-h3">수업 흐름(2~3차시)</h2><ol class="su-small">
+    <li>1차시: 학교 설정과 영양관리기준 읽기 → 3월·6월·7월 점심. 알레르기 표시와 위생 기준을 짚습니다.</li>
+    <li>2차시: 10월·11월·12월 점심 → 1년 결산과 돌아보기. 계기교육(세계 식량의 날, 독도의 날, 동지)과 서로 다른 학생을 다룹니다.</li>
+    <li>3차시(선택): 영양교사 인터뷰 또는 모둠 발표. 결과 파일(JSON)로 모둠별 선택을 비교합니다.</li></ol></div>
+  <div class="su-card su-stack su-measure"><h2 class="su-h3">근거</h2><ul class="su-small">
+    <li>학교급식법 시행규칙 [별표 3] 학교급식의 영양관리기준(2021. 1. 29. 개정): 고등학생 남·여 기준, 연속 5일 평균 평가, 에너지 ±10%, 탄·단·지 비율, 비타민·무기질 권장섭취량 원칙</li>
+    <li>같은 규칙 제5조제2항(식단 작성 시 고려사항 1~5호), 제7조제2항(알레르기 유발식품 표시·공지), [별표 4] 위생·안전관리기준</li>
+    <li>식품 등의 표시·광고에 관한 법률 시행규칙 [별표 2](2024. 12. 30. 개정): 알레르기 유발물질 19종</li>
+    <li>메뉴 이름·알레르기 번호: 경기도 고등학교 급식(NEIS) 10% 표본과 원본 표본 1,260끼. 번호는 그 메뉴에 붙은 표시의 50% 이상에 나온 번호, '?'는 20~50%</li>
+    <li>메뉴 영양값: 식약처 「전국통합식품영양성분정보(음식)표준데이터」(공공데이터포털 15100070), 1인분 기준</li></ul></div>
+  <div class="su-card su-stack su-measure"><h2 class="su-h3">한계와 주의</h2><ul class="su-small">
+    <li>영양값은 1인분 표준값이라 학교 배식량·레시피와 다릅니다. 판정은 학습용이며 실제 급식 평가가 아닙니다.</li>
+    <li>알레르기 번호는 학교마다 레시피에 따라 달라집니다. 실제로는 그 학교 레시피와 식재료로 확인해야 합니다.</li>
+    <li>식재료비 단계(₩~₩₩₩)는 수업용 가정입니다. 실제 단가 자료가 아닙니다.</li>
+    <li>손님은 모두 가상 인물입니다. 체중 감량을 요구하는 인물은 일부러 넣지 않았습니다(체형 낙인 예방).</li>
+    <li>나트륨은 별표 3에 기준이 없어 참고값(2025 한국인 영양소 섭취기준 만성질환위험감소섭취량 하루 2,300mg의 3분의 1)만 보여 줍니다.</li></ul></div>
+  <div class="su-card su-stack su-measure"><h2 class="su-h3">영양교사와 함께하기</h2><ul class="su-small">
+    <li>메뉴 은행(school-meal-gg/build_lunch_bank.py의 MENU)과 칸·조리법 분류를 함께 검수합니다.</li>
+    <li>우리 학교 실제 단가와 배식량으로 예산·영양 판정을 바꿔 보는 것도 좋은 확장 활동입니다.</li>
+    <li>학생 질문(돌아보기 3번)을 모아 영양교사 인터뷰 질문지로 씁니다.</li></ul></div>
+  <div class="su-row"><button class="su-btn" data-act="home">처음 화면으로</button></div></section>`;
+}
+function renderProg() {
+  $("#prog").innerHTML = DAYS.map((d, i) => `<li class="${S.days[i].done ? "done" : S.view === "day" && S.day === i ? "now" : ""}"><i></i><span>${d.mon}월</span></li>`).join("") +
+    `<li class="${S.view === "summary" ? "now" : ""}"><i></i><span>결산</span></li>`;
+}
+function render(top) {
+  const fk = document.activeElement && document.activeElement.id;
+  $("#app").innerHTML = S.view === "day" ? dayView() : S.view === "summary" ? summary() : S.view === "teacher" ? teacher() : home();
+  renderProg();
+  if (top) { window.scrollTo(0, 0); $("#app").focus({ preventScroll: true }); }
+  else if (fk) { const el = document.getElementById(fk); if (el) { el.focus({ preventScroll: true }); if ((el.type === "text" || el.tagName === "TEXTAREA") && el.value) el.setSelectionRange(el.value.length, el.value.length); } }
+}
+function rerenderKeep(sel) { const y = window.scrollY; render(); window.scrollTo(0, y); if (sel) { const el = document.querySelector(sel); if (el) el.focus({ preventScroll: true }); } }
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-act]"); if (!b || b.disabled) return; const a = b.dataset.act;
+  if (a === "home") { S.view = "home"; save(); return render(true); }
+  if (a === "teacher") { S.view = "teacher"; save(); return render(true); }
+  if (a === "school") { S.school = b.dataset.v; save(); return rerenderKeep(`[data-act="school"][data-v="${b.dataset.v}"]`); }
+  if (a === "go") { S.day = +b.dataset.i; S.view = "day"; save(); return render(true); }
+  if (a === "reset") { if (!confirm("1년 기록을 모두 지우고 처음부터 할까요?")) return; S.days = DAYS.map(() => ({ plate: {}, alt: {}, chk: {}, slot: "밥", q: "", done: false })); S.refl = {}; S.view = "home"; save(); return render(true); }
+  if (a === "summary") { S.view = "summary"; save(); return render(true); }
+  if (a === "next") { const n = S.days.findIndex(d => !d.done); if (n >= 0) { S.day = n; S.view = "day"; } else S.view = "summary"; save(); return render(true); }
+  if (a === "down") return download();
+  if (a === "print") return window.print();
+  if (a === "copy") { const t = $("#rep").textContent; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => say("보고서를 복사했어요."), () => say("복사가 막혀 있어요. 글 상자를 직접 골라 복사하세요.")); return; }
+  if (S.view !== "day") return; const st = D(); if (st.done) return;
+  if (a === "slot") { st.slot = b.dataset.k; st.q = ""; save(); return rerenderKeep(`[data-act="slot"][data-k="${b.dataset.k}"]`); }
+  if (a === "pick") { const i = +b.dataset.i, d = M[i], cur = st.plate[d.s] || (st.plate[d.s] = []);
+    if (cur.includes(i)) { cur.splice(cur.indexOf(i), 1); say(`${d.n}을(를) 뺐어요.`); }
+    else if (cur.length >= MAX[d.s]) { if (MAX[d.s] === 1) { say(`${M[cur[0]].n} 대신 ${d.n}을(를) 담았어요.`); cur[0] = i; } else return say(`${d.s}은(는) ${MAX[d.s]}개까지 담을 수 있어요. 하나를 빼 주세요.`); }
+    else { cur.push(i); say(`${d.n}을(를) ${d.s} 칸에 담았어요.`); }
+    pruneTasks(st); save(); return rerenderKeep(`[data-act="pick"][data-i="${i}"]`); }
+  if (a === "rem") { const k = b.dataset.k, i = +b.dataset.i, cur = st.plate[k] || []; if (cur.includes(i)) cur.splice(cur.indexOf(i), 1); pruneTasks(st); save(); say(`${M[i].n}을(를) 뺐어요.`); return rerenderKeep(); }
+  if (a === "submit") { const ev = evaluate(S.day); if (!ev.filled || ev.sf.blocked) return; st.done = true; st.at = new Date().toISOString(); save(); say("배식했어요. 결과를 확인하세요."); return render(true); }
+});
+function pruneTasks(st) { // 식판에서 빠진 메뉴의 '레시피 확인'은 지운다
+  const names = new Set(dishes(st).map(d => d.n)); for (const k of Object.keys(st.chk)) if (!names.has(k.split("|")[1])) delete st.chk[k]; }
+document.addEventListener("change", e => {
+  const el = e.target, k = el.dataset && el.dataset.in; if (!k || S.view !== "day") return; const st = D(); if (st.done) return;
+  if (k === "alt") st.alt[el.dataset.g] = el.checked;
+  if (k === "chk") st.chk[el.dataset.k] = el.checked;
+  save(); rerenderKeep("#" + CSS.escape(el.id));
+});
+document.addEventListener("input", e => {
+  const el = e.target;
+  if (el.id === "inName") { S.name = el.value.trim(); return save(); }
+  if (el.id === "inTeam") { S.team = el.value.trim(); return save(); }
+  if (el.id === "inMale") { S.male = +el.value; save(); $("#maleOut").textContent = S.male + "%"; $("#stdOut").textContent = fmt(std().kcal) + " kcal"; return; }
+  if (el.id === "inQ") { D().q = el.value; save(); return rerenderKeep("#inQ"); }
+  if (el.dataset.in === "why") { S.days[S.day].why = el.value; save(); const n = el.value.trim().length, c = $("#whyCnt"); if (c) c.textContent = `${n}/10자 이상`;
+    const bt = document.querySelector('[data-act="next"],[data-act="summary"]'); if (bt) bt.disabled = n < 10; return; }
+  if (el.dataset.in === "refl") { S.refl[el.dataset.k] = el.value; save(); const r = $("#rep"); if (r) r.textContent = reportText(); }
+});
+if (S.view === "day" && !DAYS[S.day]) S.view = "home";
+render();
+</script>
+</body>
+</html>
