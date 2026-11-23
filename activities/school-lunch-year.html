@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  급식실의 1년 — 영양사가 되어 학교 점심을 짜는 활동(통합과학2·과학탐구실험2 영양·식생활 탐구와 이어짐)
+  급식실의 1년 — 영양사가 되어 우리 학교 점심을 설계하는 활동(통합과학2·과학탐구실험2 영양·식생활 탐구와 이어짐)
   단일 파일 정적 페이지. 공용 디자인 student-ui.css, 메뉴 은행 lunch-bank.js(자동 생성: school-meal-gg/build_lunch_bank.py) 외 라이브러리 없음.
   진행 상황은 이 브라우저(localStorage "lunch_year_v1")에만 저장한다. 이 활동에 나오는 학생(guests)은 모두 가상 인물이다.
 
@@ -16,7 +16,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>급식실의 1년 · 영양사 타이쿤</title>
+<title>급식실의 1년 · 우리 학교 점심 설계하기</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23FFF1C7'/%3E%3Ctext x='16' y='23' font-size='18' text-anchor='middle'%3E%F0%9F%8D%B1%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
@@ -89,7 +89,7 @@
 </head>
 <body>
 <header class="su-top"><div class="su-in">
-  <button class="su-logo" data-act="home" aria-label="급식실의 1년 처음 화면"><span class="ico" aria-hidden="true">🍱</span><span>급식실의 1년<small>영양사가 되어 학교 점심 짜기</small></span></button>
+  <button class="su-logo" data-act="home" aria-label="급식실의 1년 처음 화면"><span class="ico" aria-hidden="true">🍱</span><span>급식실의 1년<small>우리 학교 점심 설계하기</small></span></button>
   <ol class="su-progress" id="prog" aria-label="1년 진행"></ol>
   <div class="su-right"><a class="su-link" href="nutrition-clinic.html">식탁 상담소</a><a class="su-link" href="meal-lab.html">급식 데이터 탐구</a><button class="su-link" data-act="teacher">교사용 안내</button><a class="su-link" href="../index.html">교과서 홈</a></div>
 </div></header>
