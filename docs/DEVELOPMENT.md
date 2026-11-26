@@ -17,6 +17,7 @@ activities/meal-lab.html                    식탁 문제 해결단(급식 데�
 activities/meal-lab-teacher.html            식탁 문제 해결단 교사용 안내
 activities/meal-lab-data.js                 위 활동의 데이터(10% 무작위 표본·정제 미션 원본 표본·전수 집계표). school-meal-gg/build_web_data.py가 만든다
 activities/school-lunch-year.html           급식실의 1년(우리 학교 점심 설계하기: 6일 시나리오·계기판·안전 관문·1년 결산·앱 안 교사용 안내)
+activities/read-and-eat.html                책장 옆 식탁(독서교육 연계 영양 수업: 글 5편·밑줄 펜·근거 카드·결과물 3종, lunch-bank.js 재사용)
 activities/lunch-bank.js                    위 활동의 메뉴 은행(96가지, 우유·과일 포함, 알레르기·칸·조리법·제철 달·식약처 영양값). school-meal-gg/build_lunch_bank.py가 만든다
 school-meal-gg/                             경기도 고등학교 504곳 급식 데이터(2024.3~2026.11 점심 24만 끼) 수집·분석 스크립트와 수업용 집계표. 앱의 기준값·통계 출처와 확인 상태는 school-meal-gg/VERIFICATION.md
 teacher.html                                교사 대시보드
