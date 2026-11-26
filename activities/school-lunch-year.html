@@ -36,6 +36,8 @@
   .dessert{display:flex; align-items:center; gap:10px; margin-top:10px; font-size:14px}
   .dessert .dot{width:56px; height:56px; border-radius:50%; flex:none; display:grid; place-items:center; background:var(--card); border:1px dashed var(--border); font-size:12px; color:var(--muted-foreground); text-align:center}
   .dessert .dot.on{border-style:solid; background:var(--lemon); color:var(--lemon-d); font-weight:800}
+  .dessert{flex-wrap:wrap} .dessert .side{display:flex; align-items:center; gap:6px}
+  .dessert .dot.milk.on{background:var(--sky); color:var(--sky-d)}
   .hero-tray{margin:0; display:grid; gap:12px; justify-items:center}
   .hero-tray .tray5{width:min(100%,380px); transform:rotate(-1.5deg); box-shadow:var(--shadow-lg)}
   .hero-tray .cell{min-height:64px; font-weight:800}
@@ -112,8 +114,8 @@ const STD = {
   F: { kcal: 670, pro: 18.4, va: [150, 217], b1: [0.30, 0.37], b2: [0.34, 0.40], vc: [26.7, 33.4], ca: [234, 267], fe: [3.7, 4.7] } };
 const NUTS = [["va", "비타민A", "㎍RAE"], ["b1", "티아민", "mg"], ["b2", "리보플라빈", "mg"], ["vc", "비타민C", "mg"], ["ca", "칼슘", "mg"], ["fe", "철", "mg"]];
 const NA_REF = Math.round(2300 / 3); // 참고: 2025 KDRI 나트륨 만성질환위험감소섭취량 하루 2,300mg의 3분의 1(별표 3에는 나트륨 기준 없음)
-const SLOTS = [["밥", "밥"], ["국", "국·찌개"], ["주찬", "주찬"], ["부찬", "부찬"], ["김치", "김치"], ["후식", "후식(선택)"]];
-const MAX = { 밥: 1, 국: 1, 주찬: 1, 부찬: 2, 김치: 1, 후식: 1 };
+const SLOTS = [["밥", "밥"], ["국", "국·찌개"], ["주찬", "주찬"], ["부찬", "부찬"], ["김치", "김치"], ["후식", "후식(선택)"], ["우유", "우유(선택)"]];
+const MAX = { 밥: 1, 국: 1, 주찬: 1, 부찬: 2, 김치: 1, 후식: 1, 우유: 1 };
 const MEAT_RE = /고기|소고기|쇠고기|한우|닭|오리|돼지|돈육|갈비|제육|햄|소시지|베이컨|어묵|참치|멸치|황태|북어|오징어|새우|홍합|바지락|조개|연어|고등어|삼치|코다리|사골|육개장|곰탕|삼계|수육|불고기|함박|치킨|진미채|해물|탕수|꿔바로우|부대/;
 const ANIMAL = [7, 8, 9, 10, 15, 16, 17, 18];
 const vegOk = d => !MEAT_RE.test(d.n) && !d.a.some(c => ANIMAL.includes(c));
@@ -260,9 +262,10 @@ function trayHTML(st, interactive) {
   const cell = (k, big) => { const ids = st ? st.plate[k] || [] : [];
     return `<div class="cell${big ? " big" : ""}${ids.length ? "" : " empty"}"><span class="lb">${k === "국" ? "국·찌개" : k}</span>${ids.map(i => interactive
       ? `<button data-act="rem" data-k="${k}" data-i="${i}" aria-label="${esc(M[i].n)} 빼기">${esc(M[i].n)}</button>` : `<span>${esc(M[i].n)}</span>`).join("")}</div>`; };
-  const ds = st ? st.plate["후식"] || [] : [];
+  const side = k => { const ds = st ? st.plate[k] || [] : [];
+    return `<span class="side"><span class="dot${ds.length ? " on" : ""}${k === "우유" ? " milk" : ""}">${ds.length ? esc(M[ds[0]].n) : k}</span>${ds.length && interactive ? `<button class="su-btn sm ghost" data-act="rem" data-k="${k}" data-i="${ds[0]}">${k} 빼기</button>` : ""}</span>`; };
   return `<div class="tray5" role="group" aria-label="식판">${cell("주찬")}${cell("부찬")}${cell("김치")}${cell("밥", 1)}${cell("국", 1)}</div>
-    <div class="dessert"><span class="dot${ds.length ? " on" : ""}">${ds.length ? esc(M[ds[0]].n) : "후식"}</span>${ds.length && interactive ? `<button class="su-btn sm ghost" data-act="rem" data-k="후식" data-i="${ds[0]}">후식 빼기</button>` : `<span class="su-small su-muted">후식은 넣어도, 빼도 돼요.</span>`}</div>`;
+    <div class="dessert">${side("후식")}${side("우유")}<span class="su-small su-muted">후식과 우유는 넣어도, 빼도 돼요.</span></div>`;
 }
 function home() {
   const any = S.days.some(d => d.done), next = S.days.findIndex(d => !d.done);
@@ -336,7 +339,7 @@ function dayView() {
     <div class="su-stack">
       <div class="su-row slots" role="tablist" aria-label="칸 고르기">${SLOTS.map(([k, l]) => `<button class="su-chip" role="tab" aria-selected="${!q && slot === k}" aria-pressed="${!q && slot === k}" data-act="slot" data-k="${k}">${l}<span class="su-tiny"> ${(st.plate[k] || []).length}/${MAX[k]}</span></button>`).join("")}</div>
       <div class="su-field"><label for="inQ">메뉴 이름으로 찾기</label><input type="text" id="inQ" value="${esc(st.q || "")}" placeholder="예: 김치, 오징어, 팥" autocomplete="off"></div>
-      <p class="su-tiny su-muted" style="margin:0">숫자는 알레르기 번호(1 난류 · 2 우유 · 4 땅콩 · 5 대두 · 6 밀 · 9 새우 · 10 돼지고기 · 17 오징어 …). 점선 '?'는 일부 학교에서만 표시한 번호예요. 영양값은 식약처 음식 영양성분(학교급식 레시피 값 우선)의 1인분이라 우리 학교 배식량과 다를 수 있어요. 1인분 양은 식약처 자료에 적힌 단위(g 또는 mL) 그대로예요. 쌀밥과 보리밥의 열량 차이는 대부분 곡물보다 자료의 1인분 양(450 mL와 280 mL) 차이에서 와요(100 mL당 열량은 거의 같아요). 카드에 마우스를 올리면 출처가 보여요.</p>
+      <p class="su-tiny su-muted" style="margin:0">숫자는 알레르기 번호(1 난류 · 2 우유 · 4 땅콩 · 5 대두 · 6 밀 · 9 새우 · 10 돼지고기 · 17 오징어 …). 점선 '?'는 일부 학교에서만 표시한 번호예요. 영양값은 식약처 음식 영양성분(학교급식 레시피 값 우선)의 1인분이라 우리 학교 배식량과 다를 수 있어요. 1인분 양은 식약처 자료에 적힌 단위(g 또는 mL) 그대로예요. 흰밥·잡곡밥은 1인분을 330 mL로 맞췄어요. 원자료는 쌀밥 450 mL, 보리밥 280 mL라서 열량 차이가 곡물이 아니라 양에서 생겼거든요(100 mL당 열량은 거의 같아요). 카드에 마우스를 올리면 출처가 보여요.</p>
       <div class="shelf">${list.map(k => menuCard(k, day, st, day.guests)).join("") || `<p class="su-muted">찾는 메뉴가 없어요.</p>`}</div>
     </div>
     <aside class="su-stack su-sticky" aria-label="오늘의 식판">
@@ -372,7 +375,7 @@ function resultView(i) {
   <h2 class="su-h2">학생 반응</h2><div class="guests">${day.guests.map(g => guestCard(g, ev)).join("")}</div>
   ${ev.nj ? `<details class="su-card" open><summary><b>영양관리기준 하루 판정</b> <span class="su-small su-muted">(실제 평가는 계절별 연속 5일 평균)</span></summary><div class="su-scroll"><table class="su-table nut"><thead><tr><th>항목</th><th>오늘</th><th>기준</th><th>판정</th></tr></thead><tbody>
     ${ev.nj.rows.map(r => `<tr><td>${r.l}</td><td>${esc(r.v)}</td><td class="su-small su-muted">${esc(r.note)}</td><td>${verdict(r)}</td></tr>`).join("")}</tbody></table></div>
-    <p class="su-tiny su-muted">식약처 음식 영양성분(학교급식 레시피 값 우선, 1인분)을 더한 값이에요. 실제 학교는 배식량과 레시피에 따라 달라요. 우유는 이번 메뉴 은행에 없어서 칼슘을 채우려면 반찬을 잘 골라야 해요.</p></details>` : ""}
+    <p class="su-tiny su-muted">식약처 음식 영양성분(학교급식 레시피 값 우선, 1인분)을 더한 값이에요. 실제 학교는 배식량과 레시피에 따라 달라요. 우유(200 mL 한 팩)는 칼슘을 한 번에 236 mg 더해요. 우유 알레르기 학생에게는 두유나 다른 칼슘 반찬을 생각해 보세요.</p></details>` : ""}
   <div class="su-card su-stack"><label class="su-label" for="inWhy">오늘 무엇을 포기하거나 양보했나요? 왜 그렇게 정했나요?</label>
     <textarea class="su-input" id="inWhy" data-in="why" rows="3" placeholder="예: 지호를 위해 매운 제육볶음 대신 두부조림을 넣었더니 육상부 준우의 단백질이 모자랐다">${esc(st.why || "")}</textarea>
     <p class="su-tiny su-muted" style="margin:0" id="whyCnt">${(st.why || "").trim().length}/10자 이상</p>
@@ -461,10 +464,10 @@ function teacher() {
     <li>같은 규칙 제5조제2항(식단 작성 시 고려사항 1~5호), 제7조제2항(알레르기 유발식품 표시·공지), [별표 4] 위생·안전관리기준</li>
     <li>식품 등의 표시·광고에 관한 법률 시행규칙 [별표 2](2024. 12. 30. 개정): 알레르기 유발물질 19종</li>
     <li>메뉴 이름·알레르기 번호: 경기도 고등학교 급식(NEIS) 10% 표본과 원본 표본 1,260끼. 번호는 그 메뉴에 붙은 표시의 50% 이상에 나온 번호, '?'는 20~50%</li>
-    <li>메뉴 영양값: 식약처 「전국통합식품영양성분정보(음식)표준데이터」(공공데이터포털 15100070). 같은 이름이 여러 출처에 있으면 중고등학교급식 → 초등학교급식 → 산업체급식 → 가정식 → 외식 순으로 고름(프랜차이즈 업체 제공 값은 쓰지 않음). 1인분 중량은 학교·단체급식 출처면 자료의 값, 그 밖의 출처면 같은 분류 중·초등학교급식 메뉴의 중앙값. 케이크·찹쌀떡은 한 조각 50 g으로 수업용 가정</li></ul></div>
+    <li>메뉴 영양값: 식약처 「전국통합식품영양성분정보(음식)표준데이터」(공공데이터포털 15100070). 같은 이름이 여러 출처에 있으면 중고등학교급식 → 초등학교급식 → 산업체급식 → 가정식 → 외식 순으로 고름(프랜차이즈 업체 제공 값은 쓰지 않음). 1인분 중량은 학교·단체급식 출처면 자료의 값, 그 밖의 출처면 같은 분류 중·초등학교급식 메뉴의 중앙값. 케이크·찹쌀떡은 한 조각 50 g으로 수업용 가정. 흰밥·잡곡밥 다섯 가지는 1인분을 330 mL(중고등학교급식 밥류 중앙값)로 통일했습니다. 원자료 그대로면 쌀밥 450 mL·보리밥 280 mL라 열량 차이가 곡물이 아니라 양에서 생기기 때문입니다.</li></ul></div>
   <div class="su-card su-stack su-measure"><h2 class="su-h3">한계와 주의</h2><ul class="su-small">
     <li>영양값은 표준 레시피의 1인분 값이라 학교 배식량·레시피와 다릅니다. 판정은 학습용이며 실제 급식 평가가 아닙니다.</li>
-    <li>우유·요구르트·과일(원재료)은 '음식' 자료에 없어 메뉴 은행에서 뺐습니다. 그래서 칼슘을 채우기가 어렵습니다(멸치·두부·쌀국수 등으로 채워야 함). 가공식품·원재료성식품 표준데이터를 합치면 넣을 수 있습니다.</li>
+    <li>우유·과일은 식약처 「원재료성식품」 표준데이터(15100065)에서, 두유·요구르트는 「가공식품」 표준데이터(15100066)에서 가져왔습니다. 과일은 1인 1회 분량 100 g, 우유는 학교 우유 1팩 200 mL(수업용 가정)입니다. 우유급식은 식판과 따로 '우유(선택)' 칸에 담습니다.</li>
     <li>알레르기 번호는 학교마다 레시피에 따라 달라집니다. 실제로는 그 학교 레시피와 식재료로 확인해야 합니다.</li>
     <li>식재료비 단계(₩~₩₩₩)는 수업용 가정입니다. 실제 단가 자료가 아닙니다.</li>
     <li>활동에 나오는 학생은 모두 가상 인물입니다. 체중 감량을 요구하는 인물은 일부러 넣지 않았습니다(체형 낙인 예방).</li>

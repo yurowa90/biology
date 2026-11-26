@@ -71,7 +71,9 @@ MENU = [
     # 후식·음료
     ("사과", "후식", 1, "채식 과일"), ("귤", "후식", 1, "채식 과일"), ("바나나", "후식", 1, "채식 과일 소화"), ("수박", "후식", 2, "채식 과일"),
     ("방울토마토", "후식", 1, "채식 과일"), ("파인애플", "후식", 1, "채식 과일"), ("요구르트", "후식", 1, "소화"),
-    ("우유", "후식", 1, ""), ("두유", "후식", 1, "채식"), ("식혜", "후식", 1, "전통"),
+    ("식혜", "후식", 1, "전통"),
+    # 우유급식(식판 밖 따로): 우유 알레르기 학생에게는 두유가 대체식
+    ("우유", "우유", 1, ""), ("두유", "우유", 1, "채식"),
     ("독도케이크", "후식", 2, "계기:독도"), ("크림찹쌀떡", "후식", 2, "계기:수능"), ("동지팥죽", "후식", 1, "전통 계기:동지 채식"),
     ("마카롱", "후식", 2, "세계"), ("에그타르트", "후식", 2, "세계"), ("열대과일샐러드", "후식", 2, "세계 채식"),
     ("수박화채", "후식", 2, "채식 과일 제철:6.7.8"), ("과일샐러드", "후식", 1, "과일"),
@@ -145,6 +147,18 @@ ALIAS = {"쇠고기미역국": "소고기 미역국", "들깨미역국": "미역
 NO_MATCH = {"짬뽕국", "마파두부덮밥", "투움바파스타", "순두부찌개", "마카롱", "메밀전병", "진미채볶음"}
 # 1인분 중량을 자료에서 정할 수 없어 수업용으로 정한 것(한 조각)
 PORTION = {"독도케이크": 50, "크림찹쌀떡": 50}
+# 흰밥·잡곡밥은 1인분 양을 하나로 통일: 식약처 중고등학교급식 '~밥'(볶음·덮밥 제외) 1인분의 중앙값.
+# 원자료는 쌀밥 450, 보리밥 280 mL처럼 달라서, 열량 차이가 곡물이 아니라 양에서 생겼음(VERIFICATION 9절)
+RICE = {"쌀밥", "혼합잡곡밥", "흑미밥", "보리밥", "현미밥"}
+# 음식 자료에 없는 우유·과일: 「원재료성식품」 표준데이터(15100065)의 식품명과 1인 1회 분량
+# 과일 100 g: 식품군별 1인 1회 분량(과일류 약 50 kcal: 사과·배·바나나·포도·귤 100 g)
+# 우유 200 mL: 학교 우유급식 1팩(수업용 가정, 1 mL ≈ 1 g으로 계산). 수박은 기준을 찾지 못해 다른 과일처럼 100 g
+RAW_FOOD = {"사과": ("사과_생것", 100, "g"), "귤": ("귤_온주밀감_생것", 100, "g"), "바나나": ("바나나_생것", 100, "g"),
+            "수박": ("수박_적육질_생것", 100, "g"), "방울토마토": ("토마토_방울토마토_생것", 100, "g"),
+            "파인애플": ("파인애플_생것", 100, "g"), "우유": ("우유", 200, "mL")}
+SERVING_NOTE = {"g": "과일 1인 1회 분량", "mL": "학교 우유 1팩(수업용 가정)"}
+# 가공식품 표준데이터(15100066)에서 고를 것: 메뉴 → 대표식품명. 1회 분량은 같은 대표식품 제품들의 식품중량 중앙값
+PROC_FOOD = {"두유": "두유", "요구르트": "농후발효유"}  # 식품공전 분류상 학교 급식의 요구르트는 농후발효유
 NUT_COLS = {"kcal": "에너지(kcal)", "pro": "단백질(g)", "fat": "지방(g)", "cho": "탄수화물(g)", "sug": "당류(g)",
             "ca": "칼슘(mg)", "fe": "철(mg)", "na": "나트륨(mg)", "va": "비타민 A(μg RAE)", "b1": "티아민(mg)",
             "b2": "리보플라빈(mg)", "vc": "비타민 C(mg)"}
@@ -180,7 +194,51 @@ def load_nut(path):
         if r["식품기원명"].startswith(("중고등학교급식", "초등학교급식")) and num(re.sub(r"[^\d.]", "", r["식품중량"])):
             med[r["식품대분류명"]].append(num(re.sub(r"[^\d.]", "", r["식품중량"])))
     med = {k: statistics.median(v) for k, v in med.items()}
+    rice = [num(re.sub(r"[^\d.]", "", r["식품중량"])) for r in rows if r["식품기원명"].startswith("중고등학교급식")
+            and r["식품대분류명"] == "밥류" and r["식품명"].endswith("밥") and not re.search(r"볶음|덮", r["식품명"])]
+    med["__rice__"] = statistics.median([w for w in rice if w])
     return by, norm, rows, med
+
+
+def read_csv(path):
+    raw = open(path, "rb").read()
+    for enc in ("utf-8-sig", "cp949"):
+        try:
+            return list(csv.DictReader(io.StringIO(raw.decode(enc))))
+        except UnicodeDecodeError:
+            continue
+
+
+def nut_row(r, w, wu, wsrc, org):
+    f = w / 100
+    out = {k: (round(num(r.get(col)) * f, 2) if num(r.get(col)) is not None else None) for k, col in NUT_COLS.items()}
+    out.update({"src": r["식품명"], "org": org, "w": w, "wu": wu, "wsrc": wsrc, "code": r["식품코드"],
+                "date": r.get("데이터생성일자", ""), "ref": r.get("데이터기준일자", "")})
+    return out
+
+
+def proc_index(rows):
+    """가공식품 표준데이터: 같은 대표식품 제품들의 100 g(mL)당 값과 식품중량의 중앙값으로 '보통 제품' 하나를 만든다(특정 상표를 고르지 않음)"""
+    out = {}
+    for name, rep in PROC_FOOD.items():
+        c = [r for r in rows if r.get("대표식품명") == rep and num(re.sub(r"[^\d.]", "", r.get("식품중량") or ""))]
+        if not c:
+            continue
+        med = lambda col: (statistics.median(v) if (v := [num(r.get(col)) for r in c if num(r.get(col)) is not None]) else None)
+        w = round(statistics.median(num(re.sub(r"[^\d.]", "", r["식품중량"])) for r in c), 1)
+        wu = "mL" if sum(r.get("영양성분함량기준량", "").lower().endswith("ml") for r in c) * 2 >= len(c) else "g"
+        row = {col: med(col) for col in NUT_COLS.values()}
+        row.update({"식품명": f"{rep}(제품 {len(c)}개 중앙값)", "식품코드": "", "데이터생성일자": max(r.get("데이터생성일자", "") for r in c),
+                    "데이터기준일자": max(r.get("데이터기준일자", "") for r in c)})
+        out[name] = nut_row(row, w, wu, f"같은 대표식품 제품 {len(c)}개의 식품중량 중앙값", "가공식품")
+    return out
+
+
+def nut_raw(name, raw_rows):
+    """원재료성식품 표준데이터에서 우유·과일 값을 1인 1회 분량으로"""
+    src, w, wu = RAW_FOOD[name]
+    r = next((x for x in raw_rows if x["식품명"] == src), None)
+    return r and nut_row(r, w, wu, SERVING_NOTE[wu], "원재료성식품(" + (r.get("출처명") or "")[:12] + ")")
 
 
 def nut_of(name, by, norm, med):
@@ -192,14 +250,13 @@ def nut_of(name, by, norm, med):
     w = num(re.sub(r"[^\d.]", "", r["식품중량"]))
     if name in PORTION:
         w, wsrc = PORTION[name], "수업용 가정(한 조각)"
+    elif name in RICE:
+        w, wsrc = med["__rice__"], "밥 1인분 통일(중고등학교급식 밥류 중앙값)"
     elif r["식품기원명"].startswith(tuple(SCHOOL)) and w:
         wsrc = "자료의 1인분"
     else:
         w, wsrc = round(med.get(r["식품대분류명"], statistics.median(list(med.values()))), 1), "같은 분류 학교급식 1인분 중앙값"
-    f = w / 100
-    out = {k: (round(num(r.get(col)) * f, 2) if num(r.get(col)) is not None else None) for k, col in NUT_COLS.items()}
-    out.update({"src": r["식품명"], "org": r["식품기원명"], "w": w, "wu": "mL" if r.get("영양성분함량기준량", "").lower().endswith("ml") else "g", "wsrc": wsrc, "code": r["식품코드"], "date": r.get("데이터생성일자", ""), "ref": r.get("데이터기준일자", "")})
-    return out
+    return nut_row(r, w, "mL" if r.get("영양성분함량기준량", "").lower().endswith("ml") else "g", wsrc, r["식품기원명"])
 
 
 def main():
@@ -210,10 +267,15 @@ def main():
     lab = allergy_labels(raw)
     mo = months(sample, idx)
     nut = None
+    raw_rows = proc = None
     if len(sys.argv) > 1:
         by, norm, rows, med = load_nut(sys.argv[1])
         nut = (by, norm, med)
-        print("식약처 CSV(업체 제공 제외)", len(rows), "행")
+        print("식약처 CSV(업체 제공 제외)", len(rows), "행 · 밥 1인분 통일", med["__rice__"])
+    if len(sys.argv) > 2:
+        raw_rows = read_csv(sys.argv[2]); print("원재료성식품", len(raw_rows), "행")
+    if len(sys.argv) > 3:
+        proc = proc_index(read_csv(sys.argv[3]))
     menus, skipped, unmatched = [], [], []
     for name, slot, cost, tags in MENU:
         if name not in idx:
@@ -234,11 +296,16 @@ def main():
                 "a": codes, "p": maybe, "ag": [k, n_lab], "f": cnt[idx[name]], "mo": mo.get(idx[name], []),
                 "m": method(name, slot), "raw": bool(re.search(RAW, name)) or name in FRUIT, "sh": 18 in codes, "nut": None}
         if nut:
-            item["nut"] = nut_of(name, *nut)
+            if name in RAW_FOOD:
+                item["nut"] = nut_raw(name, raw_rows) if raw_rows else None
+            elif name in PROC_FOOD:
+                item["nut"] = proc.get(name) if proc else None
+            else:
+                item["nut"] = nut_of(name, *nut)
             if not item["nut"]:
                 unmatched.append(name); continue  # 영양값이 없는 메뉴는 싣지 않는다(지어내지 않음)
         menus.append(item)
-    meta = {"built": __import__("datetime").date.today().isoformat(), "source": "경기도 고등학교 급식 10% 표본·원본 표본(NEIS), 식약처 전국통합식품영양성분정보(음식)표준데이터(15100070)",
+    meta = {"built": __import__("datetime").date.today().isoformat(), "source": "경기도 고등학교 급식 10% 표본·원본 표본(NEIS), 식약처 전국통합식품영양성분정보 표준데이터: 음식(15100070)·원재료성식품(15100065)·가공식품(15100066)",
             # 데이터기준일자는 표준데이터 전체의 기준일, 데이터생성일자는 행마다 다름(고른 행 중 가장 늦은 날)
             "nutRefDate": max((m["nut"]["ref"] for m in menus if m["nut"]), default=None),
             "nutRowLatest": max((m["nut"]["date"] for m in menus if m["nut"]), default=None),
