@@ -89,9 +89,10 @@ FRUIT = {"사과", "귤", "바나나", "수박", "방울토마토", "파인애�
 # 알레르기 표시가 이 수보다 적은 메뉴는 번호를 확정하지 않고 모두 '일부 학교에서만 표시'(p)로 둔다
 FEW_LABELS = 5
 # 이름만으로 주재료가 확실한 번호는 표시가 적어도 확정한다(우유·요구르트=2 우유, 두유=5 대두)
-KNOWN = {"우유": {2}, "요구르트": {2}, "두유": {5}, "두부조림": {5}, "계란찜": {1}, "계란말이": {1}}
+KNOWN = {"우유": {2}, "요구르트": {2}, "두유": {5}, "두부조림": {5}, "계란찜": {1}, "계란말이": {1},
+         "홍합탕": {18}, "바지락미역국": {18}, "오징어무국": {17}, "오징어초무침": {17}, "오징어튀김": {17}, "영양닭죽": {15}, "닭다리삼계탕": {15}}
 ANIMAL = {7, 8, 9, 10, 15, 16, 17, 18}  # 고등어·게·새우·돼지고기·닭고기·쇠고기·오징어·조개류
-# 원자료 이상값: 같은 음식의 다른 행·원재료와 비교해 믿기 어려운 값은 빼고(null) 근거를 VERIFICATION 9절에 적는다
+# 원자료 이상값: 같은 음식의 다른 행·원재료와 비교해 믿기 어려운 값은 빼고(null) 근거를 VERIFICATION 11절에 적는다
 OUTLIER = {("마라탕", "b1"): "외식 분석 행 D306-278000000-0002 티아민 1.271 mg/100 g(돼지고기 살코기 수준)",
            ("잡채", "b1"): "가정식 분석 행 D110-492000000-0001 티아민 1.015 mg/100 g"}
 
@@ -311,7 +312,7 @@ def main():
         sm = [int(x) for t in tg if t.startswith("제철:") for x in t[3:].split(".")]
         item = {"n": name, "s": slot, "c": cost, "t": [t for t in tg if not t.startswith("제철:")], "sm": sm,
                 "a": codes, "p": maybe, "ag": [k, n_lab], "few": few, "f": cnt[idx[name]], "mo": mo.get(idx[name], []),
-                "m": method(name, slot), "raw": bool(re.search(RAW, name)) or name in FRUIT, "sh": 18 in codes, "nut": None}
+                "m": method(name, slot), "raw": bool(re.search(RAW, name)) or name in FRUIT, "sh": bool(re.search(r"홍합|바지락|조개|굴|전복|꼬막|재첩", name)), "nut": None}
         if nut:
             if name in RAW_FOOD:
                 item["nut"] = nut_raw(name, raw_rows) if raw_rows else None

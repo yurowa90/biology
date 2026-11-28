@@ -106,25 +106,25 @@ const TEXTS = [
     concepts: ["알레르기", "면역", "유당", "효소", "칼슘", "단백질"], pairs: [["면역", "단백질"], ["유당", "효소"]], avoid: [2], who: "서윤",
     safety: "실제 생활에서: 우유 알레르기가 있으면 우유뿐 아니라 요구르트·치즈 같은 유제품도 피해야 해요. 대체식은 보호자·의사·영양교사와 함께 정해요.",
     paras: [["점심시간, 서윤이는 식판 옆 우유 칸을 비워 두었다.", "옆자리 민호가 물었다.", "\"우유 안 마시면 키 안 큰대. 너 배 아파서 그래?\"", "서윤이는 고개를 저었다.", "\"나는 우유 알레르기야. 우유 마시고 배 아픈 거랑은 원인이 달라.\""],
-      ["우유를 마시면 배가 아픈 사람 중에는 우유 속 당인 유당을 분해하는 효소가 적은 경우가 많다.", "이것을 유당불내증이라고 한다.", "유당불내증이 있는 사람은 조금씩 마시거나 유당을 줄인 우유를 고르기도 한다.", "우유 알레르기는 이와 달리, 우유 속 단백질을 몸의 면역계가 해로운 것으로 잘못 알아보고 반응하는 것이다.", "그래서 아주 적은 양에도 두드러기가 나거나 숨쉬기가 힘들어질 수 있어, 우유가 든 음식은 아예 피해야 한다."],
+      ["우유를 마시면 배가 아픈 사람 중에는 우유 속 당인 유당을 분해하는 효소가 적은 경우가 많다.", "이것을 유당불내증이라고 한다.", "유당불내증이 있는 사람은 조금씩 마시거나 유당을 줄인 우유를 고르기도 한다.", "우유 알레르기는 이와 달리, 우유 속 단백질을 몸의 면역계가 해로운 것으로 잘못 알아보고 반응하는 것이다.", "그래서 아주 적은 양에도 두드러기가 나거나 숨쉬기가 힘들어질 수 있어, 우유가 든 음식은 아예 피해야 한다.", "배가 아픈 증상은 두 경우 모두 생길 수 있어서, 증상만 보고는 어느 쪽인지 알 수 없다."],
       ["영양교사 선생님은 서윤이를 위해 우유 대신 두유를 준비해 두었다.", "민호가 다시 물었다.", "\"그럼 너는 칼슘이 모자라지 않아?\"", "서윤이가 웃었다.", "\"멸치볶음이랑 두부조림도 있잖아. 그 대신 나는 식단표에서 2번을 꼭 찾아봐.\""]],
     task: "민호나 서윤이 가운데 한 사람에게 편지를 써요. 우유 알레르기와 유당불내증의 차이를 과학 개념으로 설명하고, 서윤이가 칼슘을 채울 수 있는 방법을 근거 카드로 제안해요. 서윤이가 먹을 수 없는 음식을 권하지 않도록 카드의 알레르기 번호를 확인해요.",
-    suggest: ["두유", "견과류멸치볶음", "두부조림", "시금치나물"], contrast: ["우유", "요구르트"], fixed: ["al19", "law7"] },
+    suggest: ["두유", "견과류멸치볶음", "두부조림", "꽈리고추멸치볶음"], contrast: ["우유", "요구르트"], fixed: ["al19", "law7"] },
   { id: "ad", kind: "direct", genre: "광고", ico: "📣", title: "단백질 폭탄 '머슬킹'", by: "이 앱에서 만든 가상 광고(실제 상품 아님)", prod: "check",
     pre: ["광고에서 '운동 안 해도', '살찌지 않아요', '천연'이라는 말을 본 적이 있나요? 이런 말을 믿을 때 무엇을 확인해야 할까요?"],
     concepts: ["단백질", "근육", "열량", "에너지", "알레르기"],
     paras: [["하루 한 개, 머슬킹이면 운동 안 해도 근육이 쑥쑥 자랍니다!", "단백질 20 g, 달걀 3개보다 많아요.", "설탕 0 g! 그러니 아무리 먹어도 살찌지 않아요."],
       ["100% 천연 원료라 누구에게나 안전합니다.", "의사 10명 중 9명이 추천한 바로 그 맛.", "성장기 청소년에게 꼭 필요한 영양, 이제 머슬킹 하나로 채우세요."],
-      ["[영양성분표] 1개(60 g)당 열량 230 kcal, 단백질 20 g, 지방 9 g, 탄수화물 18 g(당류 2 g, 설탕 0 g, 당알코올 6 g)"]],
+      ["[영양정보] 1개(60 g)당 225 kcal · 나트륨 120 mg · 탄수화물 18 g(당류 2 g) · 지방 9 g · 단백질 20 g", "[원재료명] 분리대두단백, 유청단백, 말티톨(당알코올), 땅콩버터, 코코아"]],
     claims: [
-      { c: "운동 안 해도 근육이 자란다(이 바 덕분에)", a: "거짓", why: "성장기에는 운동하지 않아도 키와 함께 근육이 자라요. 하지만 그건 이 바 덕분이 아니에요. 단백질을 이미 충분히 먹고 있다면 더 먹어도 근력 운동 같은 자극 없이는 근육이 더 늘지 않고, 남는 단백질은 에너지로 쓰이거나 배설돼요. 광고는 '바 때문에'라는 인과를 근거 없이 주장했어요." },
-      { c: "단백질 20 g은 달걀 3개보다 많다", a: "판단 보류", why: "식약처 자료로 달걀(생것)은 100 g당 단백질 12.91 g이에요. 껍데기를 뺀 달걀 1개를 50~60 g으로 잡으면 3개는 약 19~23 g이라, 달걀 크기에 따라 20 g보다 적을 수도 많을 수도 있어요. 비교 조건(달걀 크기)이 없어 지금 정보로는 확인할 수 없어요." },
-      { c: "설탕은 0 g이다(성분표 기준)", a: "사실", why: "성분표에 설탕 0 g이라고 적혀 있으니 표시 기준으로는 사실이에요. 다만 설탕이 0 g이어도 다른 당류 2 g과 당알코올 6 g이 들어 있어요. '설탕 0'과 '당류 0'은 다른 말이에요." },
-      { c: "설탕 0 g이라 아무리 먹어도 살찌지 않는다", a: "거짓", why: "성분표로 1개 230 kcal예요. 단백질·탄수화물(전분 포함)은 1 g에 약 4 kcal, 지방은 약 9 kcal를 내고 당알코올도 열량이 조금 있어요. 쓰는 것보다 많이 먹으면 남는 에너지는 몸에 저장돼요." },
-      { c: "천연 원료라 누구에게나 안전하다", a: "거짓", why: "'100% 천연'은 확인할 수 없는 주장이고, 설령 천연이어도 '그러니 누구에게나 안전'은 잘못된 추론이에요(자연에 호소하는 오류). 우유·대두·땅콩 같은 천연 식품도 법령이 정한 알레르기 유발물질이에요." },
-      { c: "의사 10명 중 9명이 추천했다", a: "판단 보류", why: "누가, 언제, 어떻게 조사했는지 없어 확인할 수 없어요. 게다가 의사가 추천했다는 대상은 '맛'이라 전문 분야와도 맞지 않고, 10명은 아주 작은 표본이에요. 판단을 미루고, 이 문장은 근거로 쓰지 않아요." },
-      { c: "청소년에게 꼭 필요한 영양을 하나로 채운다", a: "과장", why: "단백질은 필요한 영양소의 하나일 뿐이에요(칼슘, 철, 비타민 등도 필요). 식사로 충분히 먹는다면 보충식품이 꼭 필요하지 않을 수도 있어요. '영양 전체'로 읽으면 거짓에 가까워 토론해 볼 만해요." }],
-    task: "광고의 주장 일곱 개를 사실·과장·거짓·판단 보류로 판정하고, 판정 근거를 적어요. 근거 카드(식약처 자료·법령)를 인용하면 더 단단해져요.",
+      { c: "운동 안 해도 근육이 쑥쑥 자란다", a: "거짓", why: "성장기에는 운동하지 않아도 키와 함께 근육이 자라요. 하지만 그건 이 바 덕분이 아니에요. 단백질을 이미 충분히 먹고 있다면 더 먹어도 근력 운동 같은 자극 없이는 근육이 더 늘지 않아요. 남는 단백질의 질소(아미노기)는 요소가 되어 오줌으로 나가고, 나머지는 에너지로 쓰이거나 지방으로 저장돼요. 광고는 '이 바 덕분에'라는 인과를 근거 없이 주장했어요." },
+      { c: "단백질이 20 g 들어 있다", a: "사실", why: "영양정보는 법(식품표시광고법)으로 정한 표시 사항이라, 광고 문구보다 믿을 근거가 있어요. 영양정보에 단백질 20 g이 적혀 있으니 표시 기준으로는 사실이에요(표시값과 실제값에는 허용 범위가 있어요). 광고를 의심하는 것과, 확인할 수 있는 정보까지 믿지 않는 것은 달라요." },
+      { c: "달걀 3개보다 단백질이 많다", a: "판단 보류", alt: ["과장"], why: "식약처 자료로 달걀(생것)은 100 g당 단백질 12.91 g이에요. 껍데기를 뺀 달걀 1개를 50~60 g으로 잡으면 3개는 약 19~23 g이라, 달걀 크기에 따라 20 g보다 적을 수도 많을 수도 있어요. 비교 조건(달걀 크기)이 없어 확인할 수 없으니 '판단 보류'가 맞다고 봐요. 큰 달걀을 기준으로 '오히려 적을 수 있다'는 근거를 들어 '과장'으로 판정했다면 그것도 인정해요." },
+      { c: "설탕 0 g이니 아무리 먹어도 살찌지 않는다", a: "거짓", why: "영양정보로 1개 225 kcal예요. 단백질·탄수화물(전분 포함)은 1 g에 약 4 kcal, 지방은 약 9 kcal를 내요. 게다가 '설탕 0'이어도 당류 2 g이 있고, 원재료의 말티톨 같은 당알코올도 열량이 조금 있어요. 쓰는 것보다 많이 먹으면 남는 에너지는 몸에 저장돼요." },
+      { c: "100% 천연 원료라 누구에게나 안전하다", a: "거짓", why: "'100% 천연'은 확인할 수 없는 주장이고, 설령 천연이어도 '그러니 누구에게나 안전'은 잘못된 추론이에요(자연에 호소하는 오류). 원재료명만 봐도 대두·우유(유청)·땅콩이 들어 있는데, 모두 법령이 정한 알레르기 유발물질이에요." },
+      { c: "의사 10명 중 9명이 추천했다", a: "판단 보류", why: "'10명 중 9명'은 비율(90%)을 말할 뿐, 몇 명의 의사를 어떻게 뽑아 무엇을 물었는지 알 수 없어요. 게다가 추천했다는 대상은 '맛'이라 의사의 전문 분야와도 맞지 않아요. 판단을 미루고, 이 문장은 근거로 쓰지 않아요." },
+      { c: "청소년에게 꼭 필요한 영양을 머슬킹 하나로 채운다", a: "과장", alt: ["거짓"], why: "단백질은 필요한 영양소의 하나일 뿐이에요(칼슘, 철, 비타민 등도 필요). 식사로 충분히 먹는다면 보충식품이 꼭 필요하지 않을 수도 있어요. '필요한 영양 전부'로 읽고 근거를 들어 '거짓'으로 판정했다면 그것도 인정해요." }],
+    task: "광고의 주장 일곱 개를 사실·과장·거짓·판단 보류로 판정하고, 판정 근거를 적어요. 영양정보와 원재료명도 근거가 돼요. 근거 카드(식약처 자료·법령)를 인용하면 더 단단해져요.",
     suggest: [], fixed: ["egg", "al19", "sugar"] },
   { id: "column", kind: "direct", genre: "칼럼", ico: "🍰", title: "급식 후식은 꼭 달아야 할까", by: "이 앱에서 쓴 가상 칼럼(필자 가상)", prod: "argue",
     pre: ["급식에서 가장 기다려지는 후식은 무엇인가요? 그 후식에는 당류가 얼마나 들어 있을 것 같나요?"],
@@ -133,7 +133,7 @@ const TEXTS = [
       ["세계보건기구(WHO)는 2015년 지침에서 유리당을 하루 총에너지의 10% 미만으로 줄이고, 가능하면 5% 미만으로 낮추라고 권고했다.", "여기서 유리당은 음식에 더한 당과 꿀·시럽·과일주스의 당을 말하고, 통과일과 우유에 원래 든 당은 빠진다.", "학교급식법 시행규칙도 식단을 짤 때 단순당류를 과다하게 쓰지 않도록 정해 두었다."],
       ["그렇다고 단 후식을 모두 없애면 급식이 즐겁지 않고 잔반이 늘 수 있다는 반론도 있다.", "나는 통과일처럼 자연스러운 단맛을 기본으로 하고, 기념일에만 특별한 후식을 내는 것이 좋다고 생각한다."]],
     task: "칼럼의 주장에 찬성하든 반대하든, 우리 학교 급식 후식에 대한 내 주장을 설득하는 글로 써요. 데이터 근거 카드를 하나 이상 인용하고, 근거마다 '왜 이 근거가 주장을 받치는지'를 쓰고, 예상 반론과 재반론을 꼭 넣어요. 카드의 '당류'에는 과일의 자연당도 들어 있다는 점에 주의해요.",
-    suggest: ["크림찹쌀떡", "독도케이크", "식혜", "사과", "귤", "수박화채"], fixed: ["who", "sugar", "law5"] },
+    suggest: ["크림찹쌀떡", "독도케이크", "식혜", "사과", "귤", "수박화채"], fixed: ["who", "sugar", "law5"], need: ["data"] },
   { id: "law", kind: "public", genre: "법령 원문", ico: "⚖️", title: "학교급식법 시행규칙 제5조·제7조", by: "법제처 국가법령정보 · 학교급식법 시행규칙(시행 2021. 6. 30.) 원문(개정 연혁 표기는 뺌)", prod: "argue", law: true,
     pre: ["법령은 '해야 한다', '하지 않을 것'처럼 독특하게 써요. 학교 급식을 짤 때 법이 무엇을 정해 두었을 것 같은지 세 가지를 예상해 보세요."],
     concepts: ["영양관리기준", "식품", "단순당", "알레르기", "계절식품"],
@@ -148,7 +148,7 @@ const TEXTS = [
       "1. 공지방법: 알레르기를 유발할 수 있는 식재료가 표시된 월간 식단표를 가정통신문으로 안내하고 학교 인터넷 홈페이지에 게재할 것",
       "2. 표시방법: 알레르기를 유발할 수 있는 식재료가 표시된 주간 식단표를 식당 및 교실에 게시할 것"]],
     task: "법령 원문을 근거로 '우리 학교 급식에 바라는 점'을 제안서로 써요. 법 조항은 주장이 아니라 근거(규칙)로 쓰고, 법 조항 카드와 데이터 카드를 각각 하나 이상 인용해요.",
-    suggest: ["우유", "사과", "보리밥", "배추김치", "크림찹쌀떡"], fixed: ["law5", "law5b", "law7", "al19"] },
+    suggest: ["우유", "사과", "보리밥", "배추김치", "크림찹쌀떡"], fixed: ["law5", "law5b", "law7", "al19"], need: ["law", "data"] },
   { id: "book", kind: "book", genre: "실제 도서", ico: "📚", title: "우리 반이 고른 책", by: "교사·학생이 서지 정보와 짧은 발췌를 넣어요(본문은 앱에 싣지 않음)", prod: null,
     pre: ["책 제목과 표지만 보고, 이 책이 음식과 몸에 대해 무엇을 주장할지 예상해 보세요."],
     concepts: ["영양", "에너지", "식품", "건강"], paras: null,
@@ -208,33 +208,46 @@ const AL = BANK.allergens || [];
 function menuEv(name) { const m = byName[name]; if (!m) return null; const n = m.nut;
   const al = m.a.map(c => c + " " + AL[c - 1]).concat(m.p.map(c => c + "? " + AL[c - 1]));
   return { id: "m:" + name, m, t: `${m.n} 1인분(${fmt(n.w)} ${n.wu || "g"})`, v: `열량 ${fmt(n.kcal)} kcal · 당류(자연당 포함) ${fmt(n.sug, 1)} g · 단백질 ${fmt(n.pro, 1)} g · 칼슘 ${fmt(n.ca)} mg · 나트륨 ${fmt(n.na)} mg`,
-    al: al.length ? "알레르기 번호: " + al.join(", ") + (m.few ? " (표시 자료 적음)" : "") : "이 표본에서는 알레르기 표시 없음",
+    al: (al.length ? "알레르기 번호: " + al.join(", ") : "이 표본에서는 알레르기 표시 없음") + (m.few ? " (표시 자료 적음)" : ""),
     note: n.note || "", s: `식약처 영양성분 표준데이터(${n.org.replace(/\(.*$/, "")}: ${n.src})` }; }
 function evById(id) { return id.startsWith("m:") ? menuEv(id.slice(2)) : FIXED_EV.find(e => e.id === id) || null; }
 const cite = e => `[근거: ${e.t} — ${e.v}${e.al ? " · " + e.al : ""} / 출처: ${e.s}]`;
-const CITE_RE = /\[근거:[^\]]*\]/g;
 
 /* 결과물 검사: 인용문은 빼고 학생이 쓴 말만 센다. 형식 점검일 뿐 내용의 타당성은 사람이 판단 */
 const ABS = /무조건|반드시|절대|모든 사람|누구나|항상|전혀|100%|완벽/;
-const own = v => String(v || "").replace(CITE_RE, " ").trim();
+const citesOf = s => s.ev.map(evById).filter(Boolean).map(cite);
+let OWN_CITES = [];
+const own = v => { let x = String(v || ""); for (const c of OWN_CITES) x = x.split(c).join(" "); return x.trim(); };
+// 의미 있는 글자 수: 한글 음절·영숫자만 세고, 같은 글자 반복(ㅁㅁㅁ, 아아아)은 한 번만
+const meaningful = v => { const x = own(v).replace(/[^가-힣A-Za-z0-9]/g, ""); let n = 0, prev = ""; for (const ch of x) { if (ch !== prev) n++; prev = ch; } return n; };
 const fieldsOf = (t, s) => s.prodType === "check" ? claimsOf(t).flatMap(c => ["v_" + c.id, "r_" + c.id]).concat(s.judged ? ["rev"] : []) : (PRODUCTS[s.prodType] || {}).fields || [];
 const prodVals = (t, s) => fieldsOf(t, s).map(k => s.prod[k] || "");
 function prodCheck(t, s) {
-  const p = s.prod, vals = prodVals(t, s), mine = vals.map(own).join(" "), cited = vals.some(v => /\[근거:/.test(v)), type = s.prodType;
-  const citedMenus = vals.join(" ").match(CITE_RE) || [];
-  const unsafe = (t.avoid || []).length ? s.ev.map(evById).filter(e => e && e.m && e.m.a.concat(e.m.p).some(c => t.avoid.includes(c)) && citedMenus.some(c => c.includes(e.t))) : [];
-  if (type === "letter") { const sci = own(p.sci), pairs = (t.pairs || []).map(pr => pr.some(w => sci.includes(w)));
-    const rows = [["받는 사람과 공감하는 말", own(p.to).length >= 2 && own(p.feel).length >= 10],
-      ["과학으로 설명하기(내 말로 30자 이상, " + (t.pairs || []).map(pr => pr.join("·")).join(" / ") + " 각각 한 번 이상)", own(p.sci).length >= 30 && pairs.every(Boolean)],
-      ["근거 카드 인용", cited], ["구체적 제안(내 말로 20자 이상)", own(p.plan).length >= 20], ["내 말 전체 120자 이상(인용 빼고)", mine.replace(/\s/g, "").length >= 120]];
-    if ((t.avoid || []).length) rows.push([unsafe.length ? `⚠ ${t.who || "인물"}이(가) 먹을 수 없는 음식(${unsafe.map(e => e.m.n).join(", ")})을 근거로 권했어요. 다시 생각해 보세요` : `${t.who || "인물"}의 알레르기 번호가 있는 음식을 권하지 않음`, !unsafe.length]);
+  OWN_CITES = citesOf(s);
+  const p = s.prod, vals = prodVals(t, s), mine = vals.map(own).join(" "), type = s.prodType;
+  const citedEv = s.ev.map(evById).filter(e => e && vals.some(v => v.includes(cite(e)))), cited = citedEv.length > 0;
+  const unsafe = (t.avoid || []).length ? citedEv.filter(e => e.m && e.m.a.concat(e.m.p).some(c => t.avoid.includes(c))) : [];
+  const avoidRe = /우유|요구르트|요거트|치즈|분유|아이스크림|버터|생크림|유제품/;
+  const mentioned = (t.avoid || []).includes(2) ? [...new Set((own(p.plan).match(new RegExp(avoidRe.source, "g")) || []))] : [];
+  if (type === "letter") { const sents = own(p.sci).split(/(?<=[.!?。])\s+|\n+/);
+    // 문장 단위: '알레르기'를 말한 문장에 면역·단백질, '유당불내증'을 말한 문장에 효소·분해가 있어야 함(거꾸로 쓰면 통과하지 못함)
+    const alg = sents.filter(x => /알레르기/.test(x) && !/불내증/.test(x)), lac = sents.filter(x => /불내증/.test(x) && !/알레르기/.test(x));
+    const pairOk = alg.some(x => /면역/.test(x) && /단백질/.test(x) && !/효소|분해/.test(x)) && lac.some(x => /유당/.test(x) && /효소|분해/.test(x) && !/면역/.test(x));
+    const rows = [["받는 사람과 공감하는 말", own(p.to).length >= 2 && meaningful(p.feel) >= 8],
+      ["과학으로 설명하기: 알레르기 문장에 '면역'과 '단백질', 유당불내증 문장에 '유당'과 '효소(분해)'(두 개념은 다른 문장으로)", meaningful(p.sci) >= 25 && pairOk],
+      ["근거 카드 인용(모은 카드를 '글에 넣기'로)", cited], ["구체적 제안(내 말로)", meaningful(p.plan) >= 15], ["내 말 전체 100자 이상(인용 빼고)", meaningful(vals.join(" ")) >= 100]];
+    if ((t.avoid || []).length) {
+      rows.push([unsafe.length ? `⚠ ${t.who}이(가) 먹을 수 없는 음식(${unsafe.map(e => e.m.n).join(", ")})의 카드를 근거로 인용했어요. 다시 생각해 보세요` : `인용한 카드에 ${t.who}이(가) 먹을 수 없는 음식이 없음`, !unsafe.length]);
+      rows.push([mentioned.length ? `⚠ 제안에 '${mentioned.join("', '")}'이(가) 나와요. ${t.who}에게 권하는 말이라면 고쳐야 해요(피하라는 말이면 괜찮아요)` : `제안 글 전체도 ${t.who}의 알레르기를 생각하며 직접 다시 읽어요`, null]); }
+    rows.push(["개념이 맞게 연결됐는지는 선생님·친구가 함께 확인해요", null]);
     return rows; }
-  if (type === "check") { const cl = claimsOf(t); const done = cl.filter(c => p["v_" + c.id] && own(p["r_" + c.id]).length >= 10).length;
+  if (type === "check") { const cl = claimsOf(t); const done = cl.filter(c => p["v_" + c.id] && meaningful(p["r_" + c.id]) >= 8).length;
     return [[`주장 판정과 내 말로 쓴 근거(${done}/${cl.length})`, done === cl.length && cl.length > 0], ["근거 카드 인용 한 번 이상", cited],
-      ["참고 판정과 비교해 무엇이 바뀌었는지(안 바뀌었는지) 쓰기", !t.claims || (s.judged && own(p.rev).length >= 10)]]; }
-  return [["주장 한 문장", own(p.claim).length >= 10], ["근거 두 가지(내 말로)", own(p.r1).length >= 10 && own(p.r2).length >= 10], ["근거 카드 인용", cited],
-    ["근거마다 '왜 이 근거가 주장을 받치나'", own(p.w1).length >= 10 && own(p.w2).length >= 10],
-    ["예상 반론과 재반론", own(p.counter).length >= 10 && own(p.rebut).length >= 10], ["결론", own(p.end).length >= 10],
+      ["참고 판정과 비교해 무엇이 바뀌었는지(안 바뀌었는지) 쓰기", !t.claims || (s.judged && meaningful(p.rev) >= 8)]]; }
+  const needRows = (t.need || []).map(kind => kind === "law" ? ["법령·지침 카드 인용", citedEv.some(e => !e.m)] : ["식약처 데이터 카드 인용", citedEv.some(e => e.m)]);
+  return [["주장 한 문장", meaningful(p.claim) >= 8], ["근거 두 가지(내 말로)", meaningful(p.r1) >= 8 && meaningful(p.r2) >= 8], ["근거 카드 인용", cited], ...needRows,
+    ["근거마다 '왜 이 근거가 주장을 받치나'", meaningful(p.w1) >= 8 && meaningful(p.w2) >= 8],
+    ["예상 반론과 재반론", meaningful(p.counter) >= 8 && meaningful(p.rebut) >= 8], ["결론", meaningful(p.end) >= 8],
     [ABS.test(mine) ? "⚠ 단정 표현(무조건·반드시·절대·누구나 등)이 있어요. 근거가 그만큼 강한지 살펴보고 '대체로', '~할 수 있다'로 바꿀지 생각해요" : "단정 표현 없음", null]];
 }
 /* 검증할 주장: 광고는 정해진 주장, 책은 '주장' 펜으로 칠한 문장(본문 순서) */
@@ -315,18 +328,19 @@ function writeHTML(t, s) {
   let body = "";
   if (s.prodType === "letter") body = (t.safety ? `<div class="su-fb warn" role="note">${esc(t.safety)}</div>` : "") + fld("to", "받는 사람", "예: 민호에게") + fld("feel", "먼저 마음을 헤아리는 말", "예: 서윤이가 우유를 안 마셔서 걱정됐지?", 1) +
     fld("sci", "과학으로 설명하기(내 말로)", "알레르기는 무엇에 대한 어떤 반응인지, 유당불내증은 무엇이 부족해서 생기는지 설명해요", 1) + fld("plan", "근거 있는 제안", "근거 카드를 인용해 칼슘을 채우는 방법을 제안해요(알레르기 번호 확인)", 1) + fld("end", "끝인사", "");
-  else if (s.prodType === "check") { const cl = claimsOf(t), ready = cl.every(c => p["v_" + c.id] && own(p["r_" + c.id]).length >= 10);
+  else if (s.prodType === "check") { OWN_CITES = citesOf(s); const cl = claimsOf(t), ready = cl.every(c => p["v_" + c.id] && meaningful(p["r_" + c.id]) >= 8);
     body = `<details class="su-card" open><summary><b>판정 기준</b></summary><ul class="su-small" style="margin:6px 0 0">${VERDICTS.map(v => `<li><b>${v[0]}</b>: ${esc(v[1])}</li>`).join("")}</ul></details>` +
       (cl.length ? cl.map((c, i) => `<div class="claim"><b>주장 ${i + 1}. “${esc(c.c)}”</b>
-      <div class="su-row" role="group" aria-label="주장 ${i + 1} 판정">${VERDICTS.map(([v]) => `<button class="su-chip" aria-pressed="${p["v_" + c.id] === v}" data-act="verdict" data-c="${esc(c.id)}" data-v="${v}">${v}</button>`).join("")}</div>
-      ${fld("r_" + c.id, "판정 근거(내 말로)", "왜 그렇게 판정했나요? 근거 카드나 과학 개념을 들어요", 1)}
-      ${s.judged && c.a ? `<div class="fb"><b>참고 판정: ${esc(c.a)}</b> · 처음 내 판정: ${esc(lock["v_" + c.id] || "–")}${lock["v_" + c.id] === c.a ? " (같아요)" : " (달라요)"}<br>${esc(c.why)}</div>` : ""}</div>`).join("")
+      <div class="su-row" role="group" aria-label="주장 ${i + 1} 판정">${VERDICTS.map(([v]) => `<button class="su-chip" aria-pressed="${p["v_" + c.id] === v}" data-act="verdict" data-c="${esc(c.id)}" data-v="${v}" ${s.judged && t.claims ? "disabled" : ""}>${v}</button>`).join("")}</div>
+      ${s.judged && t.claims ? `<div class="su-small"><b>처음 쓴 근거</b>: ${esc(lock["r_" + c.id] || p["r_" + c.id] || "")}</div>` : fld("r_" + c.id, "판정 근거(내 말로)", "왜 그렇게 판정했나요? 근거 카드나 과학 개념을 들어요", 1)}
+      ${s.judged && c.a ? `<div class="fb"><b>참고 판정: ${esc(c.a)}</b>${c.alt ? ` (근거가 있으면 ${esc(c.alt.join("·"))}도 인정)` : ""} · 처음 내 판정: ${esc(lock["v_" + c.id] || "–")}${lock["v_" + c.id] === c.a || (c.alt || []).includes(lock["v_" + c.id]) ? " (같거나 인정 범위)" : " (달라요)"}<br>${esc(c.why)}</div>` : ""}</div>`).join("")
       : `<p class="su-muted">밑줄 읽기에서 '주장' 펜으로 칠한 문장이 여기 검증할 주장으로 나와요.</p>`);
-    if (t.claims) body += s.judged ? fld("rev", "참고 판정과 비교해 보니, 내 생각이 바뀐 것(또는 바뀌지 않은 것)과 그 이유", "예: 2번은 달걀 크기를 몰라 '판단 보류'가 맞다고 생각이 바뀌었다", 1)
+    if (t.claims) body += s.judged ? fld("rev", "참고 판정과 비교해 보니, 내 생각이 바뀐 것(또는 바뀌지 않은 것)과 그 이유. 처음 판정과 근거는 그대로 남아요", "예: 3번은 달걀 크기를 몰라 '판단 보류'가 맞다고 생각이 바뀌었다. 2번은 영양정보가 법정 표시라 사실로 봐도 된다", 1)
       : `<div class="su-row"><button class="su-btn" data-act="judge" ${ready ? "" : "disabled"}>내 판정과 근거를 다 썼어요 → 참고 판정 보기</button></div><p class="su-tiny su-muted" style="margin:0">참고 판정을 열면 지금 쓴 판정과 근거가 처음 답으로 저장돼요.</p>`; }
   else body = fld("claim", "주장(한 문장)", "예: 우리 학교 후식은 통과일을 기본으로 해야 한다") +
     fld("r1", "근거 1", "데이터 근거 카드를 인용하고 내 말로 설명해요", 1) + fld("w1", "근거 1이 주장을 받치는 이유", "이 자료가 왜 내 주장의 근거가 되나요? 자료의 한계(예: 1인분 값, 총당류)는 없나요?", 1) +
-    fld("r2", "근거 2", "법령·지침이나 다른 자료", 1) + fld("w2", "근거 2가 주장을 받치는 이유", "", 1) +
+    fld("r2", "근거 2", "법령·지침이나 다른 자료", 1) + fld("w2", "근거 2가 주장을 받치는 이유", "예: 학교가 지켜야 하는 규칙이라, 내 제안이 개인 취향이 아니라 기준에 맞는다는 뜻이 된다", 1) +
+    (() => { const cs = sentList(t).filter(x => s.tags[x.k] === "counter"); return cs.length ? `<p class="su-small" style="margin:0"><span class="sent t-counter">반론</span> 내가 밑줄 그은 반론: ${cs.map(x => "“" + esc(x.s) + "”").join(" ")}</p>` : ""; })() +
     fld("counter", "예상 반론", "나와 다르게 생각하는 사람은 무엇이라고 할까요?", 1) + fld("rebut", "재반론", "반론에 어떻게 답할까요?", 1) + fld("end", "결론과 제안", "", 1);
   const ck = prodCheck(t, s);
   return `${t.kind === "book" ? `<div class="su-card su-stack"><b>결과물 고르기</b><div class="su-row" role="group" aria-label="결과물">${Object.entries(PRODUCTS).map(([k, v]) => `<button class="su-chip" aria-pressed="${s.prodType === k}" data-act="ptype" data-v="${k}">${v.name}</button>`).join("")}</div></div>` : ""}
@@ -365,7 +379,7 @@ function reportText() {
     L.push(`  읽기 전: ${s.pre.trim()}`, `  밑줄: ${PENS.map(x => `${x[1]} ${tagCount(s, x[0], t)}`).join(", ")}`, `  질문: ① ${s.q1.trim()} ② ${s.q2.trim()}`);
     L.push(`  근거 카드: ${s.ev.map(evById).filter(Boolean).map(e => e.t).join(" / ")}`);
     if (s.prodType) { L.push(`  결과물: ${PRODUCTS[s.prodType].name}`);
-      if (s.prodType === "check") { claimsOf(t).forEach(c => L.push(`   - “${c.c}” → ${p["v_" + c.id] || "?"}${s.locked && s.locked["v_" + c.id] && s.locked["v_" + c.id] !== p["v_" + c.id] ? `(처음 ${s.locked["v_" + c.id]})` : ""}: ${(p["r_" + c.id] || "").trim()}`)); if (p.rev) L.push(`   바뀐 생각: ${p.rev.trim()}`); }
+      if (s.prodType === "check") { claimsOf(t).forEach(c => L.push(`   - “${c.c}” → ${(s.locked && s.locked["v_" + c.id]) || p["v_" + c.id] || "?"}: ${((s.locked && s.locked["r_" + c.id]) || p["r_" + c.id] || "").trim()}${s.judged && c.a ? ` [참고 판정 ${c.a}]` : ""}`)); if (p.rev) L.push(`   바뀐 생각: ${p.rev.trim()}`); }
       else fieldsOf(t, s).forEach(k => p[k] && String(p[k]).trim() && L.push(`   ${k}: ${String(p[k]).trim()}`)); }
     L.push(`  돌아보기: ${s.refl.trim()}`, ""); });
   return L.join("\n");
@@ -397,8 +411,8 @@ function teacher() {
     <li>돌아보기: 읽기 전 생각과 비교해 무엇이 바뀌었는지 씁니다.</li></ol>
     <p class="su-small" style="margin:0">권장: 쓰기 뒤에 짝끼리 바꿔 읽고 "이 근거가 정말 주장을 받치나?"를 묻는 동료 비평 5분을 넣어 주세요. 앱은 혼자 하는 활동이라 협력적 논증(Osborne, 2010)은 교실 대화로 보완해야 합니다.</p></div>
   <div class="su-card su-stack su-measure"><h2 class="su-h3">글과 결과물</h2><ul class="su-small">
-    <li>이야기 「서윤이의 우유 칸」 → 상담 편지. 핵심 개념은 우유 알레르기(우유 단백질에 대한 면역 반응, 유제품도 피함)와 유당불내증(유당 분해효소 부족, 양 조절 가능)의 구분입니다. 우유·요구르트 카드는 '비교용 ⚠'로 따로 보이고, 서윤이에게 권하면 점검표가 경고합니다. 토론거리: 멸치볶음+두부조림의 칼슘(약 135 mg)은 우유 한 팩(236 mg)에 못 미칩니다. 민호의 "우유 안 마시면 키 안 큰대"도 근거를 따져 볼 만합니다.</li>
-    <li>가상 광고 「머슬킹」 → 주장 검증 보고서. 일곱 주장에 참고 판정과 해설이 있고, 학생이 판정과 이유를 모두 써야 열리며, 열 때 처음 답이 잠겨 저장됩니다(결과 파일에 '처음판정'). '설탕 0 g(성분표 기준)'은 일부러 넣은 '사실' 주장입니다. 모든 광고 문장을 거짓으로 보는 냉소가 아니라 근거에 맞춘 판단을 연습하기 위해서입니다. 참고 판정도 토론 대상입니다(예: 7번의 '과장'과 '거짓'의 경계).</li>
+    <li>이야기 「서윤이의 우유 칸」 → 상담 편지. 핵심 개념은 우유 알레르기(우유 단백질에 대한 면역 반응, 유제품도 피함)와 유당불내증(유당 분해효소 부족, 양 조절 가능)의 구분입니다. 우유·요구르트 카드는 '비교용 ⚠'로 따로 보이고, 서윤이에게 권하면 점검표가 경고합니다. 토론거리: 멸치볶음+두부조림의 칼슘(약 135 mg)은 우유 한 팩(236 mg)에 못 미칩니다. 민호의 "우유 안 마시면 키 안 큰대"도 근거를 따져 볼 만합니다. 시금치는 칼슘이 적고 옥살산 때문에 흡수율도 낮아 칼슘 공급원으로 권하지 않도록 카드에서 뺐습니다. 우유 알레르기가 있는 아이 일부는 대두 알레르기도 함께 있어 두유도 확인이 필요합니다.</li>
+    <li><details><summary>가상 광고 「머슬킹」 → 주장 검증 보고서(정답 단서 포함, 학생 화면에서는 접어 두세요)</summary> 일곱 주장에 참고 판정과 해설이 있고, 학생이 판정과 이유를 모두 써야 열리며, 열 때 처음 답이 잠겨 저장됩니다(결과 파일에 '처음판정'). 2번 '단백질이 20 g 들어 있다'는 법정 표시인 영양정보로 확인되는 '사실' 주장입니다. 모든 광고 문장을 거짓으로 보는 냉소가 아니라 근거에 맞춘 판단을 연습하기 위해서입니다. 참고 판정도 토론 대상입니다. 3번(달걀)은 '과장', 7번은 '거짓'도 근거가 있으면 인정하도록 해설에 적었습니다. 영양정보 225 kcal는 단백질 20×4 + 지방 9×9 + 당알코올 아닌 탄수화물 12×4 + 당알코올 6×약 2.4 ≈ 223 kcal를 5 kcal 단위로 적은 값입니다. 시간이 모자라면 모둠별로 주장을 나눠 맡거나(직소), 7개 가운데 4개를 고르게 해 주세요.</details></li>
     <li>가상 칼럼 「급식 후식은 꼭 달아야 할까」 → 설득하는 글. 근거마다 '왜 이 근거가 주장을 받치나'를 쓰게 했습니다. 토론거리: 카드의 당류는 총당류라 사과 100 g(10.9 g)이 독도케이크 50 g(7.3 g)보다 높게 나옵니다. WHO가 줄이라는 것은 유리당이고 통과일의 당은 빠진다는 점을 짚으면, 데이터를 그대로 비교하면 안 되는 이유를 배우는 좋은 순간이 됩니다.</li>
     <li>법령 원문(학교급식법 시행규칙 제5조제2항, 제7조제2항, 단서 포함) → 제안서. 법령 조항은 주장이 아니라 근거(규칙)로 다루도록 '주장 펜 필수'를 빼 두었습니다.</li>
     <li>실제 도서 → 학생이 세 결과물 가운데 고름. 검증 보고서를 고르면 '주장' 펜으로 칠한 문장이 본문 순서대로 검증 대상이 됩니다. 발췌를 고쳐도 같은 문장의 밑줄·판정은 유지됩니다.</li></ul></div>
@@ -408,7 +422,7 @@ function teacher() {
     <li>WHO (2015). Guideline: Sugars intake for adults and children. 유리당(첨가당과 꿀·시럽·과일주스의 당)을 총에너지의 10% 미만(강한 권고), 5% 미만(조건부 권고).</li>
     <li>영양 데이터: 식약처 「전국통합식품영양성분정보」 표준데이터(음식 15100070, 원재료성식품 15100065, 가공식품 15100066). 급식실의 1년과 같은 메뉴 은행(lunch-bank.js). 두유 칼슘은 값을 적은 제품(주로 칼슘 강화)의 중앙값이라 실제보다 높을 수 있습니다.</li>
     <li>달걀 단백질 12.91 g/100 g: 원재료성식품 표준데이터(R210-003000001-0000). 껍데기를 뺀 달걀 1개 50~60 g은 가정입니다.</li>
-    <li>읽기·논증 틀: 교과 문식성(Shanahan & Shanahan, 2008, Harvard Educational Review 78(1), 40–59). 쓰기 틀은 Toulmin(1958, The Uses of Argument)의 모형을 수업용으로 단순화한 것입니다(근거–보장은 '근거'와 '받치는 이유'로, 한정어·보강은 생략). 반론–재반론 구조는 과학 논증 수준틀(Osborne, Erduran & Simon, 2004, Journal of Research in Science Teaching 41(10))에 더 가깝습니다. 과학 논증의 협력적 성격은 Osborne(2010, Science 328, 463–466).</li></ul></div>
+    <li>읽기·논증 틀: 교과 문식성(Shanahan & Shanahan, 2008, Harvard Educational Review 78(1), 40–59). 쓰기 틀은 Toulmin(1958, The Uses of Argument)의 모형을 수업용으로 단순화한 것입니다(근거–보장은 '근거'와 '받치는 이유'로, 한정어는 단정 표현 점검으로 간접 지도, 보강은 생략). 반론–재반론 구조는 과학 논증 수준틀(Osborne, Erduran & Simon, 2004, Journal of Research in Science Teaching 41(10), 994–1020)에 더 가깝습니다. 과학 논증의 협력적 성격은 Osborne(2010, Science 328, 463–466).</li></ul></div>
   <div class="su-card su-stack su-measure"><h2 class="su-h3">주의</h2><ul class="su-small">
     <li>실제 도서는 본문을 앱에 싣지 않습니다. 발췌는 공표된 저작물을 교육 목적의 정당한 범위에서 공정한 관행에 맞게 인용하고(저작권법 제28조), 출처를 밝히도록(제37조) 지도해 주세요. 수업 목적이면 공표된 저작물의 일부분을 복제할 수 있습니다(제25조제3항). 결과 파일에는 발췌 문장을 넣지 않습니다.</li>
     <li>예시로 든 『잡식동물의 딜레마』(마이클 폴란 지음, 조윤정 옮김, 다른세상)의 출판연도는 확인하지 못했습니다. 판권면에서 확인해 넣어 주세요.</li>
@@ -453,7 +467,7 @@ document.addEventListener("click", e => {
   if (a === "ptype") { s.prodType = b.dataset.v; lastField = null; save(); return keep(`[data-act="ptype"][data-v="${s.prodType}"]`); }
   if (a === "verdict") { if (s.judged && t.claims) return say("참고 판정을 연 뒤에는 처음 판정이 저장돼요. 바뀐 생각은 아래 칸에 써 주세요.");
     s.prod["v_" + b.dataset.c] = b.dataset.v; s.done = false; save(); return keep(`[data-act="verdict"][data-c="${CSS.escape(b.dataset.c)}"][data-v="${b.dataset.v}"]`); }
-  if (a === "judge") { const cl = claimsOf(t); if (!cl.every(c => s.prod["v_" + c.id] && own(s.prod["r_" + c.id]).length >= 10)) return say("판정과 근거를 모두 써야 열 수 있어요.");
+  if (a === "judge") { const cl = claimsOf(t); OWN_CITES = citesOf(s); if (!cl.every(c => s.prod["v_" + c.id] && meaningful(s.prod["r_" + c.id]) >= 8)) return say("판정과 근거를 모두 내 말로 써야 열 수 있어요.");
     s.locked = Object.fromEntries(cl.flatMap(c => [["v_" + c.id, s.prod["v_" + c.id]], ["r_" + c.id, s.prod["r_" + c.id]]])); s.judged = true; save(); say("처음 답을 저장하고 참고 판정을 열었어요."); return keep("#w-rev"); }
   if (a === "cite") { const e = evById(b.dataset.id); if (!e) return; const flds = fieldsOf(t, s).filter(k => !k.startsWith("v_"));
     const k = lastField && flds.includes(lastField) && document.getElementById("w-" + lastField) ? lastField : flds.find(f => document.getElementById("w-" + f) && /plan|r1|^r_/.test(f)) || flds[0];
@@ -478,7 +492,7 @@ function refreshNav(t, s) { /* 입력 중에는 다시 그리지 않고 버튼·
   if (nx) nx.disabled = !!msg; const wb = $("#whyBlocked"); if (wb) wb.textContent = msg;
   const ck = document.querySelector(".check"); if (ck && n === 4) ck.innerHTML = checkList(prodCheck(t, s));
   const fin = document.querySelector('[data-act="finish"]'); if (fin) fin.disabled = s.refl.trim().length < 10;
-  const jd = document.querySelector('[data-act="judge"]'); if (jd) jd.disabled = !claimsOf(t).every(c => s.prod["v_" + c.id] && own(s.prod["r_" + c.id]).length >= 10);
+  const jd = document.querySelector('[data-act="judge"]'); if (jd) { OWN_CITES = citesOf(s); jd.disabled = !claimsOf(t).every(c => s.prod["v_" + c.id] && meaningful(s.prod["r_" + c.id]) >= 8); }
 }
 render(true);
 </script>

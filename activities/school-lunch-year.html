@@ -146,7 +146,7 @@ const DAYS = [
     theme: { label: "초복 보양식", test: d => d.t.includes("보양") },
     guests: [
       { name: "태민", ava: "🥵", who: "1학년", say: "복날엔 삼계탕이죠! 몸보신하고 싶어요.", soft: { type: "tag", tag: "보양", label: "보양 메뉴 1개 이상" } },
-      { name: "라일라", ava: "🧑‍🎓", who: "2학년 유학생", say: "종교적인 이유로 돼지고기를 먹지 않아요.", hard: { type: "nopork" } },
+      { name: "라일라", ava: "🧑‍🎓", who: "2학년", say: "종교적인 이유로 돼지고기를 먹지 않아요. 삼계탕은 꼭 먹어 보고 싶어요!", hard: { type: "nopork" } },
       { name: "수아", ava: "🫠", who: "3학년", say: "더워서 입맛이 없어요. 시원한 제철 과일이 있으면 좋겠어요.", soft: { type: "season", slot: "후식", fruit: true, label: "7월 제철 과일 후식" } }] },
   { mon: 10, when: "10월 셋째~넷째 주", title: "세계 식량의 날 · 독도의 날 주간", ico: "🌏", budget: 9,
     brief: "10월 16일은 세계 식량의 날(국제연합식량농업기구, FAO 창설일), 10월 25일은 독도의 날이에요. 굶주림과 음식물 쓰레기, 그리고 우리 바다를 함께 생각하는 주간이에요. 독도 주변 동해는 오징어 같은 수산물이 많이 나는 바다예요.",
@@ -404,7 +404,7 @@ function taskHTML(t, st) {
     <label for="chk-${esc(t.key)}"><b>${esc(g.name)}</b>: ${esc(names)}은(는) 일부 학교 레시피에 관련 재료가 들어가요. <b>영양교사에게 레시피 확인을 요청했고, 들어가지 않는대요</b>(수업용 가정).</label></div>`;
 }
 function resultView(i) {
-  const ev = evaluate(i), st = S.days[i], day = DAYS[i], tot = Object.values(ev.stars).reduce((a, b) => a + b, 0), last = i === DAYS.length - 1;
+  const ev = evaluate(i), st = S.days[i], day = DAYS[i], last = i === DAYS.length - 1;
   return `<section class="su-stack">
   <div class="su-row"><span class="su-kicker">${i + 1}번째 점심 · ${esc(day.when)} · 배식 완료</span></div>
   <h1 class="su-h1">${day.ico} ${esc(day.title)} 결과</h1>
@@ -466,7 +466,7 @@ function records(y) {
     var: `주찬 재료 ${kinds.length}가지(${kinds.join(", ") || "–"})`,
     salt: wn.length ? `나트륨이 참고값(${fmt(NA_REF)} mg) 이하인 날 ${wn.filter(e => e.nj.na <= NA_REF).length}/${wn.length}번 · 평균 ${fmt(y.avg.na)} mg` : "영양값 병합 전",
     season: `그달 제철 메뉴 ${y.season}개`, cook: `주찬 조리법 ${mm.length}가지 · 튀김 있는 날 ${y.fried}번`, trad: `전통 메뉴 ${y.trad}개`,
-    allergy: `알레르기 학생 ${alg.length}명 안전하게 · 대체식 ${altOf(alg)}번 · 확인이 필요했던 메뉴 ${chk}개`,
+    allergy: `알레르기 학생 ${alg.length}명 안전하게 · 대체식 ${altOf(alg)}번 · 레시피 확인 요청 ${chk}개`,
     hygiene: hy == null ? "6월 점심을 아직 짜지 않음" : `6월 위생 작업 ${hy}개(날것·조개류 메뉴)`,
     budget: `${y.cost}/${y.budget}칸 · ${diff > 0 ? diff + "칸 넘음" : -diff + "칸 남음"}`,
     like: `학생의 바람 ${soft.filter(x => x.ok).length}/${soft.length}개 들어줌`, event: `계기 목표 ${y.themes}/${y.evs.length}번`,
@@ -489,7 +489,7 @@ function download() {
       대체식: e.day.guests.filter(g => st.alt[g.id]).map(g => g.name), 레시피확인: Object.keys(st.chk).filter(k => st.chk[k]).length, 별점: e.stars, 계기: e.theme, 예산: [e.cost, e.day.budget],
       영양: e.nj ? Object.fromEntries(["kcal", "pro", "fat", "cho", "ca", "fe", "na", "va", "b1", "b2", "vc", "sug"].map(k => [k, +e.nj.t[k].toFixed(2)])) : null,
       학생: e.guests.map(x => ({ 이름: x.g.name, 종류: x.g.hard ? "꼭" : "바람", 충족: x.ok })), 포기한것: (st.why || "").trim() }; }),
-    결산: { 별: y.stars, 계기: y.themes, 대체식: y.alt, 예산: [y.cost, y.budget], 튀김날: y.fried, 전통: y.trad, 세계: y.world, 제철: y.season }, 성찰: REFL.map((r, k) => ({ 질문: r, 답: (S.refl[k] || "").trim() })) };
+    결산: { 계기: y.themes, 대체식: y.alt, 예산: [y.cost, y.budget], 튀김날: y.fried, 전통: y.trad, 세계: y.world, 제철: y.season }, 성찰: REFL.map((r, k) => ({ 질문: r, 답: (S.refl[k] || "").trim() })) };
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 2)], { type: "application/json" }));
   a.download = `급식실의1년_${S.name || "이름없음"}.json`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
 }
